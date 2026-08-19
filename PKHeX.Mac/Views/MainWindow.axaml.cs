@@ -372,15 +372,13 @@ public partial class MainWindow : Window
     // Trainer / database views (in-window, via sidebar navigation)
     // =====================================================================
 
-    public void OnTrainerClicked(object? sender, EventArgs e) => VM.SetView("trainer");
-    public void OnBagClicked(object? sender, EventArgs e) => VM.SetView("bag");
+    public void OnTrainerClicked(object? sender, EventArgs e) => VM.SetView("save");
+    public void OnBagClicked(object? sender, EventArgs e) => VM.SetView("save");
     public void OnAddPokemonClicked(object? sender, EventArgs e) => VM.SetView("add");
     public void OnGiftsClicked(object? sender, EventArgs e) => VM.SetView("gifts");
 
-    private void OnTrainerApplyClicked(object? sender, RoutedEventArgs e) => VM.ApplyTrainer();
-    private void OnTrainerResetClicked(object? sender, RoutedEventArgs e) => VM.ResetTrainer();
-    private void OnBagApplyClicked(object? sender, RoutedEventArgs e) => VM.ApplyBag();
-    private void OnBagResetClicked(object? sender, RoutedEventArgs e) => VM.ResetBag();
+    private void OnSaveApplyClicked(object? sender, RoutedEventArgs e) => VM.ApplySave();
+    private void OnSaveRevertClicked(object? sender, RoutedEventArgs e) => VM.ResetSave();
     private void OnAddPreviewClicked(object? sender, RoutedEventArgs e) => VM.AddPreviewToBox();
 
     // =====================================================================

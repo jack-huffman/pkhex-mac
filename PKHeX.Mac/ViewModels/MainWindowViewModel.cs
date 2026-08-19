@@ -38,26 +38,22 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private GiftsViewModel? _giftDb;
 
     public bool IsBoxesView => CurrentView == "boxes";
-    public bool IsTrainerView => CurrentView == "trainer";
-    public bool IsBagView => CurrentView == "bag";
+    public bool IsSaveView => CurrentView == "save";
     public bool IsAddView => CurrentView == "add";
     public bool IsGiftsView => CurrentView == "gifts";
     public bool IsDatabaseView => IsAddView || IsGiftsView;
-    public bool IsSaveSettingsView => IsTrainerView || IsBagView;
 
-    /// <summary>Collapses the inspector column for the full-width settings views.</summary>
+    /// <summary>Collapses the inspector column for the full-width Save view.</summary>
     public Avalonia.Controls.GridLength InspectorWidth =>
-        IsSaveSettingsView ? new Avalonia.Controls.GridLength(0) : new Avalonia.Controls.GridLength(392);
+        IsSaveView ? new Avalonia.Controls.GridLength(0) : new Avalonia.Controls.GridLength(392);
 
     partial void OnCurrentViewChanged(string value)
     {
         OnPropertyChanged(nameof(IsBoxesView));
-        OnPropertyChanged(nameof(IsTrainerView));
-        OnPropertyChanged(nameof(IsBagView));
+        OnPropertyChanged(nameof(IsSaveView));
         OnPropertyChanged(nameof(IsAddView));
         OnPropertyChanged(nameof(IsGiftsView));
         OnPropertyChanged(nameof(IsDatabaseView));
-        OnPropertyChanged(nameof(IsSaveSettingsView));
         OnPropertyChanged(nameof(InspectorWidth));
     }
 
@@ -72,30 +68,24 @@ public partial class MainWindowViewModel : ViewModelBase
         CurrentView = view;
     }
 
-    public void ApplyTrainer()
+    /// <summary>Applies trainer identity and bag edits together, then returns to the boxes.</summary>
+    public void ApplySave()
     {
         Trainer?.Apply();
-        RefreshTrainerCard();
-        CurrentView = "boxes";
-    }
-
-    public void ResetTrainer()
-    {
-        if (_sav is not null)
-            Trainer = new TrainerEditorViewModel(_sav);
-    }
-
-    public void ApplyBag()
-    {
         Bag?.Apply();
-        StatusText = "Bag updated. Remember to export the save (⌘S).";
+        RefreshTrainerCard();
+        StatusText = "Trainer info and bag updated. Remember to export the save (⌘S).";
         CurrentView = "boxes";
     }
 
-    public void ResetBag()
+    /// <summary>Discards unapplied trainer/bag edits by rebuilding both editors from the save.</summary>
+    public void ResetSave()
     {
-        if (_sav is not null)
-            Bag = new BagViewModel(_sav, _strings);
+        if (_sav is null)
+            return;
+        Trainer = new TrainerEditorViewModel(_sav);
+        Bag = new BagViewModel(_sav, _strings);
+        StatusText = "Reverted unsaved trainer and bag changes.";
     }
 
     public void AddPreviewToBox()

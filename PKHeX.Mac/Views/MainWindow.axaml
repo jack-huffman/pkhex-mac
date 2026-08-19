@@ -125,12 +125,9 @@
                         <!-- Navigation -->
                         <StackPanel Spacing="2" IsVisible="{Binding HasSave}">
                             <TextBlock Classes="sectionTitle" Text="SAVE" Margin="6,4,0,4"/>
-                            <Button Classes="nav" Classes.selected="{Binding IsTrainerView}"
-                                    Command="{Binding SetViewCommand}" CommandParameter="trainer"
-                                    Content="👤  Trainer Info"/>
-                            <Button Classes="nav" Classes.selected="{Binding IsBagView}"
-                                    Command="{Binding SetViewCommand}" CommandParameter="bag"
-                                    Content="🎒  Bag / Items"/>
+                            <Button Classes="nav" Classes.selected="{Binding IsSaveView}"
+                                    Command="{Binding SetViewCommand}" CommandParameter="save"
+                                    Content="👤  Trainer &amp; Bag"/>
                             <TextBlock Classes="sectionTitle" Text="DATABASES" Margin="6,10,0,4"/>
                             <Button Classes="nav" Classes.selected="{Binding IsAddView}"
                                     Command="{Binding SetViewCommand}" CommandParameter="add"
@@ -253,134 +250,195 @@
                         </StackPanel>
                     </ScrollViewer>
 
-                    <!-- Trainer view -->
-                    <ScrollViewer IsVisible="{Binding IsTrainerView}" Padding="18,0,10,14">
-                        <Border Classes="card" MaxWidth="520" VerticalAlignment="Top" HorizontalAlignment="Center"
-                                DataContext="{Binding Trainer}" x:DataType="vm:TrainerEditorViewModel">
-                            <StackPanel Spacing="10">
-                                <TextBlock Text="Trainer Info" FontSize="17" FontWeight="Bold" Margin="0,0,0,4"/>
-                                <StackPanel>
-                                    <TextBlock Classes="fieldLabel" Text="Trainer Name"/>
-                                    <TextBox Text="{Binding OtName, Mode=TwoWay}" MaxLength="{Binding MaxOtLength}"/>
-                                </StackPanel>
-                                <StackPanel>
-                                    <TextBlock Classes="fieldLabel" Text="Gender"/>
-                                    <ComboBox SelectedIndex="{Binding GenderIndex, Mode=TwoWay}" HorizontalAlignment="Stretch">
-                                        <ComboBoxItem Content="♂ Male"/>
-                                        <ComboBoxItem Content="♀ Female"/>
-                                    </ComboBox>
-                                </StackPanel>
-                                <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
-                                    <StackPanel Grid.Column="0">
-                                        <TextBlock Classes="fieldLabel" Text="TID"/>
-                                        <NumericUpDown Value="{Binding Tid, Mode=TwoWay}" Minimum="0" Maximum="{Binding MaxTid}"
-                                                       FormatString="0" Increment="1"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="1">
-                                        <TextBlock Classes="fieldLabel" Text="SID"/>
-                                        <NumericUpDown Value="{Binding Sid, Mode=TwoWay}" Minimum="0" Maximum="{Binding MaxSid}"
-                                                       FormatString="0" Increment="1"/>
-                                    </StackPanel>
-                                </Grid>
-                                <StackPanel>
-                                    <TextBlock Classes="fieldLabel" Text="Money"/>
-                                    <NumericUpDown Value="{Binding Money, Mode=TwoWay}" Minimum="0" Maximum="9999999"
-                                                   FormatString="0" Increment="1000"/>
-                                </StackPanel>
-                                <StackPanel>
-                                    <TextBlock Classes="fieldLabel" Text="Play Time (hours : minutes : seconds)"/>
-                                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="6">
-                                        <NumericUpDown Grid.Column="0" Value="{Binding Hours, Mode=TwoWay}" Minimum="0" Maximum="9999" FormatString="0" Increment="1"/>
-                                        <NumericUpDown Grid.Column="1" Value="{Binding Minutes, Mode=TwoWay}" Minimum="0" Maximum="59" FormatString="0" Increment="1"/>
-                                        <NumericUpDown Grid.Column="2" Value="{Binding Seconds, Mode=TwoWay}" Minimum="0" Maximum="59" FormatString="0" Increment="1"/>
-                                    </Grid>
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,8,0,0">
-                                    <Button Content="Reset" Click="OnTrainerResetClicked"/>
-                                    <Button Content="Apply" Classes="accent" Click="OnTrainerApplyClicked"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </Border>
-                    </ScrollViewer>
+                    <!-- ══════ SAVE view: trainer identity + bag, side by side ══════ -->
+                    <Grid IsVisible="{Binding IsSaveView}" Margin="18,0,18,14"
+                          ColumnDefinitions="380,*" ColumnSpacing="14">
 
-                    <!-- Bag view -->
-                    <Border Classes="card" IsVisible="{Binding IsBagView}" Margin="18,0,10,14">
-                        <DockPanel DataContext="{Binding Bag}" x:DataType="vm:BagViewModel">
-                            <TextBlock DockPanel.Dock="Top" Text="Bag / Items" FontSize="17" FontWeight="Bold" Margin="0,0,0,10"/>
-                            <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right"
-                                        Spacing="8" Margin="0,10,0,0">
-                                <Button Content="Reset" Click="OnBagResetClicked"/>
-                                <Button Content="Apply" Classes="accent" Click="OnBagApplyClicked"/>
-                            </StackPanel>
-                            <Border DockPanel.Dock="Bottom" CornerRadius="8" Padding="10" Margin="0,10,0,0"
-                                    Background="{DynamicResource SurfaceMutedBrush}">
-                                <StackPanel Spacing="6">
-                                    <TextBlock Text="Change selected slot to:" Classes="fieldLabel"/>
-                                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                                        <ComboBox Grid.Column="0" HorizontalAlignment="Stretch"
-                                                  ItemsSource="{Binding ItemPickerChoices}"
-                                                  SelectedValue="{Binding PickerValue, Mode=TwoWay}"
-                                                  SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
-                                                  DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
-                                        <Button Grid.Column="1" Content="Set" Command="{Binding SetSelectedItemCommand}"/>
-                                        <Button Grid.Column="2" Content="Clear" Command="{Binding ClearSelectedItemCommand}"/>
-                                    </Grid>
-                                </StackPanel>
-                            </Border>
-                            <Grid ColumnDefinitions="170,*" ColumnSpacing="12">
-                                <ListBox Grid.Column="0" ItemsSource="{Binding PouchNames}"
-                                         SelectedIndex="{Binding SelectedPouchIndex, Mode=TwoWay}"/>
-                                <ListBox Grid.Column="1" ItemsSource="{Binding Rows}"
-                                         SelectedItem="{Binding SelectedRow, Mode=TwoWay}">
-                                    <ListBox.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:BagItemRowViewModel">
-                                            <Grid ColumnDefinitions="*,92" ColumnSpacing="8">
-                                                <TextBlock Grid.Column="0" Text="{Binding ItemName}" FontSize="13" VerticalAlignment="Center"/>
-                                                <NumericUpDown Grid.Column="1" Value="{Binding Count, Mode=TwoWay}"
-                                                               Minimum="0" Maximum="9999" FormatString="0" Increment="1" FontSize="12"/>
+                        <!-- Trainer identity -->
+                        <Border Grid.Column="0" Classes="card" VerticalAlignment="Stretch">
+                            <DockPanel DataContext="{Binding Trainer}" x:DataType="vm:TrainerEditorViewModel">
+                                <TextBlock DockPanel.Dock="Top" Text="Trainer" FontSize="17" FontWeight="Bold"
+                                           Margin="0,0,0,12"/>
+                                <ScrollViewer>
+                                    <StackPanel Spacing="10">
+                                        <StackPanel>
+                                            <TextBlock Classes="fieldLabel" Text="Trainer Name"/>
+                                            <TextBox Text="{Binding OtName, Mode=TwoWay}" MaxLength="{Binding MaxOtLength}"/>
+                                        </StackPanel>
+                                        <StackPanel>
+                                            <TextBlock Classes="fieldLabel" Text="Gender"/>
+                                            <ComboBox HorizontalAlignment="Stretch" SelectedIndex="{Binding GenderIndex, Mode=TwoWay}">
+                                                <ComboBoxItem Content="♂ Male"/>
+                                                <ComboBoxItem Content="♀ Female"/>
+                                            </ComboBox>
+                                        </StackPanel>
+                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Classes="fieldLabel" Text="TID"/>
+                                                <NumericUpDown Value="{Binding Tid, Mode=TwoWay}" Minimum="0"
+                                                               Maximum="{Binding MaxTid}" FormatString="0" Increment="1"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1">
+                                                <TextBlock Classes="fieldLabel" Text="SID"/>
+                                                <NumericUpDown Value="{Binding Sid, Mode=TwoWay}" Minimum="0"
+                                                               Maximum="{Binding MaxSid}" FormatString="0" Increment="1"/>
+                                            </StackPanel>
+                                        </Grid>
+                                        <StackPanel>
+                                            <TextBlock Classes="fieldLabel" Text="Money"/>
+                                            <NumericUpDown Value="{Binding Money, Mode=TwoWay}" Minimum="0"
+                                                           Maximum="9999999" FormatString="0" Increment="1000"/>
+                                        </StackPanel>
+                                        <StackPanel>
+                                            <TextBlock Classes="fieldLabel" Text="Play Time  (h : m : s)"/>
+                                            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="6">
+                                                <NumericUpDown Grid.Column="0" Value="{Binding Hours, Mode=TwoWay}" Minimum="0" Maximum="9999" FormatString="0" Increment="1"/>
+                                                <NumericUpDown Grid.Column="1" Value="{Binding Minutes, Mode=TwoWay}" Minimum="0" Maximum="59" FormatString="0" Increment="1"/>
+                                                <NumericUpDown Grid.Column="2" Value="{Binding Seconds, Mode=TwoWay}" Minimum="0" Maximum="59" FormatString="0" Increment="1"/>
                                             </Grid>
-                                        </DataTemplate>
-                                    </ListBox.ItemTemplate>
-                                </ListBox>
-                            </Grid>
-                        </DockPanel>
-                    </Border>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </DockPanel>
+                        </Border>
 
-                    <!-- Add Pokémon view -->
+                        <!-- Bag -->
+                        <Border Grid.Column="1" Classes="card">
+                            <DockPanel DataContext="{Binding Bag}" x:DataType="vm:BagViewModel">
+                                <TextBlock DockPanel.Dock="Top" Text="Bag" FontSize="17" FontWeight="Bold"
+                                           Margin="0,0,0,12"/>
+                                <TextBlock DockPanel.Dock="Top" Classes="fieldLabel" IsVisible="{Binding !HasPouches}"
+                                           Text="This save format does not expose an editable inventory."/>
+
+                                <!-- Item picker for the selected slot -->
+                                <Border DockPanel.Dock="Bottom" CornerRadius="10" Padding="10" Margin="0,10,0,0"
+                                        IsVisible="{Binding HasPouches}"
+                                        Background="{DynamicResource SurfaceMutedBrush}">
+                                    <StackPanel Spacing="6">
+                                        <TextBlock Classes="fieldLabel" Text="Change selected slot to"/>
+                                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                                            <ComboBox Grid.Column="0" HorizontalAlignment="Stretch"
+                                                      ItemsSource="{Binding ItemPickerChoices}"
+                                                      SelectedValue="{Binding PickerValue, Mode=TwoWay}"
+                                                      SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
+                                                      DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                                            <Button Grid.Column="1" Content="Set" Command="{Binding SetSelectedItemCommand}"/>
+                                            <Button Grid.Column="2" Content="Clear" Command="{Binding ClearSelectedItemCommand}"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+
+                                <Grid ColumnDefinitions="170,*" ColumnSpacing="12" IsVisible="{Binding HasPouches}">
+                                    <ListBox Grid.Column="0" ItemsSource="{Binding PouchNames}"
+                                             SelectedIndex="{Binding SelectedPouchIndex, Mode=TwoWay}"/>
+                                    <ListBox Grid.Column="1" ItemsSource="{Binding Rows}"
+                                             SelectedItem="{Binding SelectedRow, Mode=TwoWay}">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:BagItemRowViewModel">
+                                                <Grid ColumnDefinitions="*,96" ColumnSpacing="8">
+                                                    <TextBlock Grid.Column="0" Text="{Binding ItemName}" FontSize="13" VerticalAlignment="Center"/>
+                                                    <NumericUpDown Grid.Column="1" Value="{Binding Count, Mode=TwoWay}"
+                                                                   Minimum="0" Maximum="9999" FormatString="0" Increment="1" FontSize="12"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </Grid>
+                            </DockPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- Save view action bar -->
+                    <StackPanel IsVisible="{Binding IsSaveView}" Orientation="Horizontal" Spacing="8"
+                                HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,32,26">
+                        <Button Content="Revert" Click="OnSaveRevertClicked"/>
+                        <Button Content="Apply" Classes="accent" Click="OnSaveApplyClicked"/>
+                    </StackPanel>
+
+                    <!-- ══════ Add Pokémon view ══════ -->
                     <Border Classes="card" IsVisible="{Binding IsAddView}" Margin="18,0,10,14">
                         <DockPanel DataContext="{Binding AddDb}" x:DataType="vm:AddPokemonViewModel">
-                            <TextBlock DockPanel.Dock="Top" Text="Add Pokémon from Encounter Database" FontSize="17" FontWeight="Bold" Margin="0,0,0,10"/>
+                            <TextBlock DockPanel.Dock="Top" Text="Add Pokémon from Encounter Database"
+                                       FontSize="17" FontWeight="Bold" Margin="0,0,0,10"/>
                             <StackPanel DockPanel.Dock="Top" Spacing="8">
                                 <StackPanel>
                                     <TextBlock Classes="fieldLabel" Text="Species"/>
-                                    <ComboBox HorizontalAlignment="Stretch"
-                                              ItemsSource="{Binding SpeciesChoices}"
+                                    <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesChoices}"
                                               SelectedValue="{Binding SpeciesValue, Mode=TwoWay}"
                                               SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
                                               DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
                                 </StackPanel>
                                 <CheckBox IsChecked="{Binding MakeShiny, Mode=TwoWay}" Content="Make Shiny ★ (if possible)"/>
-                                <TextBlock Classes="fieldLabel" Text="Legal encounters — pick one to preview it on the right"/>
+                                <TextBlock Classes="fieldLabel" Text="Legal encounters — pick one to preview"/>
                             </StackPanel>
-                            <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusText}" FontSize="12" Classes="secondary"
-                                       TextWrapping="Wrap" Margin="0,8,0,0"/>
+                            <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusText}" FontSize="12"
+                                       Classes="secondary" TextWrapping="Wrap" Margin="0,8,0,0"/>
                             <ListBox Margin="0,4,0,0" ItemsSource="{Binding EncounterDescriptions}"
                                      SelectedIndex="{Binding SelectedEncounterIndex, Mode=TwoWay}"/>
                         </DockPanel>
                     </Border>
 
-                    <!-- Mystery Gifts view -->
+                    <!-- ══════ Mystery Gifts view: sprite tile grid ══════ -->
                     <Border Classes="card" IsVisible="{Binding IsGiftsView}" Margin="18,0,10,14">
                         <DockPanel DataContext="{Binding GiftDb}" x:DataType="vm:GiftsViewModel">
-                            <TextBlock DockPanel.Dock="Top" Text="Mystery Gift Database" FontSize="17" FontWeight="Bold" Margin="0,0,0,10"/>
-                            <StackPanel DockPanel.Dock="Top" Spacing="6">
-                                <TextBox Text="{Binding SearchText, Mode=TwoWay}" Watermark="Filter by species or event name…"/>
-                                <TextBlock Classes="fieldLabel" Text="Pick a gift to preview it on the right"/>
-                            </StackPanel>
-                            <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusText}" FontSize="12" Classes="secondary"
-                                       TextWrapping="Wrap" Margin="0,8,0,0"/>
-                            <ListBox Margin="0,4,0,0" ItemsSource="{Binding GiftTitles}"
-                                     SelectedIndex="{Binding SelectedGiftIndex, Mode=TwoWay}"/>
+                            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                                <TextBlock DockPanel.Dock="Left" Text="Mystery Gift Database"
+                                           FontSize="17" FontWeight="Bold" VerticalAlignment="Center"/>
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding ResultSummary}" FontSize="11"
+                                           Classes="secondary" VerticalAlignment="Center" HorizontalAlignment="Right"/>
+                            </DockPanel>
+
+                            <!-- Filters -->
+                            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="10"
+                                  Margin="0,0,0,10">
+                                <TextBox Grid.Column="0" Text="{Binding SearchText, Mode=TwoWay}"
+                                         Watermark="Filter by species or event name…"/>
+                                <CheckBox Grid.Column="1" IsChecked="{Binding ShinyOnly, Mode=TwoWay}"
+                                          Content="Shiny only" VerticalAlignment="Center"/>
+                                <CheckBox Grid.Column="2" IsChecked="{Binding EggsOnly, Mode=TwoWay}"
+                                          Content="Eggs only" VerticalAlignment="Center"/>
+                                <Button Grid.Column="3" Content="Clear" FontSize="12"
+                                        Command="{Binding ClearFiltersCommand}"/>
+                            </Grid>
+
+                            <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusText}" FontSize="12"
+                                       Classes="secondary" TextWrapping="Wrap" Margin="0,8,0,0"/>
+
+                            <ScrollViewer>
+                                <ItemsControl ItemsSource="{Binding Tiles}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:GiftTileViewModel">
+                                            <Button Classes="giftTile" Classes.selected="{Binding IsSelected}"
+                                                    Command="{Binding $parent[ItemsControl].((vm:GiftsViewModel)DataContext).SelectTileCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip.Tip="{Binding ToolTipText}">
+                                                <StackPanel Width="104" Spacing="2">
+                                                    <Panel Height="58">
+                                                        <Image Source="{Binding Sprite}" Width="68" Height="56"
+                                                               RenderOptions.BitmapInterpolationMode="None"/>
+                                                        <Image Source="{Binding ShinyOverlay}" Width="18" Height="18"
+                                                               HorizontalAlignment="Left" VerticalAlignment="Top"
+                                                               Margin="14,2,0,0" Opacity="0.85"
+                                                               RenderOptions.BitmapInterpolationMode="None"/>
+                                                    </Panel>
+                                                    <TextBlock Text="{Binding SpeciesName}" FontSize="11" FontWeight="SemiBold"
+                                                               HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding LevelText}" FontSize="10" Classes="secondary"
+                                                               HorizontalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding CardTitle}" FontSize="9" Classes="secondary"
+                                                               HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                               MaxWidth="100"/>
+                                                </StackPanel>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
                         </DockPanel>
                     </Border>
 
