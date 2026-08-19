@@ -24,6 +24,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\PKHeX.Core\PKHeX.Core.csproj" />
+    <ProjectReference Include="..\upstream\PKHeX\PKHeX.Core\PKHeX.Core.csproj" />
   </ItemGroup>
 </Project>

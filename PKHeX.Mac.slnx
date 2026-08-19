@@ -1,4 +1,7 @@
 <Solution>
-  <Project Path="PKHeX.Core/PKHeX.Core.csproj" />
+  <Folder Name="/upstream/" />
+  <Folder Name="/upstream/PKHeX/">
+    <Project Path="upstream/PKHeX/PKHeX.Core/PKHeX.Core.csproj" />
+  </Folder>
   <Project Path="PKHeX.Mac/PKHeX.Mac.csproj" />
 </Solution>
