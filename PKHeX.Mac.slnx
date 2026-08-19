@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="PKHeX.Core/PKHeX.Core.csproj" />
+  <Project Path="PKHeX.Mac/PKHeX.Mac.csproj" />
+</Solution>
