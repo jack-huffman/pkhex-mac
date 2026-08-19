@@ -17,6 +17,12 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp -R "$PUBLISH/"* "$APP/Contents/MacOS/"
 
+# Bundle the optional high-res sprites (fetch with scripts/fetch-hires-sprites.sh).
+if [[ -d PKHeX.Mac/Assets/hires ]]; then
+  echo "==> Bundling high-res sprites..."
+  cp -R PKHeX.Mac/Assets/hires "$APP/Contents/MacOS/hires"
+fi
+
 # App icon from the PKHeX icon.png
 if [[ -f icon.png ]]; then
   ICONSET=$(mktemp -d)/AppIcon.iconset

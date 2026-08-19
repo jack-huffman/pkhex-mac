@@ -9,6 +9,8 @@
   <ItemGroup>
     <Folder Include="Models\" />
     <AvaloniaResource Include="Assets\**" />
+    <!-- High-res sprites are loaded from disk at runtime, not embedded (~400MB). -->
+    <AvaloniaResource Remove="Assets\hires\**" />
   </ItemGroup>
 
   <ItemGroup>

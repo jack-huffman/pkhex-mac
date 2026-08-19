@@ -34,8 +34,72 @@ public static class SpriteService
     public static Bitmap? GetPokemonSprite(PKM pk) =>
         pk.Species == 0 ? null : GetSprite(pk.Species, pk.Form, pk.Gender, pk is IFormArgument fa ? fa.FormArgument : 0, pk.IsShiny, pk.Context);
 
-    public static Bitmap? GetPokemonArtwork(PKM pk) =>
-        pk.Species == 0 ? null : GetSprite(pk.Species, pk.Form, pk.Gender, pk is IFormArgument fa ? fa.FormArgument : 0, pk.IsShiny, pk.Context, artwork: true);
+    public static Bitmap? GetPokemonArtwork(PKM pk)
+    {
+        if (pk.Species == 0)
+            return null;
+        // Prefer the 512x512 HOME renders when present on disk (base forms only —
+        // the hi-res set is indexed by species, so alternate forms keep the
+        // form-aware bundled artwork instead of showing the wrong appearance).
+        if (pk.Form == 0 || DefaultFormSprite.Contains(pk.Species))
+        {
+            var hires = LoadHiRes(pk.Species, pk.IsShiny);
+            if (hires is not null)
+                return hires;
+        }
+        return GetSprite(pk.Species, pk.Form, pk.Gender, pk is IFormArgument fa ? fa.FormArgument : 0, pk.IsShiny, pk.Context, artwork: true);
+    }
+
+    // ---- High-resolution HOME renders (on-disk, optional; see scripts/fetch-hires-sprites.sh) ----
+
+    private static readonly Lazy<string?> HiResDir = new(ResolveHiResDir);
+
+    private static string? ResolveHiResDir()
+    {
+        // Packaged app: hires/ sits next to the executable. Dev builds: walk up
+        // from bin/Debug/netX.0/ to the project's Assets/hires folder.
+        var baseDir = AppContext.BaseDirectory;
+        var candidates = new[]
+        {
+            System.IO.Path.Combine(baseDir, "hires"),
+            System.IO.Path.GetFullPath(System.IO.Path.Combine(baseDir, "..", "..", "..", "Assets", "hires")),
+        };
+        foreach (var dir in candidates)
+        {
+            if (System.IO.Directory.Exists(dir))
+                return dir;
+        }
+        return null;
+    }
+
+    private static Bitmap? LoadHiRes(ushort species, bool shiny)
+    {
+        if (HiResDir.Value is not { } dir)
+            return null;
+        var key = $"hires:{species}:{shiny}";
+        if (Cache.TryGetValue(key, out var cached))
+            return cached;
+
+        Bitmap? bmp = null;
+        var path = shiny
+            ? System.IO.Path.Combine(dir, "shiny", $"{species}.png")
+            : System.IO.Path.Combine(dir, $"{species}.png");
+        if (!System.IO.File.Exists(path) && shiny)
+            path = System.IO.Path.Combine(dir, $"{species}.png"); // shiny render missing: use normal
+        if (System.IO.File.Exists(path))
+        {
+            try
+            {
+                bmp = new Bitmap(path);
+            }
+            catch
+            {
+                bmp = null; // corrupt/partial download — fall back to bundled artwork
+            }
+        }
+        Cache[key] = bmp;
+        return bmp;
+    }
 
     public static Bitmap? GetSprite(ushort species, byte form, byte gender, uint formArg, bool shiny, EntityContext context, bool artwork = false)
     {

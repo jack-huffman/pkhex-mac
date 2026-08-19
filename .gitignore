@@ -1,5 +1,6 @@
 bin/
 obj/
+PKHeX.Mac/Assets/hires/
 *.user
 .DS_Store
 .claude/

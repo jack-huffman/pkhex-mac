@@ -244,7 +244,8 @@
                             <DockPanel Margin="14">
                                 <!-- Hero -->
                                 <StackPanel DockPanel.Dock="Top" Spacing="8">
-                                    <Image Source="{Binding Artwork}" Height="108"/>
+                                    <Image Source="{Binding Artwork}" Height="150"
+                                           RenderOptions.BitmapInterpolationMode="HighQuality"/>
                                     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
                                         <Image Source="{Binding BallSprite}" Width="20" Height="20" VerticalAlignment="Center"/>
                                         <TextBlock Text="{Binding SpeciesName}" FontSize="19" FontWeight="Bold" VerticalAlignment="Center"/>
