@@ -1,9 +1,11 @@
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PKHeX.Core;
+using PKHeX.Mac.Services;
 
 namespace PKHeX.Mac.ViewModels;
 
@@ -12,6 +14,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly GameStrings _strings = GameInfo.GetStrings("en");
     private SaveFile? _sav;
     private string? _savPath;
+    private PKM? _clipboardPk;
 
     public MainWindowViewModel()
     {
@@ -43,10 +46,37 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private string _currentBoxName = string.Empty;
     [ObservableProperty] private bool _hasParty;
 
+    // Update banner
+    [ObservableProperty] private bool _showUpdateBanner;
+    [ObservableProperty] private string _updateBannerText = string.Empty;
+
     private SlotViewModel? _selected;
 
     public SaveFile? SAV => _sav;
     public string? SavePath => _savPath;
+    public SlotViewModel? SelectedSlot => _selected;
+
+    // =====================================================================
+    // Update check
+    // =====================================================================
+
+    public async Task CheckForUpstreamUpdateAsync()
+    {
+        var info = await UpdateCheckService.CheckAsync();
+        if (info is { IsBehind: true })
+        {
+            UpdateBannerText = $"PKHeX {info.RemoteTag} was released {info.RemoteDate:MMM d, yyyy} — this app's engine is {info.LocalVersion}. " +
+                               "Run scripts/update-upstream.sh and rebuild to catch up.";
+            ShowUpdateBanner = true;
+        }
+    }
+
+    [RelayCommand]
+    public void DismissUpdateBanner() => ShowUpdateBanner = false;
+
+    // =====================================================================
+    // Save load / export
+    // =====================================================================
 
     public bool LoadSave(string path, out string error)
     {
@@ -62,6 +92,8 @@ public partial class MainWindowViewModel : ViewModelBase
             _sav = sav;
             _savPath = path;
             sav.Metadata.SetExtraInfo(path);
+            GameInfo.FilteredSources = new FilteredGameDataSource(sav, GameInfo.Sources);
+            Detail.SetContext(sav, GameInfo.FilteredSources);
             HasSave = true;
             HasParty = sav.HasParty;
 
@@ -76,8 +108,7 @@ public partial class MainWindowViewModel : ViewModelBase
             BoxNames.Clear();
             if (sav.HasBox)
             {
-                var names = BoxUtil.GetBoxNames(sav);
-                foreach (var n in names)
+                foreach (var n in BoxUtil.GetBoxNames(sav))
                     BoxNames.Add(n);
             }
 
@@ -95,6 +126,33 @@ public partial class MainWindowViewModel : ViewModelBase
             return false;
         }
     }
+
+    public bool ExportSave(string path, out string error)
+    {
+        error = string.Empty;
+        if (_sav is null)
+        {
+            error = "No save file loaded.";
+            return false;
+        }
+        try
+        {
+            var data = _sav.Write();
+            File.WriteAllBytes(path, data.ToArray());
+            _savPath = path;
+            StatusText = $"Saved to {Path.GetFileName(path)}";
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = $"Failed to write save file:\n{ex.Message}";
+            return false;
+        }
+    }
+
+    // =====================================================================
+    // Box / party display
+    // =====================================================================
 
     private void RebuildBoxSlots()
     {
@@ -138,6 +196,43 @@ public partial class MainWindowViewModel : ViewModelBase
         }
     }
 
+    private void RefreshSlotViews()
+    {
+        LoadBox(CurrentBox);
+        LoadParty();
+    }
+
+    /// <summary>Reads the current contents of a slot from the save.</summary>
+    private PKM? ReadSlot(SlotViewModel slot)
+    {
+        if (_sav is null)
+            return null;
+        if (slot.IsParty)
+            return slot.Slot < _sav.PartyCount ? _sav.GetPartySlotAtIndex(slot.Slot) : null;
+        return _sav.GetBoxSlotAtIndex(CurrentBox, slot.Slot);
+    }
+
+    /// <summary>Writes a PKM into a slot (party writes are compacted).</summary>
+    private void WriteSlot(SlotViewModel slot, PKM pk)
+    {
+        if (_sav is null)
+            return;
+        pk.RefreshChecksum();
+        if (slot.IsParty)
+        {
+            var index = Math.Min(slot.Slot, _sav.PartyCount);
+            _sav.SetPartySlotAtIndex(pk, index);
+        }
+        else
+        {
+            _sav.SetBoxSlotAtIndex(pk, CurrentBox, slot.Slot);
+        }
+    }
+
+    // =====================================================================
+    // Slot operations
+    // =====================================================================
+
     [RelayCommand]
     public void SelectSlot(SlotViewModel? slot)
     {
@@ -154,39 +249,178 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         if (_sav is null || _selected is null || Detail.Pokemon is not { } pk)
             return;
-
-        pk.RefreshChecksum();
-        if (_selected.IsParty)
-            _sav.SetPartySlotAtIndex(pk, _selected.Slot);
-        else
-            _sav.SetBoxSlotAtIndex(pk, CurrentBox, _selected.Slot);
-
-        _selected.Update(pk, _strings);
+        WriteSlot(_selected, pk);
+        RefreshSlotViews();
         Detail.Load(pk);
         StatusText = $"Applied changes to {Detail.SpeciesName}. Remember to export the save (⌘S).";
     }
 
-    public bool ExportSave(string path, out string error)
+    public void DeleteSlot(SlotViewModel slot)
     {
-        error = string.Empty;
         if (_sav is null)
+            return;
+        if (slot.IsParty)
         {
-            error = "No save file loaded.";
-            return false;
+            if (slot.Slot >= _sav.PartyCount)
+                return;
+            // Compact the party: shift later members up, blank the last.
+            for (int i = slot.Slot; i < _sav.PartyCount - 1; i++)
+            {
+                var next = _sav.GetPartySlotAtIndex(i + 1);
+                next.RefreshChecksum();
+                _sav.SetPartySlotAtIndex(next, i);
+            }
+            _sav.SetPartySlotAtIndex(_sav.BlankPKM, _sav.PartyCount - 1);
         }
+        else
+        {
+            _sav.SetBoxSlotAtIndex(_sav.BlankPKM, CurrentBox, slot.Slot);
+        }
+        RefreshSlotViews();
+        if (_selected == slot)
+            Detail.Load(null);
+        StatusText = "Slot cleared.";
+    }
+
+    public void CopySlot(SlotViewModel slot)
+    {
+        var pk = ReadSlot(slot);
+        if (pk is null || pk.Species == 0)
+            return;
+        _clipboardPk = pk.Clone();
+        StatusText = $"Copied {_strings.specieslist[pk.Species]}.";
+    }
+
+    public bool CanPaste => _clipboardPk is not null;
+
+    public void PasteSlot(SlotViewModel slot)
+    {
+        if (_sav is null || _clipboardPk is null)
+            return;
+        WriteSlot(slot, _clipboardPk.Clone());
+        RefreshSlotViews();
+        StatusText = $"Pasted {_strings.specieslist[_clipboardPk.Species]}.";
+    }
+
+    /// <summary>Moves (or swaps) the contents of two slots. Used by drag-and-drop.</summary>
+    public void MoveOrSwapSlot(SlotViewModel from, SlotViewModel to)
+    {
+        if (_sav is null || from == to)
+            return;
+        var pkFrom = ReadSlot(from);
+        if (pkFrom is null || pkFrom.Species == 0)
+            return;
+        var pkTo = ReadSlot(to);
+
+        if (from.IsParty && !to.IsParty && _sav.PartyCount <= 1 && (pkTo is null || pkTo.Species == 0))
+        {
+            StatusText = "Cannot remove the last party member.";
+            return;
+        }
+
+        if (pkTo is not null && pkTo.Species != 0)
+        {
+            // Swap
+            WriteSlot(from, pkTo);
+            WriteSlot(to, pkFrom);
+        }
+        else
+        {
+            // Move
+            WriteSlot(to, pkFrom);
+            if (from.IsParty)
+                DeleteSlot(from);
+            else
+                _sav.SetBoxSlotAtIndex(_sav.BlankPKM, CurrentBox, from.Slot);
+        }
+        RefreshSlotViews();
+        SelectSlot(to.IsParty ? PartySlots[to.Slot] : BoxSlots[to.Slot]);
+        StatusText = "Moved.";
+    }
+
+    /// <summary>Imports a .pk*/.pb*/etc entity file into a slot, converting format if needed.</summary>
+    public bool ImportEntityFile(SlotViewModel slot, string path, out string message)
+    {
+        message = string.Empty;
+        if (_sav is null)
+            return false;
         try
         {
-            var data = _sav.Write();
-            File.WriteAllBytes(path, data.ToArray());
-            _savPath = path;
-            StatusText = $"Saved to {Path.GetFileName(path)}";
+            var data = File.ReadAllBytes(path);
+            var prefer = EntityFileExtension.GetContextFromExtension(path, _sav.Context);
+            var pk = EntityFormat.GetFromBytes(data, prefer);
+            if (pk is null)
+            {
+                message = "Not a recognizable Pokémon entity file.";
+                return false;
+            }
+            if (pk.GetType() != _sav.PKMType)
+            {
+                pk = EntityConverter.ConvertToType(pk, _sav.PKMType, out var result);
+                if (pk is null)
+                {
+                    message = $"Cannot convert to this save's format: {result}";
+                    return false;
+                }
+            }
+            WriteSlot(slot, pk);
+            RefreshSlotViews();
+            SelectSlot(slot.IsParty ? PartySlots[slot.Slot] : BoxSlots[slot.Slot]);
+            message = $"Imported {_strings.specieslist[pk.Species]}.";
+            StatusText = message;
             return true;
         }
         catch (Exception ex)
         {
-            error = $"Failed to write save file:\n{ex.Message}";
+            message = ex.Message;
             return false;
         }
+    }
+
+    public string? GetSlotShowdownText(SlotViewModel slot)
+    {
+        var pk = ReadSlot(slot);
+        return pk is null || pk.Species == 0 ? null : new ShowdownSet(pk).Text;
+    }
+
+    // =====================================================================
+    // Box tools
+    // =====================================================================
+
+    [RelayCommand]
+    public void SortCurrentBox()
+    {
+        if (_sav is null || !_sav.HasBox)
+            return;
+        var data = _sav.GetBoxData(CurrentBox);
+        Array.Sort(data, (a, b) =>
+        {
+            if (a.Species == 0)
+                return b.Species == 0 ? 0 : 1;
+            if (b.Species == 0)
+                return -1;
+            var bySpecies = a.Species.CompareTo(b.Species);
+            return bySpecies != 0 ? bySpecies : a.Form.CompareTo(b.Form);
+        });
+        for (int i = 0; i < data.Length; i++)
+        {
+            data[i].RefreshChecksum();
+            _sav.SetBoxSlotAtIndex(data[i], CurrentBox, i);
+        }
+        RefreshSlotViews();
+        StatusText = $"Sorted {CurrentBoxName} by species.";
+    }
+
+    [RelayCommand]
+    public void ClearCurrentBox()
+    {
+        if (_sav is null || !_sav.HasBox)
+            return;
+        for (int i = 0; i < _sav.BoxSlotCount; i++)
+            _sav.SetBoxSlotAtIndex(_sav.BlankPKM, CurrentBox, i);
+        RefreshSlotViews();
+        Detail.Load(null);
+        StatusText = $"Cleared {CurrentBoxName}.";
     }
 
     [RelayCommand]
