@@ -38,12 +38,12 @@ public static class SpriteService
     {
         if (pk.Species == 0)
             return null;
-        // Prefer the 512x512 HOME renders when present on disk. Base forms are
-        // indexed by species id; alternate forms resolve through the PokeAPI
-        // name->id map (forms.json) so Hisuian/Bloodmoon/etc. show correctly.
-        var hires = pk.Form == 0 || DefaultFormSprite.Contains(pk.Species)
-            ? LoadHiRes(pk.Species, pk.IsShiny)
-            : LoadHiResForm(pk.Species, pk.Form, pk.Context, pk.IsShiny);
+        // Prefer the 512x512 HOME renders when present on disk. Alternate forms
+        // resolve through the PokeAPI name->id map (forms.json); named base forms
+        // (Maushold "Family of Three") also resolve there, so try the form lookup
+        // first and fall back to the species-indexed render.
+        var hires = LoadHiResForm(pk.Species, pk.Form, pk.Context, pk.IsShiny)
+            ?? (pk.Form == 0 || DefaultFormSprite.Contains(pk.Species) ? LoadHiRes(pk.Species, pk.IsShiny) : null);
         if (hires is not null)
             return hires;
         return GetSprite(pk.Species, pk.Form, pk.Gender, pk is IFormArgument fa ? fa.FormArgument : 0, pk.IsShiny, pk.Context, artwork: true);
@@ -139,9 +139,19 @@ public static class SpriteService
             return null;
 
         // PokeAPI slugs sometimes join form words ("bloodmoon"), sometimes hyphenate,
-        // and Paldean Tauros appends "-breed" ("tauros-paldea-combat-breed").
-        foreach (var candidate in new[] { $"{sp}-{fo}", $"{sp}-{fo.Replace("-", "")}", $"{sp}-{fo}-breed" })
+        // and some append a noun PKHeX omits: "-mask" (Ogerpon), "-breed" (Paldean
+        // Tauros), "-plumage" (Squawkabilly). Explicit renames live in SlugOverrides.
+        foreach (var raw in new[]
+                 {
+                     $"{sp}-{fo}",
+                     $"{sp}-{fo.Replace("-", "")}",
+                     $"{sp}-{fo}-mask",
+                     $"{sp}-{fo}-breed",
+                     $"{sp}-{fo}-plumage",
+                     $"{sp}-{fo}-cap",
+                 })
         {
+            var candidate = SlugOverrides.GetValueOrDefault(raw, raw);
             if (!map.TryGetValue(candidate, out var id))
                 continue;
             var key = $"hiresform:{id}:{shiny}";
@@ -151,11 +161,17 @@ public static class SpriteService
                     return cached;
                 continue;
             }
+            // Form entities have ids > 10000 and live in forms/; a few "forms"
+            // are PokeAPI's base entity (Ogerpon-Teal, Maushold-Four, Deoxys-Normal)
+            // whose render is the species file.
+            var (folder, shinySub) = id > 10_000
+                ? (System.IO.Path.Combine(dir, "forms"), System.IO.Path.Combine(dir, "forms", "shiny"))
+                : (dir, System.IO.Path.Combine(dir, "shiny"));
             var path = shiny
-                ? System.IO.Path.Combine(dir, "forms", "shiny", $"{id}.png")
-                : System.IO.Path.Combine(dir, "forms", $"{id}.png");
+                ? System.IO.Path.Combine(shinySub, $"{id}.png")
+                : System.IO.Path.Combine(folder, $"{id}.png");
             if (!System.IO.File.Exists(path) && shiny)
-                path = System.IO.Path.Combine(dir, "forms", $"{id}.png");
+                path = System.IO.Path.Combine(folder, $"{id}.png");
             Bitmap? bmp = null;
             if (System.IO.File.Exists(path))
             {
@@ -199,7 +215,7 @@ public static class SpriteService
         return sb.ToString().Trim('-');
     }
 
-    /// <summary>PKHeX form names to PokeAPI region slugs ("Hisuian" -> "hisui").</summary>
+    /// <summary>PKHeX form names to PokeAPI region slugs ("Hisuian" -> "hisui", "♀" -> "female").</summary>
     private static string SlugForm(string formName)
     {
         var slug = Slug(formName);
@@ -209,9 +225,40 @@ public static class SpriteService
             "galarian" => "galar",
             "hisuian" => "hisui",
             "paldean" => "paldea",
+            "f" => "female",
+            "m" => "male",
             _ => slug,
         };
     }
+
+    /// <summary>Forms whose PokeAPI name differs beyond suffix conventions.</summary>
+    private static readonly Dictionary<string, string> SlugOverrides = new()
+    {
+        ["basculin-blue"] = "basculin-blue-striped",
+        ["basculin-white"] = "basculin-white-striped",
+        ["darmanitan-galar"] = "darmanitan-galar-standard",
+        ["zygarde-10-c"] = "zygarde-10-power-construct",
+        ["zygarde-50-c"] = "zygarde-50-power-construct",
+        ["rockruff-dusk"] = "rockruff-own-tempo",
+        ["eiscue-noice-face"] = "eiscue-noice",
+        ["pumpkaboo-jumbo"] = "pumpkaboo-super",
+        ["gourgeist-jumbo"] = "gourgeist-super",
+        ["ogerpon-teal"] = "ogerpon",
+        ["minior-m-red"] = "minior-red-meteor",
+        ["minior-m-orange"] = "minior-orange-meteor",
+        ["minior-m-yellow"] = "minior-yellow-meteor",
+        ["minior-m-green"] = "minior-green-meteor",
+        ["minior-m-blue"] = "minior-blue-meteor",
+        ["minior-m-indigo"] = "minior-indigo-meteor",
+        ["minior-m-violet"] = "minior-violet-meteor",
+        ["minior-c-red"] = "minior-red",
+        ["minior-c-orange"] = "minior-orange",
+        ["minior-c-yellow"] = "minior-yellow",
+        ["minior-c-green"] = "minior-green",
+        ["minior-c-blue"] = "minior-blue",
+        ["minior-c-indigo"] = "minior-indigo",
+        ["minior-c-violet"] = "minior-violet",
+    };
 
     public static Bitmap? GetSprite(ushort species, byte form, byte gender, uint formArg, bool shiny, EntityContext context, bool artwork = false)
     {
@@ -278,9 +325,8 @@ public static class SpriteService
     {
         // For alternate forms only a correctly-mapped form render is acceptable;
         // base-species art would show the wrong appearance in the box.
-        var full = form == 0 || DefaultFormSprite.Contains(species)
-            ? LoadHiRes(species, shiny)
-            : LoadHiResForm(species, form, context, shiny);
+        var full = LoadHiResForm(species, form, context, shiny)
+            ?? (form == 0 || DefaultFormSprite.Contains(species) ? LoadHiRes(species, shiny) : null);
         return ScaleToSlot(full, $"hr:{species}:{form}:{shiny}");
     }
 
