@@ -260,6 +260,13 @@
                                         <Border Classes="chip" Background="{Binding Type2Brush}" IsVisible="{Binding HasType2}">
                                             <TextBlock Text="{Binding Type2Name}" FontSize="10" FontWeight="SemiBold" Foreground="White"/>
                                         </Border>
+                                        <Border Classes="chip" Background="{DynamicResource SurfaceMutedBrush}" IsVisible="{Binding IsShiny}">
+                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                <Image Source="{Binding ShinyIcon}" Width="12" Height="12" VerticalAlignment="Center"/>
+                                                <TextBlock Text="Shiny" FontSize="10" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Border>
                                         <Border Classes="chip" Background="{DynamicResource LegalBgBrush}" IsVisible="{Binding IsLegal}">
                                             <TextBlock Text="✓ Legal" FontSize="10" FontWeight="SemiBold"
                                                        Foreground="{DynamicResource LegalFgBrush}"/>

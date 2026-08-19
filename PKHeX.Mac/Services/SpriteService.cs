@@ -38,15 +38,14 @@ public static class SpriteService
     {
         if (pk.Species == 0)
             return null;
-        // Prefer the 512x512 HOME renders when present on disk (base forms only —
-        // the hi-res set is indexed by species, so alternate forms keep the
-        // form-aware bundled artwork instead of showing the wrong appearance).
-        if (pk.Form == 0 || DefaultFormSprite.Contains(pk.Species))
-        {
-            var hires = LoadHiRes(pk.Species, pk.IsShiny);
-            if (hires is not null)
-                return hires;
-        }
+        // Prefer the 512x512 HOME renders when present on disk. Base forms are
+        // indexed by species id; alternate forms resolve through the PokeAPI
+        // name->id map (forms.json) so Hisuian/Bloodmoon/etc. show correctly.
+        var hires = pk.Form == 0 || DefaultFormSprite.Contains(pk.Species)
+            ? LoadHiRes(pk.Species, pk.IsShiny)
+            : LoadHiResForm(pk.Species, pk.Form, pk.Context, pk.IsShiny);
+        if (hires is not null)
+            return hires;
         return GetSprite(pk.Species, pk.Form, pk.Gender, pk is IFormArgument fa ? fa.FormArgument : 0, pk.IsShiny, pk.Context, artwork: true);
     }
 
@@ -101,6 +100,119 @@ public static class SpriteService
         return bmp;
     }
 
+    // ---- Alternate-form hi-res renders, resolved by PokeAPI name slug ----
+
+    private static readonly Lazy<Dictionary<string, int>?> FormIdMap = new(LoadFormIdMap);
+    private static readonly Lazy<GameStrings> EnglishStrings = new(() => GameInfo.GetStrings("en"));
+
+    private static Dictionary<string, int>? LoadFormIdMap()
+    {
+        if (HiResDir.Value is not { } dir)
+            return null;
+        var path = System.IO.Path.Combine(dir, "forms.json");
+        if (!System.IO.File.Exists(path))
+            return null;
+        try
+        {
+            return System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, int>>(System.IO.File.ReadAllText(path));
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static Bitmap? LoadHiResForm(ushort species, byte form, EntityContext context, bool shiny)
+    {
+        if (FormIdMap.Value is not { } map || HiResDir.Value is not { } dir)
+            return null;
+        var strings = EnglishStrings.Value;
+        if (species >= strings.specieslist.Length)
+            return null;
+        var formNames = FormConverter.GetFormList(species, strings.types, strings.forms, GameInfo.GenderSymbolUnicode, context);
+        if (form >= formNames.Length)
+            return null;
+
+        var sp = Slug(strings.specieslist[species]);
+        var fo = SlugForm(formNames[form]);
+        if (fo.Length == 0)
+            return null;
+
+        // PokeAPI slugs sometimes join form words ("bloodmoon"), sometimes hyphenate,
+        // and Paldean Tauros appends "-breed" ("tauros-paldea-combat-breed").
+        foreach (var candidate in new[] { $"{sp}-{fo}", $"{sp}-{fo.Replace("-", "")}", $"{sp}-{fo}-breed" })
+        {
+            if (!map.TryGetValue(candidate, out var id))
+                continue;
+            var key = $"hiresform:{id}:{shiny}";
+            if (Cache.TryGetValue(key, out var cached))
+            {
+                if (cached is not null)
+                    return cached;
+                continue;
+            }
+            var path = shiny
+                ? System.IO.Path.Combine(dir, "forms", "shiny", $"{id}.png")
+                : System.IO.Path.Combine(dir, "forms", $"{id}.png");
+            if (!System.IO.File.Exists(path) && shiny)
+                path = System.IO.Path.Combine(dir, "forms", $"{id}.png");
+            Bitmap? bmp = null;
+            if (System.IO.File.Exists(path))
+            {
+                try
+                {
+                    bmp = new Bitmap(path);
+                }
+                catch
+                {
+                    // partial download — ignore
+                }
+            }
+            Cache[key] = bmp;
+            if (bmp is not null)
+                return bmp;
+        }
+        return null;
+    }
+
+    /// <summary>Lowercase, drop punctuation, gender symbols to -f/-m ("Mr. Mime" -> "mr-mime").</summary>
+    private static string Slug(string name)
+    {
+        var sb = new System.Text.StringBuilder(name.Length + 2);
+        foreach (var ch in name.ToLowerInvariant())
+        {
+            switch (ch)
+            {
+                case '♀': sb.Append("-f"); break;
+                case '♂': sb.Append("-m"); break;
+                case 'é': sb.Append('e'); break;
+                case ' ' or '-' or '_':
+                    if (sb.Length > 0 && sb[^1] != '-')
+                        sb.Append('-');
+                    break;
+                default:
+                    if (char.IsLetterOrDigit(ch))
+                        sb.Append(ch);
+                    break;
+            }
+        }
+        return sb.ToString().Trim('-');
+    }
+
+    /// <summary>PKHeX form names to PokeAPI region slugs ("Hisuian" -> "hisui").</summary>
+    private static string SlugForm(string formName)
+    {
+        var slug = Slug(formName);
+        return slug switch
+        {
+            "alolan" => "alola",
+            "galarian" => "galar",
+            "hisuian" => "hisui",
+            "paldean" => "paldea",
+            _ => slug,
+        };
+    }
+
     public static Bitmap? GetSprite(ushort species, byte form, byte gender, uint formArg, bool shiny, EntityContext context, bool artwork = false)
     {
         var name = BuildName(species, form, gender, formArg, context);
@@ -109,10 +221,24 @@ public static class SpriteService
             return LoadSet("artwork", "artwork-shiny", "a", name, species, shiny)
                 ?? LoadSet("big", "big-shiny", "b", name, species, shiny);
         }
+
+        // Box-slot sprites. For shiny requests, exhaust every shiny-colored source
+        // (pixel set -> artwork set -> hi-res render, downscaled) before ever
+        // settling for a base-color image.
+        if (shiny)
+        {
+            var shinyBmp = Load($"big-shiny/b{name}s.png")
+                ?? ScaleToSlot(Load($"artwork-shiny/a{name}s.png"), $"as{name}")
+                ?? HiResScaledToSlot(species, form, context, shiny: true);
+            if (shinyBmp is not null)
+                return shinyBmp;
+        }
         // The "big" pixel-sprite set only covers species <= 905; newer species
-        // (Gen 9+) only exist as artwork, which we downscale to slot size.
-        return LoadSet("big", "big-shiny", "b", name, species, shiny)
-            ?? LoadArtworkScaledToSlot(name, species, shiny);
+        // (Gen 9+) only exist as artwork / hi-res renders, which we downscale.
+        return Load($"big/b{name}.png")
+            ?? Load($"big/b_{species}.png")
+            ?? ScaleToSlot(Load($"artwork/a{name}.png") ?? Load($"artwork/a_{species}.png"), $"an{name}")
+            ?? HiResScaledToSlot(species, form, context, shiny: false);
     }
 
     private static Bitmap? LoadSet(string folder, string shinyFolder, string prefix, string name, ushort species, bool shiny)
@@ -129,28 +255,33 @@ public static class SpriteService
 
     private static readonly Dictionary<string, Bitmap?> ScaledCache = new();
 
-    private static Bitmap? LoadArtworkScaledToSlot(string name, ushort species, bool shiny)
+    /// <summary>Fits a bitmap within 136x112 (2x slot sprite size, crisp on Retina).</summary>
+    private static Bitmap? ScaleToSlot(Bitmap? src, string cacheKey)
     {
-        var key = $"{name}:{shiny}";
-        if (ScaledCache.TryGetValue(key, out var cached))
+        if (src is null)
+            return null;
+        if (ScaledCache.TryGetValue(cacheKey, out var cached))
             return cached;
 
-        var art = LoadSet("artwork", "artwork-shiny", "a", name, species, shiny);
-        Bitmap? result = null;
-        if (art is not null)
-        {
-            // Fit within 2x slot sprite size (136x112) preserving aspect ratio,
-            // so it renders crisply on Retina displays at 68x56 logical.
-            const double maxW = 136, maxH = 112;
-            var size = art.PixelSize;
-            var scale = Math.Min(maxW / size.Width, maxH / size.Height);
-            var target = new Avalonia.PixelSize(
-                Math.Max(1, (int)(size.Width * scale)),
-                Math.Max(1, (int)(size.Height * scale)));
-            result = art.CreateScaledBitmap(target, BitmapInterpolationMode.HighQuality);
-        }
-        ScaledCache[key] = result;
+        const double maxW = 136, maxH = 112;
+        var size = src.PixelSize;
+        var scale = Math.Min(maxW / size.Width, maxH / size.Height);
+        var target = new Avalonia.PixelSize(
+            Math.Max(1, (int)(size.Width * scale)),
+            Math.Max(1, (int)(size.Height * scale)));
+        var result = src.CreateScaledBitmap(target, BitmapInterpolationMode.HighQuality);
+        ScaledCache[cacheKey] = result;
         return result;
+    }
+
+    private static Bitmap? HiResScaledToSlot(ushort species, byte form, EntityContext context, bool shiny)
+    {
+        // For alternate forms only a correctly-mapped form render is acceptable;
+        // base-species art would show the wrong appearance in the box.
+        var full = form == 0 || DefaultFormSprite.Contains(species)
+            ? LoadHiRes(species, shiny)
+            : LoadHiResForm(species, form, context, shiny);
+        return ScaleToSlot(full, $"hr:{species}:{form}:{shiny}");
     }
 
     public static Bitmap? GetBallSprite(byte ball) =>

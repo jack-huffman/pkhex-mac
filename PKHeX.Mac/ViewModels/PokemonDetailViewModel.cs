@@ -69,6 +69,8 @@ public partial class PokemonDetailViewModel : ObservableObject
     [ObservableProperty] private IBrush? _type1Brush;
     [ObservableProperty] private IBrush? _type2Brush;
     [ObservableProperty] private string _levelBadge = string.Empty;
+
+    public Bitmap? ShinyIcon => SpriteService.GetOverlay("rare_icon");
     [ObservableProperty] private string _pidText = string.Empty;
     [ObservableProperty] private string _ecText = string.Empty;
     [ObservableProperty] private bool _isLegal;
