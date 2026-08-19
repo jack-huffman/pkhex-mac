@@ -16,6 +16,7 @@ public partial class SlotViewModel : ObservableObject
 
     [ObservableProperty] private Bitmap? _sprite;
     [ObservableProperty] private Bitmap? _ballSprite;
+    [ObservableProperty] private Bitmap? _shinyOverlay;
     [ObservableProperty] private string _toolTipText = string.Empty;
     [ObservableProperty] private string _levelText = string.Empty;
     [ObservableProperty] private bool _isEmpty = true;
@@ -37,6 +38,7 @@ public partial class SlotViewModel : ObservableObject
         {
             Sprite = null;
             BallSprite = null;
+            ShinyOverlay = null;
             ToolTipText = string.Empty;
             LevelText = string.Empty;
             IsEmpty = true;
@@ -49,6 +51,7 @@ public partial class SlotViewModel : ObservableObject
         LevelText = $"{pk.CurrentLevel}";
         Sprite = SpriteService.GetPokemonSprite(pk);
         BallSprite = SpriteService.GetBallSprite(pk.Ball);
+        ShinyOverlay = pk.IsShiny ? SpriteService.GetOverlay("rare_icon") : null;
 
         var species = (uint)pk.Species < strings.specieslist.Length ? strings.specieslist[pk.Species] : $"#{pk.Species}";
         var name = pk.Nickname == species ? species : $"{pk.Nickname} ({species})";

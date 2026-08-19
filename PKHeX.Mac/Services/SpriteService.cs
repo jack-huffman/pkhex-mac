@@ -40,10 +40,19 @@ public static class SpriteService
     public static Bitmap? GetSprite(ushort species, byte form, byte gender, uint formArg, bool shiny, EntityContext context, bool artwork = false)
     {
         var name = BuildName(species, form, gender, formArg, context);
-        var folder = artwork ? "artwork" : "big";
-        var shinyFolder = artwork ? "artwork-shiny" : "big-shiny";
-        var prefix = artwork ? "a" : "b";
+        if (artwork)
+        {
+            return LoadSet("artwork", "artwork-shiny", "a", name, species, shiny)
+                ?? LoadSet("big", "big-shiny", "b", name, species, shiny);
+        }
+        // The "big" pixel-sprite set only covers species <= 905; newer species
+        // (Gen 9+) only exist as artwork, which we downscale to slot size.
+        return LoadSet("big", "big-shiny", "b", name, species, shiny)
+            ?? LoadArtworkScaledToSlot(name, species, shiny);
+    }
 
+    private static Bitmap? LoadSet(string folder, string shinyFolder, string prefix, string name, ushort species, bool shiny)
+    {
         if (shiny)
         {
             var bmp = Load($"{shinyFolder}/{prefix}{name}s.png");
@@ -51,8 +60,33 @@ public static class SpriteService
                 return bmp;
         }
         return Load($"{folder}/{prefix}{name}.png")
-            ?? Load($"{folder}/{prefix}_{species}.png") // fallback: base form
-            ?? (artwork ? GetSprite(species, form, gender, formArg, shiny, context) : null);
+            ?? Load($"{folder}/{prefix}_{species}.png"); // fallback: base form
+    }
+
+    private static readonly Dictionary<string, Bitmap?> ScaledCache = new();
+
+    private static Bitmap? LoadArtworkScaledToSlot(string name, ushort species, bool shiny)
+    {
+        var key = $"{name}:{shiny}";
+        if (ScaledCache.TryGetValue(key, out var cached))
+            return cached;
+
+        var art = LoadSet("artwork", "artwork-shiny", "a", name, species, shiny);
+        Bitmap? result = null;
+        if (art is not null)
+        {
+            // Fit within 2x slot sprite size (136x112) preserving aspect ratio,
+            // so it renders crisply on Retina displays at 68x56 logical.
+            const double maxW = 136, maxH = 112;
+            var size = art.PixelSize;
+            var scale = Math.Min(maxW / size.Width, maxH / size.Height);
+            var target = new Avalonia.PixelSize(
+                Math.Max(1, (int)(size.Width * scale)),
+                Math.Max(1, (int)(size.Height * scale)));
+            result = art.CreateScaledBitmap(target, BitmapInterpolationMode.HighQuality);
+        }
+        ScaledCache[key] = result;
+        return result;
     }
 
     public static Bitmap? GetBallSprite(byte ball) =>

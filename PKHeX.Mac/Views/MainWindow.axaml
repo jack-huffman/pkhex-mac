@@ -76,13 +76,13 @@
                     <Image Source="{Binding Sprite}" Width="68" Height="56" Margin="0,2,0,0"
                            VerticalAlignment="Top" HorizontalAlignment="Center"
                            RenderOptions.BitmapInterpolationMode="None"/>
+                    <Image Source="{Binding ShinyOverlay}" Width="20" Height="20" Margin="13,4,0,0"
+                           VerticalAlignment="Top" HorizontalAlignment="Left" Opacity="0.8"
+                           RenderOptions.BitmapInterpolationMode="None"/>
                     <Image Source="{Binding BallSprite}" Width="18" Height="18"
                            HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="6,0,0,5"/>
                     <TextBlock Text="{Binding LevelText}" FontSize="10" Classes="secondary"
                                HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,8,5"/>
-                    <TextBlock Text="★" FontSize="11" Foreground="Gold"
-                               HorizontalAlignment="Right" VerticalAlignment="Top"
-                               Margin="0,4,7,0" IsVisible="{Binding IsShiny}"/>
                 </Panel>
             </Border>
         </DataTemplate>
