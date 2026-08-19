@@ -90,6 +90,14 @@ public partial class PokemonDetailViewModel : ObservableObject
     [ObservableProperty] private int _move2;
     [ObservableProperty] private int _move3;
     [ObservableProperty] private int _move4;
+    [ObservableProperty] private int _ppUps1;
+    [ObservableProperty] private int _ppUps2;
+    [ObservableProperty] private int _ppUps3;
+    [ObservableProperty] private int _ppUps4;
+    [ObservableProperty] private string _pp1 = string.Empty;
+    [ObservableProperty] private string _pp2 = string.Empty;
+    [ObservableProperty] private string _pp3 = string.Empty;
+    [ObservableProperty] private string _pp4 = string.Empty;
     [ObservableProperty] private int _relearn1;
     [ObservableProperty] private int _relearn2;
     [ObservableProperty] private int _relearn3;
@@ -148,6 +156,9 @@ public partial class PokemonDetailViewModel : ObservableObject
             CanEditGender = !(p.PersonalInfo.Genderless || p.PersonalInfo.OnlyMale || p.PersonalInfo.OnlyFemale);
 
             Move1 = p.Move1; Move2 = p.Move2; Move3 = p.Move3; Move4 = p.Move4;
+            PpUps1 = p.Move1_PPUps; PpUps2 = p.Move2_PPUps;
+            PpUps3 = p.Move3_PPUps; PpUps4 = p.Move4_PPUps;
+            RefreshPP(p);
             HasRelearnMoves = p.Format >= 6;
             Relearn1 = p.RelearnMove1; Relearn2 = p.RelearnMove2;
             Relearn3 = p.RelearnMove3; Relearn4 = p.RelearnMove4;
@@ -372,6 +383,14 @@ public partial class PokemonDetailViewModel : ObservableObject
         MarkDirty();
     }
 
+    private void RefreshPP(PKM p)
+    {
+        Pp1 = p.Move1 == 0 ? "—" : $"{p.Move1_PP} PP";
+        Pp2 = p.Move2 == 0 ? "—" : $"{p.Move2_PP} PP";
+        Pp3 = p.Move3 == 0 ? "—" : $"{p.Move3_PP} PP";
+        Pp4 = p.Move4 == 0 ? "—" : $"{p.Move4_PP} PP";
+    }
+
     private void SetMove(int index, int value)
     {
         if (_loading || _pk is null || value < 0)
@@ -384,8 +403,30 @@ public partial class PokemonDetailViewModel : ObservableObject
             case 3: _pk.Move4 = (ushort)value; break;
         }
         _pk.HealPP();
+        RefreshPP(_pk);
         MarkDirty();
     }
+
+    private void SetPPUps(int index, int value)
+    {
+        if (_loading || _pk is null || value is < 0 or > 3)
+            return;
+        switch (index)
+        {
+            case 0: _pk.Move1_PPUps = value; break;
+            case 1: _pk.Move2_PPUps = value; break;
+            case 2: _pk.Move3_PPUps = value; break;
+            case 3: _pk.Move4_PPUps = value; break;
+        }
+        _pk.HealPP();
+        RefreshPP(_pk);
+        MarkDirty();
+    }
+
+    partial void OnPpUps1Changed(int value) => SetPPUps(0, value);
+    partial void OnPpUps2Changed(int value) => SetPPUps(1, value);
+    partial void OnPpUps3Changed(int value) => SetPPUps(2, value);
+    partial void OnPpUps4Changed(int value) => SetPPUps(3, value);
 
     partial void OnMove1Changed(int value) => SetMove(0, value);
     partial void OnMove2Changed(int value) => SetMove(1, value);

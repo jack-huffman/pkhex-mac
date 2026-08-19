@@ -24,8 +24,17 @@
                     <NativeMenuItem Header="Copy Showdown Set to Clipboard" Gesture="Cmd+Shift+E" Click="OnShowdownExportClicked"/>
                 </NativeMenu>
             </NativeMenuItem>
+            <NativeMenuItem Header="Trainer">
+                <NativeMenu>
+                    <NativeMenuItem Header="Trainer Info…" Gesture="Cmd+T" Click="OnTrainerClicked"/>
+                    <NativeMenuItem Header="Bag / Items…" Gesture="Cmd+B" Click="OnBagClicked"/>
+                </NativeMenu>
+            </NativeMenuItem>
             <NativeMenuItem Header="Tools">
                 <NativeMenu>
+                    <NativeMenuItem Header="Add Pokémon from Database…" Gesture="Cmd+D" Click="OnAddPokemonClicked"/>
+                    <NativeMenuItem Header="Mystery Gift Database…" Gesture="Cmd+G" Click="OnGiftsClicked"/>
+                    <NativeMenuItemSeparator/>
                     <NativeMenuItem Header="Sort Current Box by Species" Click="OnSortBoxClicked"/>
                     <NativeMenuItem Header="Clear Current Box…" Click="OnClearBoxClicked"/>
                 </NativeMenu>
@@ -382,23 +391,51 @@
                             <TabItem Header="Moves" FontSize="13">
                                 <ScrollViewer>
                                     <StackPanel Spacing="8" Margin="2">
-                                        <TextBlock Classes="sectionTitle" Text="MOVES"/>
-                                        <ComboBox Classes="field" ItemsSource="{Binding MoveChoices}"
-                                                  SelectedValue="{Binding Move1, Mode=TwoWay}"
-                                                  SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
-                                                  DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
-                                        <ComboBox Classes="field" ItemsSource="{Binding MoveChoices}"
-                                                  SelectedValue="{Binding Move2, Mode=TwoWay}"
-                                                  SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
-                                                  DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
-                                        <ComboBox Classes="field" ItemsSource="{Binding MoveChoices}"
-                                                  SelectedValue="{Binding Move3, Mode=TwoWay}"
-                                                  SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
-                                                  DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
-                                        <ComboBox Classes="field" ItemsSource="{Binding MoveChoices}"
-                                                  SelectedValue="{Binding Move4, Mode=TwoWay}"
-                                                  SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
-                                                  DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                                        <Grid ColumnDefinitions="*,66,58">
+                                            <TextBlock Grid.Column="0" Classes="sectionTitle" Text="MOVES" Margin="2,0,0,0"/>
+                                            <TextBlock Grid.Column="1" Text="PP Ups" FontSize="10" Opacity="0.55" HorizontalAlignment="Center"/>
+                                            <TextBlock Grid.Column="2" Text="PP" FontSize="10" Opacity="0.55" HorizontalAlignment="Center"/>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="*,66,58" ColumnSpacing="4">
+                                            <ComboBox Grid.Column="0" Classes="field" ItemsSource="{Binding MoveChoices}"
+                                                      SelectedValue="{Binding Move1, Mode=TwoWay}"
+                                                      SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
+                                                      DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                                            <NumericUpDown Grid.Column="1" Value="{Binding PpUps1, Mode=TwoWay}" Minimum="0" Maximum="3"
+                                                           FormatString="0" Increment="1" FontSize="12"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding Pp1}" FontSize="11" Opacity="0.7"
+                                                       VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="*,66,58" ColumnSpacing="4">
+                                            <ComboBox Grid.Column="0" Classes="field" ItemsSource="{Binding MoveChoices}"
+                                                      SelectedValue="{Binding Move2, Mode=TwoWay}"
+                                                      SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
+                                                      DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                                            <NumericUpDown Grid.Column="1" Value="{Binding PpUps2, Mode=TwoWay}" Minimum="0" Maximum="3"
+                                                           FormatString="0" Increment="1" FontSize="12"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding Pp2}" FontSize="11" Opacity="0.7"
+                                                       VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="*,66,58" ColumnSpacing="4">
+                                            <ComboBox Grid.Column="0" Classes="field" ItemsSource="{Binding MoveChoices}"
+                                                      SelectedValue="{Binding Move3, Mode=TwoWay}"
+                                                      SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
+                                                      DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                                            <NumericUpDown Grid.Column="1" Value="{Binding PpUps3, Mode=TwoWay}" Minimum="0" Maximum="3"
+                                                           FormatString="0" Increment="1" FontSize="12"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding Pp3}" FontSize="11" Opacity="0.7"
+                                                       VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="*,66,58" ColumnSpacing="4">
+                                            <ComboBox Grid.Column="0" Classes="field" ItemsSource="{Binding MoveChoices}"
+                                                      SelectedValue="{Binding Move4, Mode=TwoWay}"
+                                                      SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
+                                                      DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                                            <NumericUpDown Grid.Column="1" Value="{Binding PpUps4, Mode=TwoWay}" Minimum="0" Maximum="3"
+                                                           FormatString="0" Increment="1" FontSize="12"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding Pp4}" FontSize="11" Opacity="0.7"
+                                                       VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                        </Grid>
                                         <StackPanel IsVisible="{Binding HasRelearnMoves}">
                                             <TextBlock Classes="sectionTitle" Text="RELEARN MOVES" Margin="2,10,0,6"/>
                                             <StackPanel Spacing="8">

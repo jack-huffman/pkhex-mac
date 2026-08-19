@@ -1,0 +1,52 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:PKHeX.Mac.ViewModels"
+        x:Class="PKHeX.Mac.Views.TrainerWindow"
+        x:DataType="vm:TrainerEditorViewModel"
+        Title="Trainer Info"
+        Width="380" SizeToContent="Height"
+        CanResize="False"
+        WindowStartupLocation="CenterOwner">
+    <StackPanel Margin="20" Spacing="10">
+        <StackPanel>
+            <TextBlock Text="Trainer Name" FontSize="11" Opacity="0.55" Margin="0,0,0,2"/>
+            <TextBox Text="{Binding OtName, Mode=TwoWay}" MaxLength="{Binding MaxOtLength}"/>
+        </StackPanel>
+        <StackPanel>
+            <TextBlock Text="Gender" FontSize="11" Opacity="0.55" Margin="0,0,0,2"/>
+            <ComboBox SelectedIndex="{Binding GenderIndex, Mode=TwoWay}" HorizontalAlignment="Stretch">
+                <ComboBoxItem Content="♂ Male"/>
+                <ComboBoxItem Content="♀ Female"/>
+            </ComboBox>
+        </StackPanel>
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+            <StackPanel Grid.Column="0">
+                <TextBlock Text="TID" FontSize="11" Opacity="0.55" Margin="0,0,0,2"/>
+                <NumericUpDown Value="{Binding Tid, Mode=TwoWay}" Minimum="0" Maximum="{Binding MaxTid}"
+                               FormatString="0" Increment="1"/>
+            </StackPanel>
+            <StackPanel Grid.Column="1">
+                <TextBlock Text="SID" FontSize="11" Opacity="0.55" Margin="0,0,0,2"/>
+                <NumericUpDown Value="{Binding Sid, Mode=TwoWay}" Minimum="0" Maximum="{Binding MaxSid}"
+                               FormatString="0" Increment="1"/>
+            </StackPanel>
+        </Grid>
+        <StackPanel>
+            <TextBlock Text="Money" FontSize="11" Opacity="0.55" Margin="0,0,0,2"/>
+            <NumericUpDown Value="{Binding Money, Mode=TwoWay}" Minimum="0" Maximum="9999999"
+                           FormatString="0" Increment="1000"/>
+        </StackPanel>
+        <StackPanel>
+            <TextBlock Text="Play Time (hours : minutes : seconds)" FontSize="11" Opacity="0.55" Margin="0,0,0,2"/>
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="6">
+                <NumericUpDown Grid.Column="0" Value="{Binding Hours, Mode=TwoWay}" Minimum="0" Maximum="9999" FormatString="0" Increment="1"/>
+                <NumericUpDown Grid.Column="1" Value="{Binding Minutes, Mode=TwoWay}" Minimum="0" Maximum="59" FormatString="0" Increment="1"/>
+                <NumericUpDown Grid.Column="2" Value="{Binding Seconds, Mode=TwoWay}" Minimum="0" Maximum="59" FormatString="0" Increment="1"/>
+            </Grid>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" Margin="0,10,0,0">
+            <Button Content="Cancel" Click="OnCancelClicked"/>
+            <Button Content="Apply" Classes="accent" Click="OnApplyClicked"/>
+        </StackPanel>
+    </StackPanel>
+</Window>

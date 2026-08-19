@@ -383,6 +383,50 @@ public partial class MainWindowViewModel : ViewModelBase
         return pk is null || pk.Species == 0 ? null : new ShowdownSet(pk).Text;
     }
 
+    /// <summary>Adds a Pokémon into the first empty slot of the current box.</summary>
+    public bool TryAddToCurrentBox(PKM pk, out string message)
+    {
+        message = string.Empty;
+        if (_sav is null || !_sav.HasBox)
+        {
+            message = "No save loaded.";
+            return false;
+        }
+        int empty = -1;
+        for (int i = 0; i < _sav.BoxSlotCount; i++)
+        {
+            if (_sav.GetBoxSlotAtIndex(CurrentBox, i).Species == 0)
+            {
+                empty = i;
+                break;
+            }
+        }
+        if (empty < 0)
+        {
+            message = $"{CurrentBoxName} is full — clear a slot or switch boxes.";
+            return false;
+        }
+        pk.RefreshChecksum();
+        _sav.SetBoxSlotAtIndex(pk, CurrentBox, empty);
+        RefreshSlotViews();
+        SelectSlot(BoxSlots[empty]);
+        var name = (uint)pk.Species < _strings.specieslist.Length ? _strings.specieslist[pk.Species] : $"#{pk.Species}";
+        message = $"Added {name} to {CurrentBoxName}, slot {empty + 1}.";
+        StatusText = message;
+        return true;
+    }
+
+    /// <summary>Re-reads trainer card fields after an external edit (trainer editor dialog).</summary>
+    public void RefreshTrainerCard()
+    {
+        if (_sav is null)
+            return;
+        TrainerName = _sav.OT;
+        TrainerIds = $"TID {_sav.DisplayTID:D6} · SID {_sav.DisplaySID:D4}";
+        PlayTime = _sav.PlayTimeString;
+        StatusText = "Trainer info updated. Remember to export the save (⌘S).";
+    }
+
     // =====================================================================
     // Box tools
     // =====================================================================
