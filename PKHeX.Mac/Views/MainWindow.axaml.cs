@@ -369,71 +369,19 @@ public partial class MainWindow : Window
     }
 
     // =====================================================================
-    // Trainer / database dialogs
+    // Trainer / database views (in-window, via sidebar navigation)
     // =====================================================================
 
-    public void OnTrainerClicked(object? sender, EventArgs e) => _ = OpenTrainerAsync();
-    public void OnBagClicked(object? sender, EventArgs e) => _ = OpenBagAsync();
-    public void OnAddPokemonClicked(object? sender, EventArgs e) => _ = OpenAddPokemonAsync();
-    public void OnGiftsClicked(object? sender, EventArgs e) => _ = OpenGiftsAsync();
+    public void OnTrainerClicked(object? sender, EventArgs e) => VM.SetView("trainer");
+    public void OnBagClicked(object? sender, EventArgs e) => VM.SetView("bag");
+    public void OnAddPokemonClicked(object? sender, EventArgs e) => VM.SetView("add");
+    public void OnGiftsClicked(object? sender, EventArgs e) => VM.SetView("gifts");
 
-    private async Task<bool> RequireSaveAsync()
-    {
-        if (VM.SAV is not null)
-            return true;
-        await ShowError("No Save Loaded", "Open a save file first (⌘O).");
-        return false;
-    }
-
-    private async Task OpenTrainerAsync()
-    {
-        if (!await RequireSaveAsync())
-            return;
-        var dialog = new TrainerWindow { DataContext = new TrainerEditorViewModel(VM.SAV!) };
-        await dialog.ShowDialog(this);
-        if (dialog.Applied)
-            VM.RefreshTrainerCard();
-    }
-
-    private async Task OpenBagAsync()
-    {
-        if (!await RequireSaveAsync())
-            return;
-        var vm = new BagViewModel(VM.SAV!, PKHeX.Core.GameInfo.GetStrings("en"));
-        if (!vm.HasPouches)
-        {
-            await ShowError("Not Supported", "This save format does not expose an editable inventory.");
-            return;
-        }
-        var dialog = new BagWindow { DataContext = vm };
-        await dialog.ShowDialog(this);
-    }
-
-    private async Task OpenAddPokemonAsync()
-    {
-        if (!await RequireSaveAsync())
-            return;
-        var dialog = new AddPokemonWindow
-        {
-            DataContext = new AddPokemonViewModel(VM.SAV!, PKHeX.Core.GameInfo.FilteredSources, PKHeX.Core.GameInfo.GetStrings("en")),
-        };
-        await dialog.ShowDialog(this);
-        if (dialog.ResultToAdd is { } pk && !VM.TryAddToCurrentBox(pk, out var message))
-            await ShowError("Could Not Add", message);
-    }
-
-    private async Task OpenGiftsAsync()
-    {
-        if (!await RequireSaveAsync())
-            return;
-        var dialog = new GiftsWindow
-        {
-            DataContext = new GiftsViewModel(VM.SAV!, PKHeX.Core.GameInfo.GetStrings("en")),
-        };
-        await dialog.ShowDialog(this);
-        if (dialog.ResultToAdd is { } pk && !VM.TryAddToCurrentBox(pk, out var message))
-            await ShowError("Could Not Add", message);
-    }
+    private void OnTrainerApplyClicked(object? sender, RoutedEventArgs e) => VM.ApplyTrainer();
+    private void OnTrainerResetClicked(object? sender, RoutedEventArgs e) => VM.ResetTrainer();
+    private void OnBagApplyClicked(object? sender, RoutedEventArgs e) => VM.ApplyBag();
+    private void OnBagResetClicked(object? sender, RoutedEventArgs e) => VM.ResetBag();
+    private void OnAddPreviewClicked(object? sender, RoutedEventArgs e) => VM.AddPreviewToBox();
 
     // =====================================================================
     // Box tools

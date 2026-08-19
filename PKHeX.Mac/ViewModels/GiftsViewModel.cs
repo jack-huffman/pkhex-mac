@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -39,10 +40,22 @@ public partial class GiftsViewModel : ObservableObject
 
     public PKM? Result { get; private set; }
 
+    /// <summary>Raised whenever the converted preview changes (or clears).</summary>
+    public Action<PKM?>? PreviewReady { get; set; }
+
     partial void OnSearchTextChanged(string value) => ApplyFilter();
+
+    partial void OnSelectedGiftIndexChanged(int value)
+    {
+        if ((uint)value < _filtered.Count)
+            ConvertSelected();
+        else
+            PreviewReady?.Invoke(null);
+    }
 
     private void ApplyFilter()
     {
+        SelectedGiftIndex = -1;
         GiftTitles.Clear();
         var query = SearchText.Trim();
         _filtered = query.Length == 0
@@ -84,12 +97,13 @@ public partial class GiftsViewModel : ObservableObject
             pk.Heal();
             pk.RefreshChecksum();
             Result = pk;
-            var la = new LegalityAnalysis(pk);
-            StatusText = $"Converted {Describe(gift)} — legal: {(la.Valid ? "yes" : "no")}. Click Add to Box.";
+            StatusText = $"Previewing {Describe(gift)}.";
+            PreviewReady?.Invoke(pk);
         }
         catch (System.Exception ex)
         {
             StatusText = $"Could not convert this gift: {ex.Message}";
+            PreviewReady?.Invoke(null);
         }
     }
 }

@@ -36,11 +36,30 @@ public partial class AddPokemonViewModel : ObservableObject
     /// <summary>The generated Pokémon, set when Generate succeeds.</summary>
     public PKM? Result { get; private set; }
 
+    /// <summary>Raised whenever the generated preview changes (or clears).</summary>
+    public Action<PKM?>? PreviewReady { get; set; }
+
+    partial void OnSelectedEncounterIndexChanged(int value)
+    {
+        if ((uint)value < _encounters.Count)
+            Generate();
+        else
+            PreviewReady?.Invoke(null);
+    }
+
+    partial void OnMakeShinyChanged(bool value)
+    {
+        if ((uint)SelectedEncounterIndex < _encounters.Count)
+            Generate();
+    }
+
     partial void OnSpeciesValueChanged(int value)
     {
+        SelectedEncounterIndex = -1;
         EncounterDescriptions.Clear();
         _encounters.Clear();
         Result = null;
+        PreviewReady?.Invoke(null);
         if (value <= 0)
             return;
 
@@ -91,9 +110,9 @@ public partial class AddPokemonViewModel : ObservableObject
         pk.Heal();
         pk.RefreshChecksum();
 
-        var la = new LegalityAnalysis(pk);
         Result = pk;
         var name = (uint)pk.Species < _strings.specieslist.Length ? _strings.specieslist[pk.Species] : $"#{pk.Species}";
-        StatusText = $"Generated {name} (Lv.{pk.CurrentLevel}){(pk.IsShiny ? " ★" : string.Empty)} — legal: {(la.Valid ? "yes" : "no")}. Click Add to Box.";
+        StatusText = $"Previewing {name} (Lv.{pk.CurrentLevel}){(pk.IsShiny ? " ★" : string.Empty)}.";
+        PreviewReady?.Invoke(pk);
     }
 }

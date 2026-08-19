@@ -19,6 +19,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public MainWindowViewModel()
     {
         Detail = new PokemonDetailViewModel(_strings);
+        Preview = new PokemonPreviewViewModel(_strings);
         for (int i = 0; i < 30; i++)
             BoxSlots.Add(new SlotViewModel(0, i));
         for (int i = 0; i < 6; i++)
@@ -26,6 +27,89 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     public PokemonDetailViewModel Detail { get; }
+    public PokemonPreviewViewModel Preview { get; }
+
+    // ---- In-window views (sidebar navigation) ----
+
+    [ObservableProperty] private string _currentView = "boxes";
+    [ObservableProperty] private TrainerEditorViewModel? _trainer;
+    [ObservableProperty] private BagViewModel? _bag;
+    [ObservableProperty] private AddPokemonViewModel? _addDb;
+    [ObservableProperty] private GiftsViewModel? _giftDb;
+
+    public bool IsBoxesView => CurrentView == "boxes";
+    public bool IsTrainerView => CurrentView == "trainer";
+    public bool IsBagView => CurrentView == "bag";
+    public bool IsAddView => CurrentView == "add";
+    public bool IsGiftsView => CurrentView == "gifts";
+    public bool IsDatabaseView => IsAddView || IsGiftsView;
+    public bool IsSaveSettingsView => IsTrainerView || IsBagView;
+
+    /// <summary>Collapses the inspector column for the full-width settings views.</summary>
+    public Avalonia.Controls.GridLength InspectorWidth =>
+        IsSaveSettingsView ? new Avalonia.Controls.GridLength(0) : new Avalonia.Controls.GridLength(392);
+
+    partial void OnCurrentViewChanged(string value)
+    {
+        OnPropertyChanged(nameof(IsBoxesView));
+        OnPropertyChanged(nameof(IsTrainerView));
+        OnPropertyChanged(nameof(IsBagView));
+        OnPropertyChanged(nameof(IsAddView));
+        OnPropertyChanged(nameof(IsGiftsView));
+        OnPropertyChanged(nameof(IsDatabaseView));
+        OnPropertyChanged(nameof(IsSaveSettingsView));
+        OnPropertyChanged(nameof(InspectorWidth));
+    }
+
+    [RelayCommand]
+    public void SetView(string view)
+    {
+        if (_sav is null && view != "boxes")
+        {
+            StatusText = "Open a save file first (⌘O).";
+            return;
+        }
+        CurrentView = view;
+    }
+
+    public void ApplyTrainer()
+    {
+        Trainer?.Apply();
+        RefreshTrainerCard();
+        CurrentView = "boxes";
+    }
+
+    public void ResetTrainer()
+    {
+        if (_sav is not null)
+            Trainer = new TrainerEditorViewModel(_sav);
+    }
+
+    public void ApplyBag()
+    {
+        Bag?.Apply();
+        StatusText = "Bag updated. Remember to export the save (⌘S).";
+        CurrentView = "boxes";
+    }
+
+    public void ResetBag()
+    {
+        if (_sav is not null)
+            Bag = new BagViewModel(_sav, _strings);
+    }
+
+    public void AddPreviewToBox()
+    {
+        if (Preview.Current is not { } pk)
+        {
+            StatusText = "Nothing to add — pick an entry first.";
+            return;
+        }
+        if (TryAddToCurrentBox(pk.Clone(), out var message))
+            CurrentView = "boxes";
+        else
+            StatusText = message;
+    }
 
     public ObservableCollection<SlotViewModel> BoxSlots { get; } = [];
     public ObservableCollection<SlotViewModel> PartySlots { get; } = [];
@@ -118,6 +202,16 @@ public partial class MainWindowViewModel : ViewModelBase
             LoadBox(0);
             LoadParty();
             SelectSlot(null);
+
+            // In-window editor views for this save.
+            Trainer = new TrainerEditorViewModel(sav);
+            Bag = new BagViewModel(sav, _strings);
+            AddDb = new AddPokemonViewModel(sav, GameInfo.FilteredSources, _strings);
+            GiftDb = new GiftsViewModel(sav, _strings);
+            AddDb.PreviewReady = pk => Preview.Load(pk);
+            GiftDb.PreviewReady = pk => Preview.Load(pk);
+            Preview.Load(null);
+            CurrentView = "boxes";
             return true;
         }
         catch (Exception ex)
@@ -172,6 +266,7 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         CurrentBoxName = (uint)value < BoxNames.Count ? BoxNames[value] : $"Box {value + 1}";
         LoadBox(value);
+        CurrentView = "boxes"; // clicking a box in the sidebar returns to the box view
     }
 
     private void LoadBox(int box)
