@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -62,6 +63,12 @@ public partial class PokemonDetailViewModel : ObservableObject
     [ObservableProperty] private Bitmap? _ballSprite;
     [ObservableProperty] private string _speciesName = string.Empty;
     [ObservableProperty] private string _typeText = string.Empty;
+    [ObservableProperty] private string _type1Name = string.Empty;
+    [ObservableProperty] private string _type2Name = string.Empty;
+    [ObservableProperty] private bool _hasType2;
+    [ObservableProperty] private IBrush? _type1Brush;
+    [ObservableProperty] private IBrush? _type2Brush;
+    [ObservableProperty] private string _levelBadge = string.Empty;
     [ObservableProperty] private string _pidText = string.Empty;
     [ObservableProperty] private string _ecText = string.Empty;
     [ObservableProperty] private bool _isLegal;
@@ -192,6 +199,12 @@ public partial class PokemonDetailViewModel : ObservableObject
         var t1 = Name(_strings.types, pi.Type1);
         var t2 = Name(_strings.types, pi.Type2);
         TypeText = pi.Type1 == pi.Type2 ? t1 : $"{t1} / {t2}";
+        Type1Name = t1;
+        Type2Name = t2;
+        HasType2 = pi.Type1 != pi.Type2;
+        Type1Brush = TypePalette.GetBrush(pi.Type1);
+        Type2Brush = TypePalette.GetBrush(pi.Type2);
+        LevelBadge = $"Lv. {p.CurrentLevel}";
         PidText = $"{p.PID:X8}";
         EcText = $"{p.EncryptionConstant:X8}";
         RefreshStats();
@@ -606,9 +619,17 @@ public partial class StatEditRowViewModel : ObservableObject
     [ObservableProperty] private int _ev;
     [ObservableProperty] private int _stat;
 
+    private int _maxIv = 31;
+    private int _maxEv = 252;
+
+    public double IvPercent => _maxIv > 0 ? Iv * 100.0 / _maxIv : 0;
+    public double EvPercent => _maxEv > 0 ? Ev * 100.0 / _maxEv : 0;
+
     public void Refresh(PKM p)
     {
         _loading = true;
+        _maxIv = p.MaxIV;
+        _maxEv = p.MaxEV;
         (Iv, Ev, Stat) = _index switch
         {
             0 => (p.IV_HP, p.EV_HP, (int)p.Stat_HPMax),
@@ -619,10 +640,13 @@ public partial class StatEditRowViewModel : ObservableObject
             _ => (p.IV_SPE, p.EV_SPE, (int)p.Stat_SPE),
         };
         _loading = false;
+        OnPropertyChanged(nameof(IvPercent));
+        OnPropertyChanged(nameof(EvPercent));
     }
 
     partial void OnIvChanged(int value)
     {
+        OnPropertyChanged(nameof(IvPercent));
         if (_loading || _parent.Pokemon is not { } p)
             return;
         var v = Math.Clamp(value, 0, p.MaxIV);
@@ -641,6 +665,7 @@ public partial class StatEditRowViewModel : ObservableObject
 
     partial void OnEvChanged(int value)
     {
+        OnPropertyChanged(nameof(EvPercent));
         if (_loading || _parent.Pokemon is not { } p)
             return;
         var v = Math.Clamp(value, 0, p.MaxEV);

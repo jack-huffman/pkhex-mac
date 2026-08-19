@@ -4,13 +4,161 @@
              xmlns:local="using:PKHeX.Mac"
              Name="PKHeX"
              RequestedThemeVariant="Default">
-             <!-- "Default" ThemeVariant follows system theme variant. "Dark" or "Light" are other available options. -->
 
     <Application.DataTemplates>
         <local:ViewLocator />
     </Application.DataTemplates>
 
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.ThemeDictionaries>
+                <!-- ============ LIGHT ============ -->
+                <ResourceDictionary x:Key="Light">
+                    <SolidColorBrush x:Key="WindowBackdropBrush" Color="#F4F0F0F4"/>
+                    <SolidColorBrush x:Key="SidebarBrush" Color="#7AECECF1"/>
+                    <SolidColorBrush x:Key="SurfaceCardBrush" Color="#E8FFFFFF"/>
+                    <SolidColorBrush x:Key="SurfaceMutedBrush" Color="#0A000000"/>
+                    <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#12000000"/>
+                    <SolidColorBrush x:Key="HairlineBrush" Color="#16000000"/>
+                    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#DD000000"/>
+                    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#7A000000"/>
+                    <SolidColorBrush x:Key="SlotBrush" Color="#08000000"/>
+                    <SolidColorBrush x:Key="SlotHoverBrush" Color="#14000000"/>
+                    <SolidColorBrush x:Key="MeterIvBrush" Color="#0A84FF"/>
+                    <SolidColorBrush x:Key="MeterEvBrush" Color="#FF9F0A"/>
+                    <SolidColorBrush x:Key="LegalFgBrush" Color="#1B8A3C"/>
+                    <SolidColorBrush x:Key="LegalBgBrush" Color="#2230D158"/>
+                    <SolidColorBrush x:Key="IllegalFgBrush" Color="#C43C31"/>
+                    <SolidColorBrush x:Key="IllegalBgBrush" Color="#22FF453A"/>
+                    <SolidColorBrush x:Key="BannerBrush" Color="#F00A84FF"/>
+                </ResourceDictionary>
+                <!-- ============ DARK ============ -->
+                <ResourceDictionary x:Key="Dark">
+                    <SolidColorBrush x:Key="WindowBackdropBrush" Color="#EE212126"/>
+                    <SolidColorBrush x:Key="SidebarBrush" Color="#5A2A2A31"/>
+                    <SolidColorBrush x:Key="SurfaceCardBrush" Color="#C22E2E36"/>
+                    <SolidColorBrush x:Key="SurfaceMutedBrush" Color="#12FFFFFF"/>
+                    <SolidColorBrush x:Key="SurfaceHoverBrush" Color="#1EFFFFFF"/>
+                    <SolidColorBrush x:Key="HairlineBrush" Color="#1FFFFFFF"/>
+                    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F2FFFFFF"/>
+                    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#85FFFFFF"/>
+                    <SolidColorBrush x:Key="SlotBrush" Color="#10FFFFFF"/>
+                    <SolidColorBrush x:Key="SlotHoverBrush" Color="#1FFFFFFF"/>
+                    <SolidColorBrush x:Key="MeterIvBrush" Color="#409CFF"/>
+                    <SolidColorBrush x:Key="MeterEvBrush" Color="#FFB340"/>
+                    <SolidColorBrush x:Key="LegalFgBrush" Color="#32D74B"/>
+                    <SolidColorBrush x:Key="LegalBgBrush" Color="#2632D74B"/>
+                    <SolidColorBrush x:Key="IllegalFgBrush" Color="#FF6961"/>
+                    <SolidColorBrush x:Key="IllegalBgBrush" Color="#26FF453A"/>
+                    <SolidColorBrush x:Key="BannerBrush" Color="#E60A6CD6"/>
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+
     <Application.Styles>
         <FluentTheme />
+
+        <!-- ============ Global control restyling (all windows inherit) ============ -->
+        <Style Selector="Button">
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style Selector="TextBox">
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style Selector="ComboBox">
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="10,0,0,0"/>
+        </Style>
+        <Style Selector="NumericUpDown">
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="MinHeight" Value="30"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style Selector="CheckBox">
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style Selector="ListBox">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="Margin" Value="0,1"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+        <Style Selector="TabItem">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="MinHeight" Value="34"/>
+            <Setter Property="Padding" Value="10,4"/>
+        </Style>
+        <Style Selector="Separator">
+            <Setter Property="Background" Value="{DynamicResource HairlineBrush}"/>
+            <Setter Property="Height" Value="1"/>
+        </Style>
+
+        <!-- ============ Reusable classes ============ -->
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="{DynamicResource SurfaceCardBrush}"/>
+            <Setter Property="CornerRadius" Value="14"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="14"/>
+        </Style>
+        <Style Selector="Border.chip">
+            <Setter Property="CornerRadius" Value="999"/>
+            <Setter Property="Padding" Value="10,3"/>
+        </Style>
+        <Style Selector="TextBlock.sectionTitle">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="LetterSpacing" Value="0.8"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Margin" Value="4,0,0,6"/>
+        </Style>
+        <Style Selector="TextBlock.fieldLabel">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+            <Setter Property="Margin" Value="0,0,0,3"/>
+        </Style>
+        <Style Selector="TextBlock.secondary">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        </Style>
+        <Style Selector="ProgressBar.meter">
+            <Setter Property="MinHeight" Value="5"/>
+            <Setter Property="Height" Value="5"/>
+            <Setter Property="CornerRadius" Value="2.5"/>
+            <Setter Property="Background" Value="{DynamicResource SurfaceMutedBrush}"/>
+            <Setter Property="Minimum" Value="0"/>
+            <Setter Property="Maximum" Value="100"/>
+        </Style>
+
+        <!-- Storage slot cards -->
+        <Style Selector="Border.slot">
+            <Setter Property="Background" Value="{DynamicResource SlotBrush}"/>
+            <Setter Property="CornerRadius" Value="12"/>
+            <Setter Property="BorderThickness" Value="2"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Margin" Value="3"/>
+            <Setter Property="Transitions">
+                <Transitions>
+                    <BrushTransition Property="Background" Duration="0:0:0.12"/>
+                </Transitions>
+            </Setter>
+        </Style>
+        <Style Selector="Border.slot:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SlotHoverBrush}"/>
+        </Style>
+        <Style Selector="Border.slot.selected">
+            <Setter Property="BorderBrush" Value="{DynamicResource SystemControlHighlightAccentBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource SlotHoverBrush}"/>
+        </Style>
     </Application.Styles>
 </Application>

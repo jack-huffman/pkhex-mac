@@ -53,6 +53,13 @@ public partial class MainWindow : Window
     public void OnOpenClicked(object? sender, EventArgs e) => _ = OpenAsync();
     public void OnOpenButtonClicked(object? sender, RoutedEventArgs e) => _ = OpenAsync();
     public void OnExportClicked(object? sender, EventArgs e) => _ = ExportAsync();
+    public void OnExportButtonClicked(object? sender, RoutedEventArgs e) => _ = ExportAsync();
+
+    private void OnHeaderPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+            BeginMoveDrag(e);
+    }
 
     private async Task OpenAsync()
     {

@@ -6,7 +6,8 @@
         x:DataType="vm:BagViewModel"
         Title="Bag / Items"
         Width="560" Height="560"
-        WindowStartupLocation="CenterOwner">
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource WindowBackdropBrush}">
     <DockPanel Margin="16">
         <!-- Footer buttons -->
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right"

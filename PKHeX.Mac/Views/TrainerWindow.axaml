@@ -6,7 +6,8 @@
         Title="Trainer Info"
         Width="380" SizeToContent="Height"
         CanResize="False"
-        WindowStartupLocation="CenterOwner">
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource WindowBackdropBrush}">
     <StackPanel Margin="20" Spacing="10">
         <StackPanel>
             <TextBlock Text="Trainer Name" FontSize="11" Opacity="0.55" Margin="0,0,0,2"/>

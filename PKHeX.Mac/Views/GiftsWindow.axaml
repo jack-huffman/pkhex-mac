@@ -5,7 +5,8 @@
         x:DataType="vm:GiftsViewModel"
         Title="Mystery Gift Database"
         Width="560" Height="560"
-        WindowStartupLocation="CenterOwner">
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource WindowBackdropBrush}">
     <DockPanel Margin="16">
         <StackPanel DockPanel.Dock="Top" Spacing="6">
             <TextBlock Text="Search" FontSize="11" Opacity="0.55"/>

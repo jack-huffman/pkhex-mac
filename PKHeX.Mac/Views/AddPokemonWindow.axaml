@@ -6,7 +6,8 @@
         x:DataType="vm:AddPokemonViewModel"
         Title="Add Pokémon from Encounter Database"
         Width="520" Height="520"
-        WindowStartupLocation="CenterOwner">
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource WindowBackdropBrush}">
     <DockPanel Margin="16">
         <StackPanel DockPanel.Dock="Top" Spacing="8">
             <TextBlock Text="Species" FontSize="11" Opacity="0.55"/>

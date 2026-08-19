@@ -17,6 +17,7 @@ public partial class SlotViewModel : ObservableObject
     [ObservableProperty] private Bitmap? _sprite;
     [ObservableProperty] private Bitmap? _ballSprite;
     [ObservableProperty] private string _toolTipText = string.Empty;
+    [ObservableProperty] private string _levelText = string.Empty;
     [ObservableProperty] private bool _isEmpty = true;
     [ObservableProperty] private bool _isShiny;
     [ObservableProperty] private bool _isSelected;
@@ -37,6 +38,7 @@ public partial class SlotViewModel : ObservableObject
             Sprite = null;
             BallSprite = null;
             ToolTipText = string.Empty;
+            LevelText = string.Empty;
             IsEmpty = true;
             IsShiny = false;
             return;
@@ -44,6 +46,7 @@ public partial class SlotViewModel : ObservableObject
 
         IsEmpty = false;
         IsShiny = pk.IsShiny;
+        LevelText = $"{pk.CurrentLevel}";
         Sprite = SpriteService.GetPokemonSprite(pk);
         BallSprite = SpriteService.GetBallSprite(pk.Ball);
 
