@@ -77,6 +77,19 @@ public partial class PokedexViewModel : ObservableObject
         Summary = $"{caught} caught · {seen} seen · {_all.Count} in this game's dex";
     }
 
+    internal SaveFile Save => _sav;
+    internal GameStrings Strings => _strings;
+
+    /// <summary>Only one row's detail is open at a time, like a disclosure list.</summary>
+    internal void CollapseOthers(DexRowViewModel keep)
+    {
+        foreach (var row in _all)
+        {
+            if (!ReferenceEquals(row, keep) && row.IsExpanded)
+                row.IsExpanded = false;
+        }
+    }
+
     internal void Write(ushort species, bool value)
     {
         DexAccessor.SetEntry(_sav, species, value, ShinyToo);
@@ -141,11 +154,20 @@ public partial class PokedexViewModel : ObservableObject
     }
 }
 
-/// <summary>One dex entry: species, sprite, and its seen/caught flags.</summary>
+/// <summary>
+/// One dex entry. Collapsed it shows sprite/name/caught; expanded it exposes every
+/// field the game stores for that species — per-form seen/obtained, genders seen,
+/// shiny, and (base-game entries only) the languages it was obtained in.
+/// </summary>
 public partial class DexRowViewModel : ObservableObject
 {
+    private static readonly string[] GenderNames = ["Male", "Female", "Genderless"];
+    private static readonly string[] LanguageNames =
+        ["Japanese", "English", "French", "Italian", "German", "Spanish", "Korean", "Chinese S", "Chinese T"];
+
     private readonly PokedexViewModel _parent;
     private bool _loading;
+    private bool _detailBuilt;
 
     public DexRowViewModel(PokedexViewModel parent, ushort species, string name)
     {
@@ -153,8 +175,6 @@ public partial class DexRowViewModel : ObservableObject
         Number = species;
         Name = name;
         Sprite = SpriteService.GetSprite(species, 0, 0, 0, shiny: false, EntityContext.None);
-        _loading = true;
-        _loading = false;
     }
 
     public ushort Number { get; }
@@ -164,25 +184,175 @@ public partial class DexRowViewModel : ObservableObject
 
     [ObservableProperty] private bool _seen;
     [ObservableProperty] private bool _caught;
+    [ObservableProperty] private bool _isExpanded;
+    [ObservableProperty] private bool _shinySeen;
+    [ObservableProperty] private bool _supportsDetail;
+    [ObservableProperty] private bool _hasLanguages;
+    [ObservableProperty] private bool _hasPerFormObtained;
+    [ObservableProperty] private string _detailNote = string.Empty;
 
-    /// <summary>Reads this entry's state back from the save.</summary>
+    public ObservableCollection<DexFormRowViewModel> Forms { get; } = [];
+    public ObservableCollection<DexFlagViewModel> Genders { get; } = [];
+    public ObservableCollection<DexFlagViewModel> Languages { get; } = [];
+
+    /// <summary>Reads this entry's headline state from the save.</summary>
     internal void Reload(SaveFile sav)
     {
         _loading = true;
         Seen = DexAccessor.GetSeen(sav, Number);
         Caught = DexAccessor.GetCaught(sav, Number);
+        SupportsDetail = Dex9Detail.IsSupported(sav, Number);
+        if (sav is SAV9SV sv && SupportsDetail)
+            ShinySeen = Dex9Detail.GetShinySeen(sv, Number);
         _loading = false;
+        if (_detailBuilt)
+            BuildDetail(); // keep an open panel in sync after bulk edits
+    }
+
+    partial void OnIsExpandedChanged(bool value)
+    {
+        if (!value)
+            return;
+        _parent.CollapseOthers(this);
+        BuildDetail();
+    }
+
+    /// <summary>Populates the expanded panel from the save, on first open and after bulk changes.</summary>
+    private void BuildDetail()
+    {
+        Forms.Clear();
+        Genders.Clear();
+        Languages.Clear();
+        _detailBuilt = true;
+
+        if (_parent.Save is not SAV9SV sv || !SupportsDetail)
+        {
+            DetailNote = "This save format does not expose per-entry Pokédex details.";
+            return;
+        }
+
+        HasLanguages = Dex9Detail.HasLanguageFlags(sv, Number);
+        HasPerFormObtained = Dex9Detail.HasPerFormObtained(sv, Number);
+        DetailNote = HasPerFormObtained
+            ? "DLC entry: forms track seen and obtained separately."
+            : "Base-game entry: obtained is stored once for the whole species, not per form.";
+
+        var strings = _parent.Strings;
+        var formNames = FormConverter.GetFormList(Number, strings.types, strings.forms,
+            GameInfo.GenderSymbolUnicode, EntityContext.Gen9);
+        for (byte f = 0; f < formNames.Length && f < 32; f++)
+        {
+            var label = string.IsNullOrWhiteSpace(formNames[f]) ? $"Form {f}" : formNames[f];
+            Forms.Add(new DexFormRowViewModel(sv, Number, f, label));
+        }
+
+        for (byte g = 0; g < GenderNames.Length; g++)
+        {
+            var gender = g;
+            Genders.Add(new DexFlagViewModel(
+                GenderNames[g],
+                Dex9Detail.GetGenderSeen(sv, Number, gender),
+                v => Dex9Detail.SetGenderSeen(sv, Number, gender, v)));
+        }
+
+        if (HasLanguages)
+        {
+            for (int i = 0; i < LanguageNames.Length; i++)
+            {
+                var index = i;
+                Languages.Add(new DexFlagViewModel(
+                    LanguageNames[i],
+                    Dex9Detail.GetLanguage(sv, Number, index),
+                    v => Dex9Detail.SetLanguage(sv, Number, index, v)));
+            }
+        }
     }
 
     partial void OnCaughtChanged(bool value)
     {
         if (_loading)
             return;
-        // Caught implies seen; clearing caught leaves the entry unregistered.
         _parent.Write(Number, value);
         _loading = true;
         Seen = value || Seen;
         _loading = false;
         _parent.RefreshSummary();
+        if (_detailBuilt)
+            BuildDetail();
+    }
+
+    partial void OnShinySeenChanged(bool value)
+    {
+        if (_loading || _parent.Save is not SAV9SV sv || !SupportsDetail)
+            return;
+        Dex9Detail.SetShinySeen(sv, Number, value);
+        _parent.Write(Number, Caught); // reuse the change notification
+    }
+}
+
+/// <summary>A per-form row inside an expanded dex entry.</summary>
+public partial class DexFormRowViewModel : ObservableObject
+{
+    private readonly SAV9SV _sav;
+    private readonly ushort _species;
+    private readonly byte _form;
+    private bool _loading;
+
+    public DexFormRowViewModel(SAV9SV sav, ushort species, byte form, string label)
+    {
+        _sav = sav;
+        _species = species;
+        _form = form;
+        Label = label;
+        _loading = true;
+        Seen = Dex9Detail.GetFormSeen(sav, species, form);
+        Obtained = Dex9Detail.GetFormObtained(sav, species, form);
+        _loading = false;
+    }
+
+    public string Label { get; }
+
+    [ObservableProperty] private bool _seen;
+    [ObservableProperty] private bool _obtained;
+
+    partial void OnSeenChanged(bool value)
+    {
+        if (_loading)
+            return;
+        Dex9Detail.SetFormSeen(_sav, _species, _form, value);
+    }
+
+    partial void OnObtainedChanged(bool value)
+    {
+        if (_loading)
+            return;
+        Dex9Detail.SetFormObtained(_sav, _species, _form, value);
+    }
+}
+
+/// <summary>A single labelled dex flag (gender seen, language obtained).</summary>
+public partial class DexFlagViewModel : ObservableObject
+{
+    private readonly Action<bool> _write;
+    private bool _loading;
+
+    public DexFlagViewModel(string label, bool value, Action<bool> write)
+    {
+        Label = label;
+        _write = write;
+        _loading = true;
+        Value = value;
+        _loading = false;
+    }
+
+    public string Label { get; }
+
+    [ObservableProperty] private bool _value;
+
+    partial void OnValueChanged(bool value)
+    {
+        if (_loading)
+            return;
+        _write(value);
     }
 }

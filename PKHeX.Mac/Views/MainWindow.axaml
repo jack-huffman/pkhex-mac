@@ -39,6 +39,9 @@
                     <NativeMenuItem Header="Add Pokémon from Database…" Gesture="Cmd+D" Click="OnAddPokemonClicked"/>
                     <NativeMenuItem Header="Mystery Gift Database…" Gesture="Cmd+G" Click="OnGiftsClicked"/>
                     <NativeMenuItemSeparator/>
+                    <NativeMenuItem Header="Export Box to Folder…" Click="OnDumpBoxClicked"/>
+                    <NativeMenuItem Header="Import Folder into Box…" Click="OnLoadFolderClicked"/>
+                    <NativeMenuItemSeparator/>
                     <NativeMenuItem Header="Sort Current Box by Species" Click="OnSortBoxClicked"/>
                     <NativeMenuItem Header="Clear Current Box…" Click="OnClearBoxClicked"/>
                 </NativeMenu>
@@ -55,6 +58,7 @@
         <DataTemplate x:Key="SlotTemplate" x:DataType="vm:SlotViewModel">
             <Border Classes="slot" Classes.selected="{Binding IsSelected}"
                     Classes.dragover="{Binding IsDragOver}"
+                    Classes.multi="{Binding IsMultiSelected}"
                     Width="94" Height="82"
                     PointerPressed="OnSlotPressed"
                     PointerMoved="OnSlotPointerMoved"
@@ -258,6 +262,24 @@
                                     </ItemsControl>
                                 </StackPanel>
 
+                                <!-- Multi-selection actions -->
+                                <Border Classes="card" Padding="10" IsVisible="{Binding HasMultiSelection}">
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Left" VerticalAlignment="Center" FontSize="12">
+                                            <Run Text="{Binding MultiSelectCount}"/><Run Text=" selected"/>
+                                        </TextBlock>
+                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8"
+                                                    HorizontalAlignment="Right">
+                                            <Button Content="Export selected…" FontSize="11" Padding="8,3"
+                                                    Click="OnDumpSelectionClicked"/>
+                                            <Button Content="Delete" FontSize="11" Padding="8,3"
+                                                    Command="{Binding DeleteSelectedCommand}"/>
+                                            <Button Content="Clear selection" FontSize="11" Padding="8,3"
+                                                    Command="{Binding ClearMultiSelectionCommand}"/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
+
                                 <!-- Box card -->
                                 <Border Classes="card" Padding="12">
                                     <StackPanel Spacing="8">
@@ -269,6 +291,10 @@
                                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             <Button Grid.Column="2" Content="›" FontSize="15" Padding="10,2"
                                                     Command="{Binding NextBoxCommand}"/>
+                                            <Button Grid.Column="1" Content="Select all" FontSize="10" Padding="8,2"
+                                                    HorizontalAlignment="Right"
+                                                    ToolTip.Tip="Select every Pokémon in this box (⇧-click or ⌘-click slots to adjust)"
+                                                    Command="{Binding SelectWholeBoxCommand}"/>
                                         </Grid>
                                         <ItemsControl ItemsSource="{Binding BoxSlots}" HorizontalAlignment="Center"
                                                       ItemTemplate="{StaticResource SlotTemplate}">
@@ -426,19 +452,93 @@
                             <ListBox ItemsSource="{Binding Rows}" IsVisible="{Binding IsSupported}">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate x:DataType="vm:DexRowViewModel">
-                                        <Grid ColumnDefinitions="62,44,*,90,90" ColumnSpacing="10">
-                                            <TextBlock Grid.Column="0" Text="{Binding NumberText}" FontSize="11"
-                                                       Classes="secondary" VerticalAlignment="Center"
-                                                       FontFamily="Menlo, monospace"/>
-                                            <Image Grid.Column="1" Source="{Binding Sprite}" Width="40" Height="34"
-                                                   RenderOptions.BitmapInterpolationMode="None"/>
-                                            <TextBlock Grid.Column="2" Text="{Binding Name}" FontSize="13"
-                                                       VerticalAlignment="Center"/>
-                                            <TextBlock Grid.Column="3" Text="Seen" FontSize="11" Classes="secondary"
-                                                       VerticalAlignment="Center" IsVisible="{Binding Seen}"/>
-                                            <CheckBox Grid.Column="4" Content="Caught" FontSize="12"
-                                                      IsChecked="{Binding Caught, Mode=TwoWay}"/>
-                                        </Grid>
+                                        <StackPanel>
+                                            <!-- Collapsed summary; the arrow toggles the detail panel -->
+                                            <Grid ColumnDefinitions="24,62,44,*,70,80,90" ColumnSpacing="10">
+                                                <ToggleButton Grid.Column="0" Classes="disclose"
+                                                              IsChecked="{Binding IsExpanded, Mode=TwoWay}"
+                                                              IsVisible="{Binding SupportsDetail}"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding NumberText}" FontSize="11"
+                                                           Classes="secondary" VerticalAlignment="Center"
+                                                           FontFamily="Menlo, monospace"/>
+                                                <Image Grid.Column="2" Source="{Binding Sprite}" Width="40" Height="34"
+                                                       RenderOptions.BitmapInterpolationMode="None"/>
+                                                <TextBlock Grid.Column="3" Text="{Binding Name}" FontSize="13"
+                                                           VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="4" Text="Seen" FontSize="11" Classes="secondary"
+                                                           VerticalAlignment="Center" IsVisible="{Binding Seen}"/>
+                                                <CheckBox Grid.Column="5" Content="★" FontSize="12"
+                                                          ToolTip.Tip="Shiny registered"
+                                                          IsVisible="{Binding SupportsDetail}"
+                                                          IsChecked="{Binding ShinySeen, Mode=TwoWay}"/>
+                                                <CheckBox Grid.Column="6" Content="Caught" FontSize="12"
+                                                          IsChecked="{Binding Caught, Mode=TwoWay}"/>
+                                            </Grid>
+
+                                            <!-- Everything the game stores for this species -->
+                                            <Border IsVisible="{Binding IsExpanded}" CornerRadius="10" Padding="12"
+                                                    Margin="34,8,0,6"
+                                                    Background="{DynamicResource SurfaceMutedBrush}">
+                                                <StackPanel Spacing="10">
+                                                    <TextBlock Text="{Binding DetailNote}" FontSize="10"
+                                                               Classes="secondary" TextWrapping="Wrap"/>
+
+                                                    <StackPanel Spacing="4">
+                                                        <TextBlock Classes="sectionTitle" Text="FORMS" Margin="0"/>
+                                                        <ItemsControl ItemsSource="{Binding Forms}">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:DexFormRowViewModel">
+                                                                    <Grid ColumnDefinitions="200,90,100" ColumnSpacing="10" Margin="0,1">
+                                                                        <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="12"
+                                                                                   VerticalAlignment="Center"
+                                                                                   TextTrimming="CharacterEllipsis"/>
+                                                                        <CheckBox Grid.Column="1" Content="Seen" FontSize="11"
+                                                                                  IsChecked="{Binding Seen, Mode=TwoWay}"/>
+                                                                        <CheckBox Grid.Column="2" Content="Obtained" FontSize="11"
+                                                                                  IsChecked="{Binding Obtained, Mode=TwoWay}"/>
+                                                                    </Grid>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </StackPanel>
+
+                                                    <StackPanel Spacing="4">
+                                                        <TextBlock Classes="sectionTitle" Text="GENDERS SEEN" Margin="0"/>
+                                                        <ItemsControl ItemsSource="{Binding Genders}">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate>
+                                                                    <StackPanel Orientation="Horizontal" Spacing="16"/>
+                                                                </ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:DexFlagViewModel">
+                                                                    <CheckBox Content="{Binding Label}" FontSize="11"
+                                                                              IsChecked="{Binding Value, Mode=TwoWay}"/>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </StackPanel>
+
+                                                    <StackPanel Spacing="4" IsVisible="{Binding HasLanguages}">
+                                                        <TextBlock Classes="sectionTitle" Text="LANGUAGES OBTAINED" Margin="0"/>
+                                                        <ItemsControl ItemsSource="{Binding Languages}">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate>
+                                                                    <WrapPanel/>
+                                                                </ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:DexFlagViewModel">
+                                                                    <CheckBox Content="{Binding Label}" FontSize="11"
+                                                                              Margin="0,0,16,2"
+                                                                              IsChecked="{Binding Value, Mode=TwoWay}"/>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Border>
+                                        </StackPanel>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>

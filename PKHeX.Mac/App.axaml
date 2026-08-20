@@ -161,6 +161,26 @@
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
 
+        <!-- Disclosure triangle for expandable rows -->
+        <Style Selector="ToggleButton.disclose">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="4,0"/>
+            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="Width" Value="22"/>
+            <Setter Property="Content" Value="▶"/>
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        </Style>
+        <Style Selector="ToggleButton.disclose:checked">
+            <Setter Property="Content" Value="▼"/>
+        </Style>
+
+        <!-- Multi-selected storage slots -->
+        <Style Selector="Border.slot.multi">
+            <Setter Property="BorderBrush" Value="{DynamicResource MeterEvBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource SlotHoverBrush}"/>
+        </Style>
+
         <!-- Sidebar navigation buttons -->
         <Style Selector="Button.nav">
             <Setter Property="Background" Value="Transparent"/>

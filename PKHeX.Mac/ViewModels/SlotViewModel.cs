@@ -23,6 +23,7 @@ public partial class SlotViewModel : ObservableObject
     [ObservableProperty] private bool _isShiny;
     [ObservableProperty] private bool _isSelected;
     [ObservableProperty] private bool _isDragOver;
+    [ObservableProperty] private bool _isMultiSelected;
 
     public PKM? Pokemon { get; private set; }
 

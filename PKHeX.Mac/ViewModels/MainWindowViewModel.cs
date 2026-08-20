@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -632,6 +634,241 @@ public partial class MainWindowViewModel : ViewModelBase
         TrainerIds = $"TID {_sav.DisplayTID:D6} · SID {_sav.DisplaySID:D4}";
         PlayTime = _sav.PlayTimeString;
         StatusText = "Trainer info updated. Remember to export the save (⌘S).";
+    }
+
+    // =====================================================================
+    // Multi-selection
+    // =====================================================================
+
+    private readonly List<SlotViewModel> _multiSelection = [];
+    private int _selectionAnchor = -1;
+
+    [ObservableProperty] private int _multiSelectCount;
+    [ObservableProperty] private bool _hasMultiSelection;
+
+    /// <summary>
+    /// Extends the selection from the anchor slot to <paramref name="slot"/> (shift-click).
+    /// </summary>
+    public void SelectRangeTo(SlotViewModel slot)
+    {
+        if (slot.IsParty || _selectionAnchor < 0)
+        {
+            ToggleInSelection(slot);
+            return;
+        }
+        ClearMultiSelection();
+        var (from, to) = _selectionAnchor <= slot.Slot ? (_selectionAnchor, slot.Slot) : (slot.Slot, _selectionAnchor);
+        for (int i = from; i <= to && i < BoxSlots.Count; i++)
+        {
+            BoxSlots[i].IsMultiSelected = true;
+            _multiSelection.Add(BoxSlots[i]);
+        }
+        RefreshMultiSelectionState();
+    }
+
+    /// <summary>Adds or removes a single slot from the selection (⌘-click).</summary>
+    public void ToggleInSelection(SlotViewModel slot)
+    {
+        if (slot.IsParty)
+            return;
+        if (slot.IsMultiSelected)
+        {
+            slot.IsMultiSelected = false;
+            _multiSelection.Remove(slot);
+        }
+        else
+        {
+            slot.IsMultiSelected = true;
+            _multiSelection.Add(slot);
+            _selectionAnchor = slot.Slot;
+        }
+        RefreshMultiSelectionState();
+    }
+
+    public void SetSelectionAnchor(SlotViewModel slot)
+    {
+        if (!slot.IsParty)
+            _selectionAnchor = slot.Slot;
+    }
+
+    [RelayCommand]
+    public void ClearMultiSelection()
+    {
+        foreach (var s in _multiSelection)
+            s.IsMultiSelected = false;
+        _multiSelection.Clear();
+        RefreshMultiSelectionState();
+    }
+
+    private void RefreshMultiSelectionState()
+    {
+        MultiSelectCount = _multiSelection.Count;
+        HasMultiSelection = MultiSelectCount > 0;
+    }
+
+    /// <summary>The occupied slots currently multi-selected, ordered by slot index.</summary>
+    private List<SlotViewModel> SelectedOccupied() =>
+        _multiSelection.Where(s => !s.IsEmpty).OrderBy(s => s.Slot).ToList();
+
+    [RelayCommand]
+    public void DeleteSelected()
+    {
+        if (_sav is null || _multiSelection.Count == 0)
+            return;
+        var n = 0;
+        foreach (var slot in SelectedOccupied())
+        {
+            _sav.SetBoxSlotAtIndex(_sav.BlankPKM, CurrentBox, slot.Slot);
+            n++;
+        }
+        ClearMultiSelection();
+        RefreshSlotViews();
+        Detail.Load(null);
+        StatusText = $"Deleted {n} Pokémon from {CurrentBoxName}.";
+    }
+
+    /// <summary>Moves every selected Pokémon into the first free slots of another box.</summary>
+    public void MoveSelectionToBox(int targetBox)
+    {
+        if (_sav is null || !_sav.HasBox || (uint)targetBox >= _sav.BoxCount || targetBox == CurrentBox)
+            return;
+        var moved = 0;
+        foreach (var slot in SelectedOccupied())
+        {
+            var pk = _sav.GetBoxSlotAtIndex(CurrentBox, slot.Slot);
+            if (pk.Species == 0)
+                continue;
+            var empty = -1;
+            for (int i = 0; i < _sav.BoxSlotCount; i++)
+            {
+                if (_sav.GetBoxSlotAtIndex(targetBox, i).Species == 0)
+                {
+                    empty = i;
+                    break;
+                }
+            }
+            if (empty < 0)
+                break; // target full
+            var clone = pk.Clone();
+            clone.RefreshChecksum();
+            _sav.SetBoxSlotAtIndex(clone, targetBox, empty);
+            _sav.SetBoxSlotAtIndex(_sav.BlankPKM, CurrentBox, slot.Slot);
+            moved++;
+        }
+        ClearMultiSelection();
+        RefreshSlotViews();
+        var boxName = (uint)targetBox < BoxNames.Count ? BoxNames[targetBox] : $"Box {targetBox + 1}";
+        StatusText = moved == 0 ? $"{boxName} is full." : $"Moved {moved} Pokémon to {boxName}.";
+    }
+
+    [RelayCommand]
+    public void SelectWholeBox()
+    {
+        ClearMultiSelection();
+        foreach (var slot in BoxSlots.Where(s => !s.IsEmpty))
+        {
+            slot.IsMultiSelected = true;
+            _multiSelection.Add(slot);
+        }
+        RefreshMultiSelectionState();
+    }
+
+    // =====================================================================
+    // Folder import / export
+    // =====================================================================
+
+    /// <summary>Writes every Pokémon in the current box (or the selection) to a folder.</summary>
+    public int DumpToFolder(string folder, bool selectionOnly)
+    {
+        if (_sav is null || !_sav.HasBox)
+            return 0;
+        var written = 0;
+        var slots = selectionOnly && _multiSelection.Count > 0
+            ? SelectedOccupied().Select(s => s.Slot)
+            : Enumerable.Range(0, _sav.BoxSlotCount);
+
+        foreach (var index in slots)
+        {
+            var pk = _sav.GetBoxSlotAtIndex(CurrentBox, index);
+            if (pk.Species == 0)
+                continue;
+            try
+            {
+                var data = new byte[pk.SIZE_PARTY];
+                pk.WriteDecryptedDataParty(data);
+                var name = PathUtil.CleanFileName(pk.FileName);
+                var path = Path.Combine(folder, name);
+                // Never clobber: same species+nickname can repeat in a box.
+                var suffix = 1;
+                while (File.Exists(path))
+                {
+                    var stem = Path.GetFileNameWithoutExtension(name);
+                    path = Path.Combine(folder, $"{stem} ({++suffix}){Path.GetExtension(name)}");
+                }
+                File.WriteAllBytes(path, data);
+                written++;
+            }
+            catch
+            {
+                // skip unwritable entries rather than aborting the dump
+            }
+        }
+        StatusText = $"Exported {written} Pokémon to {Path.GetFileName(folder)}.";
+        return written;
+    }
+
+    /// <summary>Loads every readable entity file in a folder into the current box's free slots.</summary>
+    public (int loaded, int skipped) LoadFromFolder(string folder)
+    {
+        if (_sav is null || !_sav.HasBox)
+            return (0, 0);
+        int loaded = 0, skipped = 0;
+        var files = Directory.EnumerateFiles(folder).OrderBy(f => f).ToList();
+        var next = 0;
+
+        foreach (var file in files)
+        {
+            if (next >= _sav.BoxSlotCount)
+                break;
+            PKM? pk;
+            try
+            {
+                var data = File.ReadAllBytes(file);
+                var prefer = EntityFileExtension.GetContextFromExtension(file, _sav.Context);
+                pk = EntityFormat.GetFromBytes(data, prefer);
+            }
+            catch
+            {
+                pk = null;
+            }
+            if (pk is null || pk.Species == 0)
+            {
+                skipped++;
+                continue;
+            }
+            if (pk.GetType() != _sav.PKMType)
+            {
+                pk = EntityConverter.ConvertToType(pk, _sav.PKMType, out _);
+                if (pk is null)
+                {
+                    skipped++;
+                    continue;
+                }
+            }
+            // Fill the next empty slot.
+            while (next < _sav.BoxSlotCount && _sav.GetBoxSlotAtIndex(CurrentBox, next).Species != 0)
+                next++;
+            if (next >= _sav.BoxSlotCount)
+                break;
+            pk.RefreshChecksum();
+            _sav.SetBoxSlotAtIndex(pk, CurrentBox, next);
+            loaded++;
+            next++;
+        }
+        RefreshSlotViews();
+        StatusText = $"Imported {loaded} Pokémon into {CurrentBoxName}"
+                     + (skipped > 0 ? $" ({skipped} file(s) skipped)" : string.Empty) + ".";
+        return (loaded, skipped);
     }
 
     // =====================================================================

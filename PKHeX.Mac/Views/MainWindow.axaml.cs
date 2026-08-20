@@ -132,6 +132,21 @@ public partial class MainWindow : Window
         var point = e.GetCurrentPoint(this);
         if (point.Properties.IsLeftButtonPressed)
         {
+            // Shift extends a range, Cmd toggles one slot; a plain click resets.
+            var mods = e.KeyModifiers;
+            if (mods.HasFlag(KeyModifiers.Shift))
+            {
+                VM.SelectRangeTo(slot);
+                return;
+            }
+            if (mods.HasFlag(KeyModifiers.Meta))
+            {
+                VM.ToggleInSelection(slot);
+                return;
+            }
+
+            VM.ClearMultiSelection();
+            VM.SetSelectionAnchor(slot);
             VM.SelectSlot(slot);
             if (!slot.IsEmpty)
             {
@@ -435,6 +450,51 @@ public partial class MainWindow : Window
         if (!_dragging || sender is not Control { DataContext: string name })
             return;
         _dragOverBoxIndex = VM.BoxNames.IndexOf(name);
+    }
+
+    public void OnDumpBoxClicked(object? sender, EventArgs e) => _ = DumpBoxAsync(selectionOnly: false);
+    public void OnDumpSelectionClicked(object? sender, RoutedEventArgs e) => _ = DumpBoxAsync(selectionOnly: true);
+    public void OnLoadFolderClicked(object? sender, EventArgs e) => _ = LoadFolderAsync();
+
+    private async Task DumpBoxAsync(bool selectionOnly)
+    {
+        if (VM.SAV is null)
+        {
+            await ShowError("No Save Loaded", "Open a save file first (⌘O).");
+            return;
+        }
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = selectionOnly ? "Export Selected Pokémon To…" : "Export Box To…",
+            AllowMultiple = false,
+        });
+        if (folders.Count == 0 || folders[0].TryGetLocalPath() is not { } dir)
+            return;
+        var written = VM.DumpToFolder(dir, selectionOnly);
+        if (written == 0)
+            await ShowError("Nothing Exported", "There were no Pokémon to write.");
+    }
+
+    private async Task LoadFolderAsync()
+    {
+        if (VM.SAV is null)
+        {
+            await ShowError("No Save Loaded", "Open a save file first (⌘O).");
+            return;
+        }
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Import Pokémon Files From…",
+            AllowMultiple = false,
+        });
+        if (folders.Count == 0 || folders[0].TryGetLocalPath() is not { } dir)
+            return;
+        var (loaded, skipped) = VM.LoadFromFolder(dir);
+        if (loaded == 0)
+            await ShowError("Nothing Imported",
+                skipped > 0
+                    ? $"None of the {skipped} file(s) could be read as Pokémon for this save."
+                    : "That folder contains no Pokémon files.");
     }
 
     private void OnCopyReportClicked(object? sender, RoutedEventArgs e)
