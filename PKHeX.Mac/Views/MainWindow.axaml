@@ -1297,7 +1297,7 @@
                                                             <Grid ColumnDefinitions="*,*" ColumnSpacing="14">
 
                                                                 <!-- Left: identity, then matchups by multiplier -->
-                                                                <StackPanel Grid.Column="0" Spacing="7">
+                                                                <StackPanel Grid.Column="0" Spacing="5">
                                                                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                                                                         <Panel Grid.Column="0" Width="72" Height="72"
                                                                                VerticalAlignment="Top">
@@ -1334,19 +1334,19 @@
                                                                         </StackPanel>
                                                                     </Grid>
 
-                                                                    <StackPanel Spacing="3" IsVisible="{Binding HasResistances}">
-                                                                        <TextBlock Text="Resistances" FontSize="11"
-                                                                                   FontWeight="SemiBold"/>
+                                                                    <StackPanel Spacing="2" IsVisible="{Binding HasResistances}">
+                                                                        <TextBlock Text="RESISTANCES" FontSize="9"
+                                                                                   FontWeight="SemiBold" Classes="secondary"/>
                                                                         <ItemsControl ItemsSource="{Binding Resistances}">
                                                                             <ItemsControl.ItemTemplate>
                                                                                 <DataTemplate x:DataType="vm:MatchupGroupViewModel">
-                                                                                    <StackPanel Orientation="Horizontal" Spacing="6"
-                                                                                                Margin="0,0,0,3"
+                                                                                    <StackPanel Orientation="Horizontal" Spacing="5"
+                                                                                                Margin="0,0,0,2"
                                                                                                 ToolTip.Tip="{Binding Tooltip}">
-                                                                                        <Border Width="30" Height="30"
-                                                                                                CornerRadius="15"
+                                                                                        <Border Width="22" Height="22"
+                                                                                                CornerRadius="11"
                                                                                                 Background="{DynamicResource SurfaceMutedBrush}">
-                                                                                            <TextBlock Text="{Binding Label}" FontSize="10"
+                                                                                            <TextBlock Text="{Binding Label}" FontSize="9"
                                                                                                        FontWeight="SemiBold"
                                                                                                        Foreground="{Binding LabelBrush}"
                                                                                                        HorizontalAlignment="Center"
@@ -1360,13 +1360,13 @@
                                                                                             </ItemsControl.ItemsPanel>
                                                                                             <ItemsControl.ItemTemplate>
                                                                                                 <DataTemplate x:DataType="vm:TypeBadgeViewModel">
-                                                                                                    <Panel Margin="0,1,3,1"
+                                                                                                    <Panel Margin="0,1,2,1"
                                                                                                            ToolTip.Tip="{Binding TypeName}">
                                                                                                         <Image Source="{Binding Icon}"
-                                                                                                               Width="26" Height="26"
+                                                                                                               Width="20" Height="20"
                                                                                                                IsVisible="{Binding HasIcon}"/>
-                                                                                                        <Border Width="26" Height="26"
-                                                                                                                CornerRadius="13"
+                                                                                                        <Border Width="20" Height="20"
+                                                                                                                CornerRadius="10"
                                                                                                                 Background="{Binding Brush}"
                                                                                                                 IsVisible="{Binding !HasIcon}"/>
                                                                                                     </Panel>
@@ -1379,19 +1379,19 @@
                                                                         </ItemsControl>
                                                                     </StackPanel>
 
-                                                                    <StackPanel Spacing="3" IsVisible="{Binding HasWeaknesses}">
-                                                                        <TextBlock Text="Weaknesses" FontSize="11"
-                                                                                   FontWeight="SemiBold"/>
+                                                                    <StackPanel Spacing="2" IsVisible="{Binding HasWeaknesses}">
+                                                                        <TextBlock Text="WEAKNESSES" FontSize="9"
+                                                                                   FontWeight="SemiBold" Classes="secondary"/>
                                                                         <ItemsControl ItemsSource="{Binding Weaknesses}">
                                                                             <ItemsControl.ItemTemplate>
                                                                                 <DataTemplate x:DataType="vm:MatchupGroupViewModel">
-                                                                                    <StackPanel Orientation="Horizontal" Spacing="6"
-                                                                                                Margin="0,0,0,3"
+                                                                                    <StackPanel Orientation="Horizontal" Spacing="5"
+                                                                                                Margin="0,0,0,2"
                                                                                                 ToolTip.Tip="{Binding Tooltip}">
-                                                                                        <Border Width="30" Height="30"
-                                                                                                CornerRadius="15"
+                                                                                        <Border Width="22" Height="22"
+                                                                                                CornerRadius="11"
                                                                                                 Background="{DynamicResource SurfaceMutedBrush}">
-                                                                                            <TextBlock Text="{Binding Label}" FontSize="10"
+                                                                                            <TextBlock Text="{Binding Label}" FontSize="9"
                                                                                                        FontWeight="SemiBold"
                                                                                                        Foreground="{Binding LabelBrush}"
                                                                                                        HorizontalAlignment="Center"
@@ -1405,13 +1405,13 @@
                                                                                             </ItemsControl.ItemsPanel>
                                                                                             <ItemsControl.ItemTemplate>
                                                                                                 <DataTemplate x:DataType="vm:TypeBadgeViewModel">
-                                                                                                    <Panel Margin="0,1,3,1"
+                                                                                                    <Panel Margin="0,1,2,1"
                                                                                                            ToolTip.Tip="{Binding TypeName}">
                                                                                                         <Image Source="{Binding Icon}"
-                                                                                                               Width="26" Height="26"
+                                                                                                               Width="20" Height="20"
                                                                                                                IsVisible="{Binding HasIcon}"/>
-                                                                                                        <Border Width="26" Height="26"
-                                                                                                                CornerRadius="13"
+                                                                                                        <Border Width="20" Height="20"
+                                                                                                                CornerRadius="10"
                                                                                                                 Background="{Binding Brush}"
                                                                                                                 IsVisible="{Binding !HasIcon}"/>
                                                                                                     </Panel>
@@ -1426,10 +1426,20 @@
                                                                 </StackPanel>
 
                                                                 <!-- Right: moves, laid out as on the Moves tab -->
-                                                                <StackPanel Grid.Column="1" Spacing="4"
-                                                                            IsVisible="{Binding HasMoves}">
-                                                                    <TextBlock Text="Moves" FontSize="11" FontWeight="SemiBold"/>
+                                                                <DockPanel Grid.Column="1"
+                                                                           IsVisible="{Binding HasMoves}">
+                                                                    <TextBlock DockPanel.Dock="Top" Text="MOVES" FontSize="9"
+                                                                               FontWeight="SemiBold" Classes="secondary"
+                                                                               Margin="0,0,0,4"/>
+                                                                    <!-- One column of equal-height cells, so the rows
+                                                                         stretch to fill the tile rather than bunching
+                                                                         at the top -->
                                                                     <ItemsControl ItemsSource="{Binding Moves}">
+                                                                        <ItemsControl.ItemsPanel>
+                                                                            <ItemsPanelTemplate>
+                                                                                <UniformGrid Columns="1"/>
+                                                                            </ItemsPanelTemplate>
+                                                                        </ItemsControl.ItemsPanel>
                                                                         <ItemsControl.ItemTemplate>
                                                                             <DataTemplate x:DataType="vm:MoveChoice">
                                                                                 <Grid ColumnDefinitions="*,24,24,30,32"
@@ -1470,7 +1480,7 @@
                                                                             </DataTemplate>
                                                                         </ItemsControl.ItemTemplate>
                                                                     </ItemsControl>
-                                                                </StackPanel>
+                                                                </DockPanel>
                                                             </Grid>
                                                         </Border>
                                                     </DataTemplate>
