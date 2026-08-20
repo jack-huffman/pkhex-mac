@@ -1294,46 +1294,49 @@
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate x:DataType="vm:TeamMemberViewModel">
                                                         <Border Classes="card" Padding="12" Margin="0,0,8,8">
-                                                            <Grid ColumnDefinitions="*,*" ColumnSpacing="14">
+                                                            <Grid RowDefinitions="Auto,*" ColumnDefinitions="*,*"
+                                                                  ColumnSpacing="14" RowSpacing="9">
 
-                                                                <!-- Left: identity, then matchups by multiplier -->
-                                                                <StackPanel Grid.Column="0" Spacing="5">
-                                                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                                                                        <Panel Grid.Column="0" Width="72" Height="72"
-                                                                               VerticalAlignment="Top">
-                                                                            <Image Source="{Binding Artwork}" Stretch="Uniform"
-                                                                                   RenderOptions.BitmapInterpolationMode="HighQuality"/>
-                                                                        </Panel>
-                                                                        <StackPanel Grid.Column="1" Spacing="3"
-                                                                                    VerticalAlignment="Center">
-                                                                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                                                                <TextBlock Text="{Binding SpeciesName}" FontSize="14"
-                                                                                           FontWeight="Bold"/>
-                                                                                <TextBlock Text="{Binding LevelText}" FontSize="10"
-                                                                                           Classes="secondary"
-                                                                                           VerticalAlignment="Center"/>
-                                                                            </StackPanel>
-                                                                            <StackPanel Orientation="Horizontal" Spacing="5">
-                                                                                <Image Source="{Binding Type1Icon}" Width="20" Height="20"
-                                                                                       IsVisible="{Binding HasType1Icon}"
-                                                                                       ToolTip.Tip="{Binding Type1Name}"/>
-                                                                                <Image Source="{Binding Type2Icon}" Width="20" Height="20"
-                                                                                       IsVisible="{Binding HasType2Icon}"
-                                                                                       ToolTip.Tip="{Binding Type2Name}"/>
-                                                                            </StackPanel>
-                                                                            <StackPanel Orientation="Horizontal" Spacing="5">
-                                                                                <TextBlock Text="{Binding AbilityName}" FontSize="10"
-                                                                                           Classes="secondary"
-                                                                                           TextTrimming="CharacterEllipsis"/>
-                                                                                <TextBlock Text="★" FontSize="9"
-                                                                                           IsVisible="{Binding AbilityMatters}"
-                                                                                           Foreground="{DynamicResource LegalFgBrush}"
-                                                                                           VerticalAlignment="Center"
-                                                                                           ToolTip.Tip="This ability changes incoming damage and is included below."/>
-                                                                            </StackPanel>
+                                                                <!-- Header: identity across the full card width -->
+                                                                <Grid Grid.Row="0" Grid.ColumnSpan="2"
+                                                                      ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                                                    <Panel Grid.Column="0" Width="72" Height="72"
+                                                                           VerticalAlignment="Top">
+                                                                        <Image Source="{Binding Artwork}" Stretch="Uniform"
+                                                                               RenderOptions.BitmapInterpolationMode="HighQuality"/>
+                                                                    </Panel>
+                                                                    <StackPanel Grid.Column="1" Spacing="3"
+                                                                                VerticalAlignment="Center">
+                                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                            <TextBlock Text="{Binding SpeciesName}" FontSize="14"
+                                                                                       FontWeight="Bold"/>
+                                                                            <TextBlock Text="{Binding LevelText}" FontSize="10"
+                                                                                       Classes="secondary"
+                                                                                       VerticalAlignment="Center"/>
                                                                         </StackPanel>
-                                                                    </Grid>
+                                                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                                                            <Image Source="{Binding Type1Icon}" Width="20" Height="20"
+                                                                                   IsVisible="{Binding HasType1Icon}"
+                                                                                   ToolTip.Tip="{Binding Type1Name}"/>
+                                                                            <Image Source="{Binding Type2Icon}" Width="20" Height="20"
+                                                                                   IsVisible="{Binding HasType2Icon}"
+                                                                                   ToolTip.Tip="{Binding Type2Name}"/>
+                                                                        </StackPanel>
+                                                                        <StackPanel Orientation="Horizontal" Spacing="5">
+                                                                            <TextBlock Text="{Binding AbilityName}" FontSize="10"
+                                                                                       Classes="secondary"
+                                                                                       TextTrimming="CharacterEllipsis"/>
+                                                                            <TextBlock Text="★" FontSize="9"
+                                                                                       IsVisible="{Binding AbilityMatters}"
+                                                                                       Foreground="{DynamicResource LegalFgBrush}"
+                                                                                       VerticalAlignment="Center"
+                                                                                       ToolTip.Tip="This ability changes incoming damage and is included below."/>
+                                                                        </StackPanel>
+                                                                    </StackPanel>
+                                                                </Grid>
 
+                                                                <!-- Body left: matchups by multiplier -->
+                                                                <StackPanel Grid.Row="1" Grid.Column="0" Spacing="5">
                                                                     <StackPanel Spacing="2" IsVisible="{Binding HasResistances}">
                                                                         <TextBlock Text="RESISTANCES" FontSize="9"
                                                                                    FontWeight="SemiBold" Classes="secondary"/>
@@ -1426,7 +1429,7 @@
                                                                 </StackPanel>
 
                                                                 <!-- Right: moves, laid out as on the Moves tab -->
-                                                                <DockPanel Grid.Column="1"
+                                                                <DockPanel Grid.Row="1" Grid.Column="1"
                                                                            IsVisible="{Binding HasMoves}">
                                                                     <TextBlock DockPanel.Dock="Top" Text="MOVES" FontSize="9"
                                                                                FontWeight="SemiBold" Classes="secondary"
