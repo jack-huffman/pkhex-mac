@@ -135,8 +135,36 @@
 
                         </StackPanel>
 
+                        <StackPanel IsVisible="{Binding HasSave}" Spacing="6">
+                            <TextBlock Classes="sectionTitle" Text="FIND" Margin="6,4,0,0"/>
+                            <TextBox Text="{Binding BoxSearchText, Mode=TwoWay}" FontSize="12"
+                                     Watermark="Species, nickname, OT, shiny…"/>
+                            <TextBlock Text="{Binding SearchSummary}" FontSize="10" Classes="secondary"
+                                       Margin="4,0,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+
                         <TextBlock Classes="sectionTitle" Text="BOXES" IsVisible="{Binding HasSave}" Margin="6,6,0,0"/>
                     </StackPanel>
+
+                    <!-- Search results replace the box list while searching -->
+                    <ListBox DockPanel.Dock="Top" MaxHeight="260" Margin="10,0,10,10"
+                             IsVisible="{Binding HasSearchResults}"
+                             ItemsSource="{Binding SearchResults}"
+                             SelectionChanged="OnSearchHitSelected">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SearchHitViewModel">
+                                <Grid ColumnDefinitions="40,*" ColumnSpacing="6">
+                                    <Image Grid.Column="0" Source="{Binding Sprite}" Width="38" Height="32"
+                                           RenderOptions.BitmapInterpolationMode="None"/>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Species}" FontSize="12" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding Location}" FontSize="10" Classes="secondary"/>
+                                        <TextBlock Text="{Binding Detail}" FontSize="10" Classes="secondary"/>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
 
                     <!-- Box list. Tapped (not SelectionChanged) drives the view switch so
                          clicking the already-selected box still returns to the grid. -->
@@ -147,7 +175,9 @@
                              Tapped="OnBoxListTapped">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding}" FontSize="13"/>
+                                <!-- Drop a dragged Pokémon here to move it to this box -->
+                                <TextBlock Text="{Binding}" FontSize="13" Background="Transparent"
+                                           PointerEntered="OnBoxNamePointerEntered"/>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
@@ -903,7 +933,8 @@
                                                                    Foreground="{DynamicResource TextSecondaryBrush}"/>
                                                     </DockPanel>
                                                     <ProgressBar Classes="meter" Value="{Binding EvBudgetPercent}"
-                                                                 Foreground="{DynamicResource MeterEvBrush}"/>
+                                                                 Foreground="{DynamicResource MeterEvBrush}"
+                                                                 Margin="0,0,10,0"/>
                                                     <TextBlock Text="Sliders stop at whatever the 510-point pool has left."
                                                                FontSize="10" Classes="secondary"
                                                                IsVisible="{Binding !EvOverLimit}"/>
@@ -922,17 +953,18 @@
                                                             <Grid ColumnDefinitions="66,44,*" RowDefinitions="Auto,Auto"
                                                                   ColumnSpacing="8" RowSpacing="2" Margin="0,0,0,9">
 
-                                                                <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Horizontal"
-                                                                            Spacing="4" VerticalAlignment="Center">
-                                                                    <TextBlock Text="{Binding ShortLabel}"
+                                                                <!-- Fixed label column so every nature arrow lines up -->
+                                                                <Grid Grid.Row="0" Grid.Column="0" ColumnDefinitions="44,*"
+                                                                      VerticalAlignment="Center">
+                                                                    <TextBlock Grid.Column="0" Text="{Binding ShortLabel}"
                                                                                FontSize="12" FontWeight="Bold"
                                                                                Foreground="{Binding LabelBrush}"
                                                                                VerticalAlignment="Center"/>
-                                                                    <TextBlock Text="{Binding NatureBadge}" FontSize="10"
+                                                                    <TextBlock Grid.Column="1" Text="{Binding NatureBadge}" FontSize="10"
                                                                                IsVisible="{Binding HasNatureBadge}"
                                                                                Foreground="{Binding NatureBadgeBrush}"
                                                                                VerticalAlignment="Center"/>
-                                                                </StackPanel>
+                                                                </Grid>
                                                                 <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Stat}"
                                                                            FontSize="13" FontWeight="SemiBold"
                                                                            VerticalAlignment="Center"/>

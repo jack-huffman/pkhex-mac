@@ -21,6 +21,7 @@ public partial class MainWindow : Window
     private Avalonia.Point _dragStart;
     private bool _dragPending;
     private bool _dragging;
+    private int _dragOverBoxIndex = -1;
 
     public MainWindow()
     {
@@ -179,12 +180,17 @@ public partial class MainWindow : Window
         var wasDragging = _dragging;
         var source = _dragSource;
         var target = wasDragging ? SlotAt(e.GetCurrentPoint(this).Position) : null;
+        var boxIndex = _dragOverBoxIndex;
 
         EndDrag();
         e.Pointer.Capture(null);
 
-        if (wasDragging && source is not null && target is not null && target != source)
+        if (!wasDragging || source is null)
+            return;
+        if (target is not null && target != source)
             VM.MoveOrSwapSlot(source, target);
+        else if (target is null && boxIndex >= 0)
+            VM.MoveSlotToBox(source, boxIndex); // dropped on a box name in the sidebar
     }
 
     private void EndDrag()
@@ -192,6 +198,7 @@ public partial class MainWindow : Window
         _dragPending = false;
         _dragging = false;
         _dragSource = null;
+        _dragOverBoxIndex = -1;
         DragGhost.IsVisible = false;
         DragGhost.Source = null;
         HighlightDropTarget(null);
@@ -421,6 +428,20 @@ public partial class MainWindow : Window
     /// <summary>Any tap in the box list returns to the box grid, even when the
     /// tapped box was already the selected one (no SelectionChanged fires then).</summary>
     private void OnBoxListTapped(object? sender, Avalonia.Input.TappedEventArgs e) => VM.SetView("boxes");
+
+    /// <summary>While dragging a Pokémon, hovering a box name marks it as the drop target.</summary>
+    private void OnBoxNamePointerEntered(object? sender, PointerEventArgs e)
+    {
+        if (!_dragging || sender is not Control { DataContext: string name })
+            return;
+        _dragOverBoxIndex = VM.BoxNames.IndexOf(name);
+    }
+
+    private void OnSearchHitSelected(object? sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ListBox { SelectedItem: SearchHitViewModel hit })
+            VM.GoToSearchHit(hit);
+    }
 
     public void OnTrainerClicked(object? sender, EventArgs e) => VM.SetView("save");
     public void OnBagClicked(object? sender, EventArgs e) => VM.SetView("save");

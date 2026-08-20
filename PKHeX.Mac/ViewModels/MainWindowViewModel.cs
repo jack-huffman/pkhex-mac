@@ -621,6 +621,117 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     // =====================================================================
+    // Cross-box moves and search
+    // =====================================================================
+
+    /// <summary>
+    /// Moves the dragged Pokémon into the first free slot of another box. Used when
+    /// a slot is dropped onto a box name in the sidebar.
+    /// </summary>
+    public void MoveSlotToBox(SlotViewModel from, int targetBox)
+    {
+        if (_sav is null || !_sav.HasBox || (uint)targetBox >= _sav.BoxCount)
+            return;
+        var pk = ReadSlot(from);
+        if (pk is null || pk.Species == 0)
+            return;
+        if (!from.IsParty && targetBox == CurrentBox)
+            return; // same box: the grid drag already handles this
+
+        int empty = -1;
+        for (int i = 0; i < _sav.BoxSlotCount; i++)
+        {
+            if (_sav.GetBoxSlotAtIndex(targetBox, i).Species == 0)
+            {
+                empty = i;
+                break;
+            }
+        }
+        var boxName = (uint)targetBox < BoxNames.Count ? BoxNames[targetBox] : $"Box {targetBox + 1}";
+        if (empty < 0)
+        {
+            StatusText = $"{boxName} is full.";
+            return;
+        }
+
+        var moved = pk.Clone();
+        moved.RefreshChecksum();
+        _sav.SetBoxSlotAtIndex(moved, targetBox, empty);
+        if (from.IsParty)
+            DeleteSlot(from);
+        else
+            _sav.SetBoxSlotAtIndex(_sav.BlankPKM, CurrentBox, from.Slot);
+        RefreshSlotViews();
+        var name = (uint)moved.Species < _strings.specieslist.Length ? _strings.specieslist[moved.Species] : $"#{moved.Species}";
+        StatusText = $"Moved {name} to {boxName}, slot {empty + 1}.";
+    }
+
+    // ---- Search across every box ----
+
+    public ObservableCollection<SearchHitViewModel> SearchResults { get; } = [];
+
+    [ObservableProperty] private string _boxSearchText = string.Empty;
+    [ObservableProperty] private bool _hasSearchResults;
+    [ObservableProperty] private string _searchSummary = string.Empty;
+
+    partial void OnBoxSearchTextChanged(string value) => RunBoxSearch();
+
+    /// <summary>Finds Pokémon in any box by species name, nickname, or OT.</summary>
+    private void RunBoxSearch()
+    {
+        SearchResults.Clear();
+        var query = BoxSearchText.Trim();
+        if (_sav is null || !_sav.HasBox || query.Length < 2)
+        {
+            HasSearchResults = false;
+            SearchSummary = string.Empty;
+            return;
+        }
+
+        var matches = 0;
+        for (int box = 0; box < _sav.BoxCount && matches < 200; box++)
+        {
+            for (int slot = 0; slot < _sav.BoxSlotCount && matches < 200; slot++)
+            {
+                var pk = _sav.GetBoxSlotAtIndex(box, slot);
+                if (pk.Species == 0)
+                    continue;
+                var species = (uint)pk.Species < _strings.specieslist.Length ? _strings.specieslist[pk.Species] : $"#{pk.Species}";
+                var isShiny = query.Equals("shiny", StringComparison.OrdinalIgnoreCase) && pk.IsShiny;
+                if (!isShiny
+                    && !species.Contains(query, StringComparison.OrdinalIgnoreCase)
+                    && !pk.Nickname.Contains(query, StringComparison.OrdinalIgnoreCase)
+                    && !pk.OriginalTrainerName.Contains(query, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                var boxName = (uint)box < BoxNames.Count ? BoxNames[box] : $"Box {box + 1}";
+                SearchResults.Add(new SearchHitViewModel(box, slot, species, boxName, pk, _strings));
+                matches++;
+            }
+        }
+        HasSearchResults = SearchResults.Count > 0;
+        SearchSummary = SearchResults.Count == 0
+            ? $"No Pokémon match \"{query}\"."
+            : $"{SearchResults.Count} match{(SearchResults.Count == 1 ? string.Empty : "es")}" +
+              (SearchResults.Count >= 200 ? " (first 200)" : string.Empty);
+    }
+
+    /// <summary>Jumps to the box and slot of a search hit.</summary>
+    [RelayCommand]
+    public void GoToSearchHit(SearchHitViewModel? hit)
+    {
+        if (hit is null || _sav is null)
+            return;
+        CurrentView = "boxes";
+        CurrentBox = hit.Box;
+        if ((uint)hit.Slot < BoxSlots.Count)
+            SelectSlot(BoxSlots[hit.Slot]);
+    }
+
+    [RelayCommand]
+    public void ClearBoxSearch() => BoxSearchText = string.Empty;
+
+    // =====================================================================
     // Box tools
     // =====================================================================
 
