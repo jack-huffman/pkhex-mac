@@ -1,0 +1,412 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PKHeX.Mac.ViewModels"
+             xmlns:ctrl="using:PKHeX.Mac.Controls"
+             x:Class="PKHeX.Mac.Views.Panels.GameDataPanel"
+             x:DataType="vm:MainWindowViewModel">
+
+    <Border Classes="card" Margin="18,14,18,14">
+        <TabControl Padding="0,6,0,0">
+
+            <!-- ── Daycare ── -->
+            <TabItem Header="Daycare">
+            <DockPanel DataContext="{Binding Daycare}" x:DataType="vm:DaycareViewModel"
+                       Margin="2,8,2,2">
+                <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}"
+                           FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                           Text="This save has no daycare that PKHeX can read. Gen 1 through 7 and BDSP do; Sword/Shield and Scarlet/Violet handle breeding without a stored daycare."/>
+
+                <StackPanel DockPanel.Dock="Top" Spacing="12" Margin="0,0,0,14"
+                            IsVisible="{Binding IsSupported}">
+                    <ComboBox HorizontalAlignment="Left" MinWidth="200"
+                              IsVisible="{Binding HasMultipleUnits}"
+                              ItemsSource="{Binding Units}"
+                              SelectedItem="{Binding SelectedUnit, Mode=TwoWay}"/>
+                    <StackPanel Orientation="Horizontal" Spacing="16">
+                        <CheckBox Content="An egg is waiting" FontSize="{StaticResource FontBody}"
+                                  IsVisible="{Binding HasEggState}"
+                                  IsChecked="{Binding EggAvailable, Mode=TwoWay}"
+                                  VerticalAlignment="Center"/>
+                        <StackPanel Orientation="Horizontal" Spacing="8"
+                                    IsVisible="{Binding HasSeed}">
+                            <TextBlock Text="Egg seed" FontSize="{StaticResource FontBody}" Classes="secondary"
+                                       VerticalAlignment="Center"/>
+                            <TextBox Text="{Binding SeedText, Mode=TwoWay}" MinWidth="180"
+                                     FontSize="{StaticResource FontBody}" FontFamily="Menlo, monospace"/>
+                            <TextBlock Text="{Binding SeedError}" FontSize="{StaticResource FontMicro}"
+                                       Foreground="{DynamicResource IllegalFgBrush}"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </StackPanel>
+                    <TextBlock FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                               Text="Transfers use whichever box slot is selected in the Boxes view — move a parent into a box to edit it with the full inspector, then board it again."/>
+                    <TextBlock Text="{Binding Status}" FontSize="{StaticResource FontBody}"
+                               Foreground="{DynamicResource LegalFgBrush}" TextWrapping="Wrap"
+                               IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                </StackPanel>
+
+                <ScrollViewer IsVisible="{Binding IsSupported}">
+                    <ContentControl Content="{Binding SelectedUnit}">
+                        <ContentControl.ContentTemplate>
+                            <DataTemplate x:DataType="vm:DaycareUnitViewModel">
+                                <ItemsControl ItemsSource="{Binding Parents}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:DaycareSlotViewModel">
+                                            <Border Classes="card" Padding="12" Margin="0,0,0,10">
+                                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
+                                                    <Panel Grid.Column="0" Width="72" Height="60">
+                                                        <Image Source="{Binding Sprite}" Stretch="Uniform"
+                                                               RenderOptions.BitmapInterpolationMode="None"/>
+                                                    </Panel>
+                                                    <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                                            <TextBlock Text="{Binding Label}" FontSize="{StaticResource FontMicro}"
+                                                                       Classes="secondary" VerticalAlignment="Center"/>
+                                                            <TextBlock Text="{Binding SpeciesName}" FontSize="{StaticResource FontHeading}"
+                                                                       FontWeight="Bold"/>
+                                                        </StackPanel>
+                                                        <TextBlock Text="{Binding DetailText}" FontSize="{StaticResource FontBody}"
+                                                                   Classes="secondary"/>
+                                                        <StackPanel Orientation="Horizontal" Spacing="12">
+                                                            <CheckBox Content="Boarded" FontSize="{StaticResource FontBody}"
+                                                                      IsChecked="{Binding Occupied, Mode=TwoWay}"
+                                                                      VerticalAlignment="Center"
+                                                                      ToolTip.Tip="The game only counts a parent that is marked boarded."/>
+                                                            <StackPanel Orientation="Horizontal" Spacing="6"
+                                                                        IsVisible="{Binding HasExperience}">
+                                                                <TextBlock Text="Banked EXP" FontSize="{StaticResource FontBody}"
+                                                                           Classes="secondary" VerticalAlignment="Center"/>
+                                                                <NumericUpDown MinWidth="130" FontSize="{StaticResource FontBody}"
+                                                                               Value="{Binding Experience, Mode=TwoWay}"
+                                                                               Minimum="0" Maximum="9999999"
+                                                                               FormatString="0" Increment="1"
+                                                                               HorizontalContentAlignment="Right"/>
+                                                            </StackPanel>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="2" Spacing="6" VerticalAlignment="Center">
+                                                        <Button Content="Copy to box slot" FontSize="{StaticResource FontBody}"
+                                                                HorizontalAlignment="Stretch"
+                                                                HorizontalContentAlignment="Center"
+                                                                Command="{Binding CopyToBoxCommand}"/>
+                                                        <Button Content="Board from box slot" FontSize="{StaticResource FontBody}"
+                                                                HorizontalAlignment="Stretch"
+                                                                HorizontalContentAlignment="Center"
+                                                                Command="{Binding TakeFromBoxCommand}"/>
+                                                        <Button Content="Clear" FontSize="{StaticResource FontBody}"
+                                                                HorizontalAlignment="Stretch"
+                                                                HorizontalContentAlignment="Center"
+                                                                Command="{Binding ClearSlotCommand}"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </DataTemplate>
+                        </ContentControl.ContentTemplate>
+                    </ContentControl>
+                </ScrollViewer>
+            </DockPanel>
+            </TabItem>
+
+            <!-- ── Mystery Gift album ── -->
+            <TabItem Header="Gift Album">
+            <DockPanel DataContext="{Binding GiftAlbum}" x:DataType="vm:GiftAlbumViewModel"
+                       Margin="2,8,2,2">
+                <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}"
+                           FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                           Text="This save keeps no Mystery Gift album. Gen 4 through 7 and Let's Go store the wondercards themselves; Gen 8 and 9 moved to server-delivered records, so there is nothing to write. The Mystery Gifts database can still turn a gift into a Pokémon."/>
+
+                <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,12"
+                            IsVisible="{Binding IsSupported}">
+                    <TextBlock Text="{Binding Summary}" FontSize="{StaticResource FontBody}" FontWeight="SemiBold"/>
+                    <TextBlock FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                               Text="Writing a card here puts the gift in the game's own delivery list, so it can be collected in-game rather than injected as a finished Pokémon. Only cards matching this game's format are offered."/>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Write gift into card slot" Classes="accent" FontSize="{StaticResource FontBody}"
+                                Command="{Binding InjectSelectedCommand}"/>
+                        <Button Content="Clear card slot" FontSize="{StaticResource FontBody}"
+                                Command="{Binding ClearSelectedCommand}"/>
+                        <Button Content="Clear received flags" FontSize="{StaticResource FontBody}"
+                                IsVisible="{Binding HasFlags}"
+                                Command="{Binding ClearReceivedFlagsCommand}"
+                                ToolTip.Tip="Lets the game hand out gifts it thinks you already claimed."/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding Status}" FontSize="{StaticResource FontBody}" TextWrapping="Wrap"
+                               Foreground="{DynamicResource LegalFgBrush}"
+                               IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                </StackPanel>
+
+                <Grid IsVisible="{Binding IsSupported}" ColumnDefinitions="*,*" ColumnSpacing="16">
+                    <DockPanel Grid.Column="0">
+                        <TextBlock DockPanel.Dock="Top" Classes="sectionTitle" Text="CARD SLOTS IN THIS SAVE"
+                                   Margin="0,0,0,6"/>
+                        <ListBox Classes="plain" ItemsSource="{Binding Cards}"
+                                 SelectedItem="{Binding SelectedCard, Mode=TwoWay}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:GiftCardViewModel">
+                                    <Grid ColumnDefinitions="52,34,*" ColumnSpacing="8">
+                                        <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="{StaticResource FontBody}"
+                                                   Classes="secondary" VerticalAlignment="Center"/>
+                                        <Image Grid.Column="1" Source="{Binding Sprite}" Width="30" Height="26"
+                                               RenderOptions.BitmapInterpolationMode="None"/>
+                                        <StackPanel Grid.Column="2" Spacing="0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Title}" FontSize="{StaticResource FontBody}"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding Detail}" FontSize="{StaticResource FontMicro}" Classes="secondary"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+
+                    <DockPanel Grid.Column="1">
+                        <TextBlock DockPanel.Dock="Top" Classes="sectionTitle" Text="GIFTS THIS GAME ACCEPTS"
+                                   Margin="0,0,0,6"/>
+                        <TextBox DockPanel.Dock="Top" Text="{Binding CandidateFilter, Mode=TwoWay}"
+                                 FontSize="{StaticResource FontBody}" PlaceholderText="Search gifts…" Margin="0,0,0,6"/>
+                        <ListBox Classes="plain" ItemsSource="{Binding Candidates}"
+                                 SelectedItem="{Binding SelectedCandidate, Mode=TwoWay}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:GiftCandidate">
+                                    <Grid ColumnDefinitions="34,*" ColumnSpacing="8">
+                                        <Image Grid.Column="0" Source="{Binding Sprite}" Width="30" Height="26"
+                                               RenderOptions.BitmapInterpolationMode="None"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Description}" FontSize="{StaticResource FontBody}"
+                                                   VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+                </Grid>
+            </DockPanel>
+            </TabItem>
+
+            <!-- ── Hall of Fame ── -->
+            <TabItem Header="Hall of Fame">
+            <DockPanel DataContext="{Binding HallOfFame}" x:DataType="vm:HallOfFameViewModel"
+                       Margin="2,8,2,2">
+                <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}"
+                           FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                           Text="No readable Hall of Fame record in this save. Gen 1, Gen 3 and Gen 6 keep the teams you won with; other generations store only the time of your first clear, which appears in the Extras tab as SecondsToFame."/>
+
+                <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,12"
+                            IsVisible="{Binding IsSupported}">
+                    <TextBlock Text="{Binding Summary}" FontSize="{StaticResource FontBody}" FontWeight="SemiBold"/>
+                    <TextBlock FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                               Text="A record of past wins rather than live state, so it is shown as history. Entries can be cleared where the format allows it."/>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <CheckBox Content="Recorded entries only" FontSize="{StaticResource FontBody}"
+                                  IsChecked="{Binding UsedOnly, Mode=TwoWay}"
+                                  VerticalAlignment="Center"/>
+                        <Button Content="Clear selected entry" FontSize="{StaticResource FontBody}"
+                                IsVisible="{Binding CanClear}"
+                                Command="{Binding ClearSelectedCommand}"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding Status}" FontSize="{StaticResource FontBody}" TextWrapping="Wrap"
+                               Foreground="{DynamicResource LegalFgBrush}"
+                               IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                </StackPanel>
+
+                <ScrollViewer IsVisible="{Binding IsSupported}">
+                    <ListBox Classes="plain" ItemsSource="{Binding Visible}"
+                             SelectedItem="{Binding SelectedTeam, Mode=TwoWay}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:FameTeamViewModel">
+                                <StackPanel Spacing="4" Margin="0,3">
+                                    <TextBlock Text="{Binding Label}" FontSize="{StaticResource FontBody}" FontWeight="SemiBold"/>
+                                    <ItemsControl ItemsSource="{Binding Members}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel Orientation="Horizontal"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:FameMemberViewModel">
+                                                <StackPanel Width="104" Spacing="2" Margin="0,0,6,6">
+                                                    <Image Source="{Binding Sprite}" Width="56" Height="48"
+                                                           HorizontalAlignment="Center"
+                                                           RenderOptions.BitmapInterpolationMode="None"/>
+                                                    <TextBlock Text="{Binding SpeciesName}" FontSize="{StaticResource FontBody}"
+                                                               HorizontalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding Nickname}" FontSize="{StaticResource FontMicro}"
+                                                               Classes="secondary" HorizontalAlignment="Center"
+                                                               IsVisible="{Binding HasNickname}"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding LevelText}" FontSize="{StaticResource FontMicro}"
+                                                               Classes="secondary" HorizontalAlignment="Center"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </ScrollViewer>
+            </DockPanel>
+            </TabItem>
+
+            <!-- ── Mail ── -->
+            <TabItem Header="Mail">
+            <DockPanel DataContext="{Binding Mail}" x:DataType="vm:MailViewModel"
+                       Margin="2,8,2,2">
+                <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}"
+                           FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                           Text="This save keeps no mail. Gen 2 through 5 store mail in the mailbox and on party members; later generations dropped the feature."/>
+
+                <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,12"
+                            IsVisible="{Binding IsSupported}">
+                    <TextBlock Text="{Binding Summary}" FontSize="{StaticResource FontBody}" FontWeight="SemiBold"/>
+                    <TextBlock FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                               Text="Mail held by a party member is stored inside that Pokémon, so editing it re-saves the party slot. Gen 4 and 5 write their messages as word codes rather than text, so only the stationery, author and pictured Pokémon are editable there."/>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <CheckBox Content="In-use slots only" FontSize="{StaticResource FontBody}"
+                                  IsChecked="{Binding UsedOnly, Mode=TwoWay}"
+                                  VerticalAlignment="Center"/>
+                        <Button Content="Clear all mail" FontSize="{StaticResource FontBody}"
+                                Command="{Binding ClearAllCommand}"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding Status}" FontSize="{StaticResource FontBody}" TextWrapping="Wrap"
+                               Foreground="{DynamicResource LegalFgBrush}"
+                               IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                </StackPanel>
+
+                <ScrollViewer IsVisible="{Binding IsSupported}">
+                    <ItemsControl ItemsSource="{Binding Visible}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:MailRowViewModel">
+                                <Border Classes="card" Padding="12" Margin="0,0,0,8">
+                                    <StackPanel Spacing="8">
+                                        <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="12">
+                                            <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="{StaticResource FontBody}"
+                                                       FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                            <Image Grid.Column="1" Source="{Binding Sprite}" Width="34" Height="28"
+                                                   RenderOptions.BitmapInterpolationMode="None"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding SpeciesName}" FontSize="{StaticResource FontBody}"
+                                                       Classes="secondary" VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="3" Text="{Binding StateText}" FontSize="{StaticResource FontMicro}"
+                                                       Classes="secondary" VerticalAlignment="Center"/>
+                                            <Button Grid.Column="4" Content="Clear" FontSize="{StaticResource FontBody}"
+                                                    Command="{Binding ClearCommand}"/>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="Auto,150,Auto,100,Auto,100" ColumnSpacing="8">
+                                            <TextBlock Grid.Column="0" Text="From" FontSize="{StaticResource FontBody}"
+                                                       Classes="secondary" VerticalAlignment="Center"/>
+                                            <TextBox Grid.Column="1" Text="{Binding AuthorName, Mode=TwoWay}"
+                                                     FontSize="{StaticResource FontBody}"/>
+                                            <TextBlock Grid.Column="2" Text="TID" FontSize="{StaticResource FontBody}"
+                                                       Classes="secondary" VerticalAlignment="Center"/>
+                                            <TextBox Grid.Column="3" Text="{Binding AuthorTid, Mode=TwoWay}"
+                                                     FontSize="{StaticResource FontBody}"/>
+                                            <TextBlock Grid.Column="4" Text="SID" FontSize="{StaticResource FontBody}"
+                                                       Classes="secondary" VerticalAlignment="Center"/>
+                                            <TextBox Grid.Column="5" Text="{Binding AuthorSid, Mode=TwoWay}"
+                                                     FontSize="{StaticResource FontBody}"/>
+                                        </Grid>
+                                        <Grid ColumnDefinitions="Auto,100,Auto,100,*" ColumnSpacing="8">
+                                            <TextBlock Grid.Column="0" Text="Pictured species" FontSize="{StaticResource FontBody}"
+                                                       Classes="secondary" VerticalAlignment="Center"/>
+                                            <TextBox Grid.Column="1" Text="{Binding AppearSpecies, Mode=TwoWay}"
+                                                     FontSize="{StaticResource FontBody}"/>
+                                            <TextBlock Grid.Column="2" Text="Stationery" FontSize="{StaticResource FontBody}"
+                                                       Classes="secondary" VerticalAlignment="Center"/>
+                                            <TextBox Grid.Column="3" Text="{Binding MailType, Mode=TwoWay}"
+                                                     FontSize="{StaticResource FontBody}"/>
+                                        </Grid>
+                                        <StackPanel Spacing="4" IsVisible="{Binding SupportsText}">
+                                            <TextBlock Text="Message" FontSize="{StaticResource FontBody}" Classes="secondary"/>
+                                            <TextBox Text="{Binding MessageText, Mode=TwoWay}" FontSize="{StaticResource FontBody}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+            </TabItem>
+
+            <!-- ── Generic per-generation structures ── -->
+            <TabItem Header="Extras">
+            <DockPanel DataContext="{Binding Extras}" x:DataType="vm:GameExtrasViewModel"
+                       Margin="2,8,2,2">
+                <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}"
+                           FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                           Text="No editable structures were found in this save."/>
+                <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,12"
+                            IsVisible="{Binding IsSupported}">
+                    <TextBlock Text="{Binding Summary}" FontSize="{StaticResource FontBody}" FontWeight="SemiBold"/>
+                    <TextBlock FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                               Text="The game-specific structures that have no dedicated screen here — things like the Key System, Entralink pass powers, Global Link, Battle Subway, game settings and daily counters. Values are written straight through with no validation, so treat this as a power tool."/>
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                        <TextBox Grid.Column="0" Text="{Binding SearchText, Mode=TwoWay}"
+                                 FontSize="{StaticResource FontBody}" PlaceholderText="Search structures and fields…"/>
+                        <CheckBox Grid.Column="1" Content="With a value" FontSize="{StaticResource FontBody}"
+                                  IsChecked="{Binding NonZeroOnly, Mode=TwoWay}"
+                                  VerticalAlignment="Center"/>
+                        <Button Grid.Column="2" Content="Reset" FontSize="{StaticResource FontBody}"
+                                Command="{Binding ClearFiltersCommand}"/>
+                    </Grid>
+                </StackPanel>
+
+                <ScrollViewer IsVisible="{Binding IsSupported}">
+                    <ItemsControl ItemsSource="{Binding Groups}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ExtrasGroupViewModel">
+                                <StackPanel Spacing="6" Margin="0,0,0,16">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="{Binding Label}" FontSize="{StaticResource FontBody}" FontWeight="Bold"/>
+                                        <TextBlock Text="{Binding TypeName}" FontSize="{StaticResource FontMicro}" Classes="secondary"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                    <ItemsControl ItemsSource="{Binding Visible}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:ExtrasFieldViewModel">
+                                                <Grid ColumnDefinitions="230,190,*" ColumnSpacing="12"
+                                                      Margin="0,0,0,3">
+                                                    <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="{StaticResource FontBody}"
+                                                               VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <CheckBox Grid.Column="1" IsVisible="{Binding IsBoolean}"
+                                                              IsChecked="{Binding BoolValue, Mode=TwoWay}"
+                                                              VerticalAlignment="Center"/>
+                                                    <ComboBox Grid.Column="1" IsVisible="{Binding IsEnumeration}"
+                                                              HorizontalAlignment="Stretch" FontSize="{StaticResource FontBody}"
+                                                              ItemsSource="{Binding EnumNames}"
+                                                              SelectedIndex="{Binding EnumIndex, Mode=TwoWay}"/>
+                                                    <TextBox Grid.Column="1" IsVisible="{Binding IsInteger}"
+                                                             Text="{Binding TextValue, Mode=TwoWay}"
+                                                             FontSize="{StaticResource FontBody}" FontFamily="Menlo, monospace"/>
+                                                    <TextBox Grid.Column="1" IsVisible="{Binding IsText}"
+                                                             Text="{Binding TextValue, Mode=TwoWay}"
+                                                             FontSize="{StaticResource FontBody}"/>
+                                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8"
+                                                                VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding TypeName}" FontSize="{StaticResource FontMicro}"
+                                                                   Classes="secondary"/>
+                                                        <TextBlock Text="{Binding Error}" FontSize="{StaticResource FontMicro}"
+                                                                   Foreground="{DynamicResource IllegalFgBrush}"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+            </TabItem>
+        </TabControl>
+    </Border>
+
+</UserControl>

@@ -1,0 +1,279 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PKHeX.Mac.ViewModels"
+             x:Class="PKHeX.Mac.Views.Panels.RaidsPanel"
+             x:DataType="vm:MainWindowViewModel">
+
+    <Border Classes="card" Margin="18,14,18,14">
+        <DockPanel DataContext="{Binding Raids}" x:DataType="vm:RaidsViewModel">
+            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                <TextBlock DockPanel.Dock="Left" Text="Raids" FontSize="{StaticResource FontTitle}"
+                           FontWeight="Bold" VerticalAlignment="Center"/>
+                <TextBlock DockPanel.Dock="Right" Text="{Binding Summary}" FontSize="{StaticResource FontBody}"
+                           Classes="secondary" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+            </DockPanel>
+
+            <Border DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}" CornerRadius="10"
+                    Padding="16" Background="{DynamicResource SurfaceMutedBrush}">
+                <TextBlock FontSize="{StaticResource FontBody}" TextWrapping="Wrap" Classes="secondary"
+                           Text="Raid data only exists in Sword/Shield and Scarlet/Violet."/>
+            </Border>
+
+            <TabControl IsVisible="{Binding IsSupported}" Padding="0,6,0,0">
+
+                <!-- ── Sword/Shield Max Raid nests ── -->
+                <TabItem Header="Max Raid Dens" IsVisible="{Binding IsSwsh}">
+                    <DockPanel Margin="2,8,2,2">
+                        <Grid DockPanel.Dock="Top" ColumnDefinitions="240,*" ColumnSpacing="12"
+                              Margin="0,0,0,10">
+                            <ComboBox Grid.Column="0" HorizontalAlignment="Stretch"
+                                      ItemsSource="{Binding NestRegions}"
+                                      SelectedItem="{Binding SelectedNestRegion, Mode=TwoWay}"/>
+                            <TextBlock Grid.Column="1" FontSize="{StaticResource FontBody}" Classes="secondary"
+                                       VerticalAlignment="Center" TextWrapping="Wrap"
+                                       Text="Each den stores a 64-bit seed, a star tier and flags for rare, event and wishing-piece raids."/>
+                        </Grid>
+
+                        <Panel>
+                            <TextBlock IsVisible="{Binding !HasNests}" FontSize="{StaticResource FontBody}" Classes="secondary"
+                                       TextWrapping="Wrap" VerticalAlignment="Top"
+                                       Text="This save has no raid nest blocks."/>
+                            <ContentControl Content="{Binding SelectedNestRegion}">
+                                <ContentControl.ContentTemplate>
+                                    <DataTemplate x:DataType="vm:NestRegionViewModel">
+                                        <DockPanel>
+                                            <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,10">
+                                                <TextBlock Text="{Binding Summary}" FontSize="{StaticResource FontBody}" Classes="secondary"/>
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <CheckBox Content="Active only" FontSize="{StaticResource FontBody}"
+                                                              IsChecked="{Binding ActiveOnly, Mode=TwoWay}"
+                                                              VerticalAlignment="Center"/>
+                                                    <CheckBox Content="as rare" FontSize="{StaticResource FontBody}"
+                                                              IsChecked="{Binding MakeRare, Mode=TwoWay}"
+                                                              VerticalAlignment="Center"
+                                                              ToolTip.Tip="Applies to the Activate all action."/>
+                                                    <CheckBox Content="as event" FontSize="{StaticResource FontBody}"
+                                                              IsChecked="{Binding MakeEvent, Mode=TwoWay}"
+                                                              VerticalAlignment="Center"
+                                                              ToolTip.Tip="Applies to the Activate all action."/>
+                                                    <Button Content="Activate all" FontSize="{StaticResource FontBody}"
+                                                            Command="{Binding ActivateAllCommand}"
+                                                            ToolTip.Tip="Turns on every den with a random tier and encounter roll. Skips the Watchtower, which the game handles specially."/>
+                                                    <Button Content="Deactivate all" FontSize="{StaticResource FontBody}"
+                                                            Command="{Binding DeactivateAllCommand}"/>
+                                                    <Button Content="Reset watts" FontSize="{StaticResource FontBody}"
+                                                            Command="{Binding ResetWattsCommand}"
+                                                            ToolTip.Tip="Clears the collected flag so every active den pays watts again."/>
+                                                </StackPanel>
+                                            </StackPanel>
+
+                                            <ListBox Classes="plain" ItemsSource="{Binding Dens}"
+                                                     SelectedItem="{Binding SelectedDen, Mode=TwoWay}">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:NestRowViewModel">
+                                                        <Grid ColumnDefinitions="130,58,70,74,110,160,86"
+                                                              ColumnSpacing="8">
+                                                            <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="{StaticResource FontBody}"
+                                                                       FontWeight="SemiBold" VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                            <CheckBox Grid.Column="1" Content="Up" FontSize="{StaticResource FontBody}"
+                                                                      IsChecked="{Binding Active, Mode=TwoWay}"
+                                                                      VerticalAlignment="Center"/>
+                                                            <ComboBox Grid.Column="2" HorizontalAlignment="Stretch"
+                                                                      FontSize="{StaticResource FontBody}"
+                                                                      ItemsSource="{Binding StarChoices}"
+                                                                      SelectedIndex="{Binding StarIndex, Mode=TwoWay}"/>
+                                                            <CheckBox Grid.Column="3" Content="Rare" FontSize="{StaticResource FontBody}"
+                                                                      IsChecked="{Binding IsRare, Mode=TwoWay}"
+                                                                      VerticalAlignment="Center"/>
+                                                            <CheckBox Grid.Column="4" Content="Wishing" FontSize="{StaticResource FontBody}"
+                                                                      IsChecked="{Binding IsWishingPiece, Mode=TwoWay}"
+                                                                      VerticalAlignment="Center"/>
+                                                            <TextBox Grid.Column="5" Text="{Binding SeedText, Mode=TwoWay}"
+                                                                     FontSize="{StaticResource FontBody}" FontFamily="Menlo, monospace"
+                                                                     ToolTip.Tip="Raid seed (64-bit hex)"/>
+                                                            <CheckBox Grid.Column="6" Content="Watts" FontSize="{StaticResource FontBody}"
+                                                                      IsChecked="{Binding WattsHarvested, Mode=TwoWay}"
+                                                                      VerticalAlignment="Center"
+                                                                      ToolTip.Tip="Watts already collected from this den."/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </DockPanel>
+                                    </DataTemplate>
+                                </ContentControl.ContentTemplate>
+                            </ContentControl>
+                        </Panel>
+                    </DockPanel>
+                </TabItem>
+
+                <!-- ── Live raid crystals, per region ── -->
+                <TabItem Header="Active Dens" IsVisible="{Binding IsSv}">
+                    <DockPanel Margin="2,8,2,2">
+                        <Grid DockPanel.Dock="Top" ColumnDefinitions="240,*" ColumnSpacing="12"
+                              Margin="0,0,0,10">
+                            <ComboBox Grid.Column="0" HorizontalAlignment="Stretch"
+                                      ItemsSource="{Binding Regions}"
+                                      SelectedItem="{Binding SelectedRegion, Mode=TwoWay}"/>
+                            <TextBlock Grid.Column="1" FontSize="{StaticResource FontBody}" Classes="secondary"
+                                       VerticalAlignment="Center" TextWrapping="Wrap"
+                                       Text="Each crystal has its own 32-bit seed and tier. The region seeds below drive today's and tomorrow's line-up."/>
+                        </Grid>
+
+                        <Panel>
+                            <TextBlock IsVisible="{Binding !HasRegions}" FontSize="{StaticResource FontBody}" Classes="secondary"
+                                       TextWrapping="Wrap" VerticalAlignment="Top"
+                                       Text="This save has no raid crystal blocks — they appear once the game has generated its first daily raids."/>
+                            <ContentControl Content="{Binding SelectedRegion}">
+                                <ContentControl.ContentTemplate>
+                                    <DataTemplate x:DataType="vm:RaidRegionViewModel">
+                                        <DockPanel>
+                                            <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,10">
+                                                <TextBlock Text="{Binding Summary}" FontSize="{StaticResource FontBody}" Classes="secondary"/>
+                                                <Grid ColumnDefinitions="Auto,170,Auto,170" ColumnSpacing="8"
+                                                      IsVisible="{Binding HasSeeds}">
+                                                    <TextBlock Grid.Column="0" Text="Today" FontSize="{StaticResource FontBody}"
+                                                               Classes="secondary" VerticalAlignment="Center"/>
+                                                    <TextBox Grid.Column="1" Text="{Binding CurrentSeedText, Mode=TwoWay}"
+                                                             FontSize="{StaticResource FontBody}" FontFamily="Menlo, monospace"/>
+                                                    <TextBlock Grid.Column="2" Text="Tomorrow" FontSize="{StaticResource FontBody}"
+                                                               Classes="secondary" VerticalAlignment="Center"
+                                                               Margin="8,0,0,0"/>
+                                                    <TextBox Grid.Column="3" Text="{Binding TomorrowSeedText, Mode=TwoWay}"
+                                                             FontSize="{StaticResource FontBody}" FontFamily="Menlo, monospace"/>
+                                                </Grid>
+                                                <TextBlock Text="{Binding SeedError}" FontSize="{StaticResource FontBody}"
+                                                           Foreground="{DynamicResource IllegalFgBrush}"
+                                                           IsVisible="{Binding SeedError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <CheckBox Content="Placed dens only" FontSize="{StaticResource FontBody}"
+                                                              IsChecked="{Binding ActiveOnly, Mode=TwoWay}"
+                                                              VerticalAlignment="Center"/>
+                                                    <Button Content="Copy selected den to all" FontSize="{StaticResource FontBody}"
+                                                            Command="{Binding PropagateSelectedCommand}"
+                                                            ToolTip.Tip="Writes the selected den's tier and seed onto every placed den in this region."/>
+                                                    <Button Content="Enable all placed" FontSize="{StaticResource FontBody}"
+                                                            Command="{Binding EnableAllPlacedCommand}"/>
+                                                    <Button Content="Unclaim all LP" FontSize="{StaticResource FontBody}"
+                                                            Command="{Binding UnclaimAllPointsCommand}"/>
+                                                </StackPanel>
+                                            </StackPanel>
+
+                                            <ListBox Classes="plain" ItemsSource="{Binding Dens}"
+                                                     SelectedItem="{Binding SelectedDen, Mode=TwoWay}">
+                                                <ListBox.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:DenRowViewModel">
+                                                        <Grid ColumnDefinitions="62,180,64,190,120,Auto" ColumnSpacing="12">
+                                                            <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="{StaticResource FontBody}"
+                                                                       FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                            <TextBlock Grid.Column="1" Text="{Binding PlaceText}" FontSize="{StaticResource FontBody}"
+                                                                       Classes="secondary" VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                            <CheckBox Grid.Column="2" Content="Up" FontSize="{StaticResource FontBody}"
+                                                                      IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                                                      VerticalAlignment="Center"
+                                                                      ToolTip.Tip="Is the raid crystal currently active?"/>
+                                                            <ComboBox Grid.Column="3" HorizontalAlignment="Stretch"
+                                                                      FontSize="{StaticResource FontBody}"
+                                                                      ItemsSource="{Binding ContentChoices}"
+                                                                      SelectedIndex="{Binding ContentIndex, Mode=TwoWay}"/>
+                                                            <TextBox Grid.Column="4" Text="{Binding SeedText, Mode=TwoWay}"
+                                                                     FontSize="{StaticResource FontBody}" FontFamily="Menlo, monospace"
+                                                                     ToolTip.Tip="Raid seed (32-bit hex)"/>
+                                                            <CheckBox Grid.Column="5" Content="LP taken" FontSize="{StaticResource FontBody}"
+                                                                      IsChecked="{Binding ClaimedLeaguePoints, Mode=TwoWay}"
+                                                                      VerticalAlignment="Center"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ListBox.ItemTemplate>
+                                            </ListBox>
+                                        </DockPanel>
+                                    </DataTemplate>
+                                </ContentControl.ContentTemplate>
+                            </ContentControl>
+                        </Panel>
+                    </DockPanel>
+                </TabItem>
+
+                <!-- ── Seven-star event capture records ── -->
+                <TabItem Header="Event Records" IsVisible="{Binding IsSv}">
+                    <DockPanel Margin="2,8,2,2">
+                        <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,10">
+                            <TextBlock Text="{Binding EmptyNote}" FontSize="{StaticResource FontBody}" TextWrapping="Wrap"
+                                       Foreground="{DynamicResource IllegalFgBrush}"
+                                       IsVisible="{Binding EmptyNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                            <TextBlock FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                                       Text="Clearing a capture flag lets that event raid be caught again. Defeated marks it as beaten without granting a catch."/>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <CheckBox IsChecked="{Binding UsedOnly, Mode=TwoWay}" Content="Used slots only"
+                                          VerticalAlignment="Center"/>
+                                <Button Content="Allow re-catch on all" FontSize="{StaticResource FontBody}"
+                                        Command="{Binding AllowRecatchAllCommand}"/>
+                                <Button Content="Mark all defeated" FontSize="{StaticResource FontBody}"
+                                        Command="{Binding MarkAllDefeatedCommand}"/>
+                            </StackPanel>
+                        </StackPanel>
+                        <ListBox Classes="plain" ItemsSource="{Binding Rows}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:RaidRowViewModel">
+                                    <Grid ColumnDefinitions="*,120,120" ColumnSpacing="12">
+                                        <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="{StaticResource FontBody}"
+                                                   FontFamily="Menlo, monospace" VerticalAlignment="Center"/>
+                                        <CheckBox Grid.Column="1" Content="Captured" FontSize="{StaticResource FontBody}"
+                                                  IsChecked="{Binding Captured, Mode=TwoWay}"/>
+                                        <CheckBox Grid.Column="2" Content="Defeated" FontSize="{StaticResource FontBody}"
+                                                  IsChecked="{Binding Defeated, Mode=TwoWay}"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+                </TabItem>
+
+                <!-- ── Tier unlocks and win tallies ── -->
+                <TabItem Header="Progression" IsVisible="{Binding IsSv}">
+                    <ScrollViewer Margin="2,8,2,2">
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="20">
+                            <StackPanel Grid.Column="0" Spacing="6">
+                                <TextBlock Classes="sectionTitle" Text="TIERS UNLOCKED" Margin="0"/>
+                                <TextBlock FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                                           Text="A tier must be unlocked before the game will generate raids of that difficulty."/>
+                                <ItemsControl ItemsSource="{Binding Unlocks}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:RaidFlagViewModel">
+                                            <CheckBox Content="{Binding Label}" FontSize="{StaticResource FontBody}"
+                                                      IsChecked="{Binding Value, Mode=TwoWay}" Margin="0,1"/>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="6">
+                                <TextBlock Classes="sectionTitle" Text="RAIDS WON" Margin="0"/>
+                                <TextBlock FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                                           Text="Win counts the game uses to decide when to raise the raid difficulty."/>
+                                <ItemsControl ItemsSource="{Binding Counters}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:RaidCounterViewModel">
+                                            <Grid ColumnDefinitions="*,150" ColumnSpacing="8" Margin="0,2">
+                                                <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="{StaticResource FontBody}"
+                                                           VerticalAlignment="Center"/>
+                                                <!-- Wide enough that the spinner buttons don't crush the text field -->
+                                                <NumericUpDown Grid.Column="1" MinWidth="140"
+                                                               Value="{Binding Value, Mode=TwoWay}"
+                                                               Minimum="0" Maximum="99999" FormatString="0"
+                                                               Increment="1" FontSize="{StaticResource FontBody}"
+                                                               HorizontalContentAlignment="Right"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Grid>
+                    </ScrollViewer>
+                </TabItem>
+            </TabControl>
+        </DockPanel>
+    </Border>
+
+</UserControl>
