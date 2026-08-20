@@ -17,12 +17,13 @@ namespace PKHeX.Mac.ViewModels;
 /// </summary>
 public partial class GiftsViewModel : ObservableObject
 {
-    /// <summary>Tiles rendered at once. The grid is not virtualized, so cap it and say so.</summary>
-    private const int DisplayCap = 600;
+    /// <summary>Tiles added per page. The grid is not virtualized, so it fills on demand.</summary>
+    private const int PageSize = 100;
 
     private readonly SaveFile _sav;
     private readonly GameStrings _strings;
     private readonly List<GiftTileViewModel> _allTiles;
+    private List<GiftTileViewModel> _matches = [];
     private GiftTileViewModel? _selectedTile;
     private bool _suppressFilter;
 
@@ -60,7 +61,8 @@ public partial class GiftsViewModel : ObservableObject
     [ObservableProperty] private bool _addableOnly = true;
     [ObservableProperty] private string _statusText = string.Empty;
     [ObservableProperty] private string _resultSummary = string.Empty;
-    [ObservableProperty] private string _capNotice = string.Empty;
+    [ObservableProperty] private bool _hasMore;
+    [ObservableProperty] private string _loadMoreLabel = string.Empty;
 
     public PKM? Result { get; private set; }
 
@@ -120,7 +122,7 @@ public partial class GiftsViewModel : ObservableObject
         var gen = SelectedGeneration;
         var game = SelectedGameIndex > 0 && SelectedGameIndex < GameChoices.Count ? GameChoices[SelectedGameIndex] : null;
 
-        var matches = _allTiles.Where(t =>
+        _matches = _allTiles.Where(t =>
             (gen is null || t.Generation == gen)
             && (game is null || t.GameName == game)
             && (!ShinyOnly || t.IsShiny)
@@ -128,19 +130,27 @@ public partial class GiftsViewModel : ObservableObject
             && (!AddableOnly || t.IsAddable)
             && (query.Length == 0 || t.Matches(query))).ToList();
 
-        foreach (var tile in matches.Take(DisplayCap))
+        ResultSummary = $"{_matches.Count} of {_allTiles.Count} gifts";
+        StatusText = _matches.Count == 0
+            ? "No gifts match the current filters."
+            : "Pick a gift to preview it.";
+        LoadNextPage();
+    }
+
+    /// <summary>Appends the next page of matching tiles to the grid.</summary>
+    [RelayCommand]
+    public void LoadNextPage()
+    {
+        foreach (var tile in _matches.Skip(Tiles.Count).Take(PageSize))
         {
             tile.IsSelected = false;
             Tiles.Add(tile);
         }
-
-        ResultSummary = $"{matches.Count} of {_allTiles.Count} gifts";
-        CapNotice = matches.Count > DisplayCap
-            ? $"Showing the first {DisplayCap} — narrow the filters to see the rest."
+        var remaining = _matches.Count - Tiles.Count;
+        HasMore = remaining > 0;
+        LoadMoreLabel = remaining > 0
+            ? $"Load {Math.Min(PageSize, remaining)} more  ({remaining:N0} left)"
             : string.Empty;
-        StatusText = matches.Count == 0
-            ? "No gifts match the current filters."
-            : "Pick a gift to preview it.";
     }
 
     [RelayCommand]
