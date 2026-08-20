@@ -649,8 +649,23 @@
                                                     <TextBlock Classes="fieldLabel" Text="Nature"/>
                                                     <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding NatureChoices}"
                                                               SelectedValue="{Binding NatureValue, Mode=TwoWay}"
-                                                              SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
-                                                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                                                              SelectedValueBinding="{Binding Value, x:DataType=vm:NatureChoice}">
+                                                        <ComboBox.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:NatureChoice">
+                                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                                <TextBlock Text="{Binding Name}" FontSize="13" MinWidth="76"/>
+                                                                <TextBlock Text="{Binding UpLabel}" FontSize="11" FontWeight="SemiBold"
+                                                                           Foreground="{x:Static vm:NatureChoice.UpBrush}"
+                                                                           VerticalAlignment="Center" IsVisible="{Binding HasModifiers}"/>
+                                                                <TextBlock Text="{Binding DownLabel}" FontSize="11" FontWeight="SemiBold"
+                                                                           Foreground="{x:Static vm:NatureChoice.DownBrush}"
+                                                                           VerticalAlignment="Center" IsVisible="{Binding HasModifiers}"/>
+                                                                <TextBlock Text="{Binding NeutralLabel}" FontSize="11" Classes="secondary"
+                                                                           VerticalAlignment="Center" IsVisible="{Binding IsNeutral}"/>
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                    </ComboBox>
                                                 </StackPanel>
                                                 <StackPanel>
                                                     <TextBlock Classes="fieldLabel" Text="Ability"/>
@@ -683,8 +698,23 @@
                                                     <TextBlock Classes="fieldLabel" Text="Stat Nature (Gen 8+ split)"/>
                                                     <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding NatureChoices}"
                                                               SelectedValue="{Binding StatNatureValue, Mode=TwoWay}"
-                                                              SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
-                                                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                                                              SelectedValueBinding="{Binding Value, x:DataType=vm:NatureChoice}">
+                                                        <ComboBox.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:NatureChoice">
+                                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                                <TextBlock Text="{Binding Name}" FontSize="13" MinWidth="76"/>
+                                                                <TextBlock Text="{Binding UpLabel}" FontSize="11" FontWeight="SemiBold"
+                                                                           Foreground="{x:Static vm:NatureChoice.UpBrush}"
+                                                                           VerticalAlignment="Center" IsVisible="{Binding HasModifiers}"/>
+                                                                <TextBlock Text="{Binding DownLabel}" FontSize="11" FontWeight="SemiBold"
+                                                                           Foreground="{x:Static vm:NatureChoice.DownBrush}"
+                                                                           VerticalAlignment="Center" IsVisible="{Binding HasModifiers}"/>
+                                                                <TextBlock Text="{Binding NeutralLabel}" FontSize="11" Classes="secondary"
+                                                                           VerticalAlignment="Center" IsVisible="{Binding IsNeutral}"/>
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                    </ComboBox>
                                                 </StackPanel>
                                                 <StackPanel>
                                                     <TextBlock Classes="fieldLabel" Text="Experience"/>
@@ -744,8 +774,23 @@
                                                     <TextBlock Classes="fieldLabel" Text="Nature"/>
                                                     <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding NatureChoices}"
                                                               SelectedValue="{Binding NatureValue, Mode=TwoWay}"
-                                                              SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
-                                                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                                                              SelectedValueBinding="{Binding Value, x:DataType=vm:NatureChoice}">
+                                                        <ComboBox.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:NatureChoice">
+                                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                                <TextBlock Text="{Binding Name}" FontSize="13" MinWidth="76"/>
+                                                                <TextBlock Text="{Binding UpLabel}" FontSize="11" FontWeight="SemiBold"
+                                                                           Foreground="{x:Static vm:NatureChoice.UpBrush}"
+                                                                           VerticalAlignment="Center" IsVisible="{Binding HasModifiers}"/>
+                                                                <TextBlock Text="{Binding DownLabel}" FontSize="11" FontWeight="SemiBold"
+                                                                           Foreground="{x:Static vm:NatureChoice.DownBrush}"
+                                                                           VerticalAlignment="Center" IsVisible="{Binding HasModifiers}"/>
+                                                                <TextBlock Text="{Binding NeutralLabel}" FontSize="11" Classes="secondary"
+                                                                           VerticalAlignment="Center" IsVisible="{Binding IsNeutral}"/>
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                    </ComboBox>
                                                     <TextBlock Text="{Binding NatureEffectText}" FontSize="11" Classes="secondary"
                                                                TextWrapping="Wrap"/>
                                                 </StackPanel>

@@ -45,7 +45,7 @@ public partial class PokemonDetailViewModel : ObservableObject
         SpeciesChoices = sources.Species;
         ItemChoices = sources.Items;
         BallChoices = sources.Balls;
-        NatureChoices = sources.Natures;
+        NatureChoices = NatureChoice.Build(_strings.natures);
         MoveChoices = sources.Moves;
         VersionChoices = sources.Games;
         LanguageChoices = sources.Languages;
@@ -57,7 +57,7 @@ public partial class PokemonDetailViewModel : ObservableObject
     [ObservableProperty] private IReadOnlyList<ComboItem> _speciesChoices = [];
     [ObservableProperty] private IReadOnlyList<ComboItem> _itemChoices = [];
     [ObservableProperty] private IReadOnlyList<ComboItem> _ballChoices = [];
-    [ObservableProperty] private IReadOnlyList<ComboItem> _natureChoices = [];
+    [ObservableProperty] private IReadOnlyList<NatureChoice> _natureChoices = [];
     [ObservableProperty] private IReadOnlyList<ComboItem> _moveChoices = [];
     [ObservableProperty] private IReadOnlyList<ComboItem> _versionChoices = [];
     [ObservableProperty] private IReadOnlyList<ComboItem> _languageChoices = [];
