@@ -1,8 +1,12 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
+using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PKHeX.Core;
+using PKHeX.Mac.Services;
 
 namespace PKHeX.Mac.ViewModels;
 
@@ -34,6 +38,8 @@ public partial class BagViewModel : ObservableObject
     [ObservableProperty] private IReadOnlyList<ComboItem> _itemPickerChoices = [];
     [ObservableProperty] private int _pickerValue;
     [ObservableProperty] private int _maxCount = 999;
+    [ObservableProperty] private int _giveAllCount = 1;
+    [ObservableProperty] private string _pouchSummary = string.Empty;
 
     private InventoryPouch? CurrentPouch =>
         (uint)SelectedPouchIndex < _bag.Pouches.Count ? _bag.Pouches[SelectedPouchIndex] : null;
@@ -44,8 +50,10 @@ public partial class BagViewModel : ObservableObject
         if (CurrentPouch is not { } pouch)
             return;
         MaxCount = pouch.MaxCount;
+        GiveAllCount = Math.Min(pouch.MaxCount, 1);
         foreach (var item in pouch.Items)
             Rows.Add(new BagItemRowViewModel(item, _strings, pouch.MaxCount));
+        PouchSummary = $"{pouch.Count} of {pouch.Items.Length} slots used · max {pouch.MaxCount} per item";
 
         // Legal items for this pouch, for the picker.
         var legal = _bag.Info.GetItems(pouch.Type);
@@ -79,6 +87,52 @@ public partial class BagViewModel : ObservableObject
         SelectedRow?.SetItem(0);
     }
 
+    /// <summary>Fills the pouch with every item the game allows there.</summary>
+    [RelayCommand]
+    public void GiveAllItems()
+    {
+        if (CurrentPouch is not { } pouch)
+            return;
+        pouch.GiveAllItems(_bag, Math.Clamp(GiveAllCount, 1, pouch.MaxCount));
+        ReloadPouch();
+    }
+
+    [RelayCommand]
+    public void SortByName()
+    {
+        if (CurrentPouch is not { } pouch)
+            return;
+        pouch.SortByName(_strings.itemlist);
+        ReloadPouch();
+    }
+
+    [RelayCommand]
+    public void SortByCount()
+    {
+        if (CurrentPouch is not { } pouch)
+            return;
+        pouch.SortByCount(reverse: true);
+        ReloadPouch();
+    }
+
+    [RelayCommand]
+    public void ClearPouch()
+    {
+        if (CurrentPouch is not { } pouch)
+            return;
+        foreach (var item in pouch.Items)
+            item.Clear();
+        ReloadPouch();
+    }
+
+    /// <summary>Rebuilds the row list after a bulk pouch operation.</summary>
+    private void ReloadPouch()
+    {
+        var index = SelectedPouchIndex;
+        SelectedPouchIndex = -1;
+        SelectedPouchIndex = index;
+    }
+
     public void Apply() => _bag.CopyTo(_sav);
 }
 
@@ -99,17 +153,23 @@ public partial class BagItemRowViewModel : ObservableObject
         Count = item.Count;
         _loading = false;
         ItemName = NameOf(item.Index);
+        Sprite = SpriteService.GetItemSprite(item.Index);
     }
 
     public int Index => _item.Index;
 
     [ObservableProperty] private string _itemName = string.Empty;
     [ObservableProperty] private int _count;
+    [ObservableProperty] private Bitmap? _sprite;
+
+    /// <summary>The pouch's per-item ceiling, so the input cannot promise more than the game stores.</summary>
+    public int MaxCount => _maxCount;
 
     public void SetItem(int itemId)
     {
         _item.Index = itemId;
         ItemName = NameOf(itemId);
+        Sprite = SpriteService.GetItemSprite(itemId);
         if (itemId == 0)
         {
             _item.Count = 0;

@@ -287,16 +287,44 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         try
         {
+            // Back up whatever is already there before overwriting it. Writing a
+            // corrupt save over the only copy would cost real playtime.
+            var backup = TryBackup(path);
             var data = _sav.Write();
             File.WriteAllBytes(path, data.ToArray());
             _savPath = path;
-            StatusText = $"Saved to {Path.GetFileName(path)}";
+            StatusText = backup is null
+                ? $"Saved to {Path.GetFileName(path)}"
+                : $"Saved to {Path.GetFileName(path)} (previous version kept as {Path.GetFileName(backup)})";
             return true;
         }
         catch (Exception ex)
         {
             error = $"Failed to write save file:\n{ex.Message}";
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Copies an existing save aside before it is overwritten. Returns the backup
+    /// path, or null when there was nothing to back up. Never throws — a failed
+    /// backup must not block the export.
+    /// </summary>
+    private static string? TryBackup(string path)
+    {
+        try
+        {
+            if (!File.Exists(path))
+                return null;
+            var dir = Path.GetDirectoryName(path) ?? ".";
+            var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+            var backup = Path.Combine(dir, $"{Path.GetFileName(path)}.{stamp}.bak");
+            File.Copy(path, backup, overwrite: false);
+            return backup;
+        }
+        catch
+        {
+            return null;
         }
     }
 
