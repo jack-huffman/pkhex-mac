@@ -28,6 +28,25 @@ public partial class MainWindowViewModel : ViewModelBase
             PartySlots.Add(new SlotViewModel(-1, i));
     }
 
+    /// <summary>Whether the in-memory save differs from the file on disk.</summary>
+    public SaveStateViewModel SaveState { get; } = new();
+
+    /// <summary>Shown when closing would discard unsaved edits.</summary>
+    [ObservableProperty] private bool _isClosePromptOpen;
+
+    /// <summary>Extra line in the close prompt, for inspector edits not yet applied.</summary>
+    [ObservableProperty] private string _closePromptNote = string.Empty;
+
+    public bool HasUnappliedDetail => ClosePromptNote.Length > 0;
+
+    partial void OnClosePromptNoteChanged(string value) => OnPropertyChanged(nameof(HasUnappliedDetail));
+
+    /// <summary>
+    /// Anything that would be lost by quitting: edits written into the in-memory save,
+    /// plus edits typed into the inspector that have not been applied to a slot yet.
+    /// </summary>
+    public bool HasPendingWork => SaveState.HasUnsavedChanges || Detail.IsDirty;
+
     public PokemonDetailViewModel Detail { get; }
     public PokemonPreviewViewModel Preview { get; }
 
@@ -130,29 +149,29 @@ public partial class MainWindowViewModel : ViewModelBase
             {
                 StatusText = "Reading the Mystery Gift album…";
                 GiftAlbum = new GiftAlbumViewModel(_sav, _strings, () =>
-                    StatusText = "Gift album updated. Remember to export the save (⌘S).");
+                    NoteChange("Gift album updated"));
             }
             Extras ??= new GameExtrasViewModel(_sav, () =>
-                StatusText = "Save structure edited. Remember to export the save (⌘S).");
+                NoteChange("Save structure edited"));
             Mail ??= new MailViewModel(_sav, _strings, () =>
-                StatusText = "Mail updated. Remember to export the save (⌘S).");
+                NoteChange("Mail updated"));
             HallOfFame ??= new HallOfFameViewModel(_sav, _strings, () =>
-                StatusText = "Hall of Fame updated. Remember to export the save (⌘S).");
+                NoteChange("Hall of Fame updated"));
         }
         if (view == "raids" && _sav is not null)
         {
             Raids ??= new RaidsViewModel(_sav, () =>
-                StatusText = "Raid records updated. Remember to export the save (⌘S).");
+                NoteChange("Raid records updated"));
         }
         if (view == "flags" && _sav is not null)
         {
             EventFlags ??= new EventFlagsViewModel(_sav, () =>
-                StatusText = "Event flags updated. Remember to export the save (⌘S).");
+                NoteChange("Event flags updated"));
             if (SaveBlocks is null)
             {
                 StatusText = "Reading save blocks…";
                 SaveBlocks = new SaveBlocksViewModel(_sav, () =>
-                    StatusText = "Save block changed. Remember to export the save (⌘S).");
+                    NoteChange("Save block changed"));
             }
         }
         if (view == "tools" && _sav is not null)
@@ -160,7 +179,7 @@ public partial class MainWindowViewModel : ViewModelBase
             Tools ??= new ToolsViewModel(_sav, _strings, () =>
             {
                 RefreshSlotViews();
-                StatusText = "Batch changes applied. Remember to export the save (⌘S).";
+                NoteChange("Batch changes applied.");
             });
             Tools.CurrentBox = CurrentBox;
         }
@@ -168,7 +187,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             StatusText = "Loading the Pokédex…";
             Dex = new PokedexViewModel(_sav, _strings, () =>
-                StatusText = "Pokédex updated. Remember to export the save (⌘S).");
+                NoteChange("Pokédex updated"));
         }
         if (view == "gifts" && GiftDb is null && _sav is not null)
         {
@@ -192,7 +211,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private DaycareViewModel BuildDaycare(SaveFile sav)
     {
         var vm = new DaycareViewModel(sav, _strings, () =>
-            StatusText = "Daycare updated. Remember to export the save (⌘S).");
+            NoteChange("Daycare updated"));
         vm.ReadSelectedSlot = () => _selected?.Pokemon;
         vm.WriteSelectedSlot = pk =>
         {
@@ -210,7 +229,7 @@ public partial class MainWindowViewModel : ViewModelBase
         Trainer?.Apply();
         Bag?.Apply();
         RefreshTrainerCard();
-        StatusText = "Trainer info and bag updated. Remember to export the save (⌘S).";
+        NoteChange("Trainer info and bag updated.");
         CurrentView = "boxes";
     }
 
@@ -244,7 +263,7 @@ public partial class MainWindowViewModel : ViewModelBase
             WriteSlot(slot, clone);
             RefreshSlotViews();
             var name = (uint)clone.Species < _strings.specieslist.Length ? _strings.specieslist[clone.Species] : $"#{clone.Species}";
-            StatusText = $"Placed {name} in {CurrentBoxName}, slot {slot.Slot + 1}. Remember to export the save (⌘S).";
+            NoteChange($"Placed {name} in {CurrentBoxName}, slot {slot.Slot + 1}");
             SelectSlot(BoxSlots[slot.Slot]); // reselect so the editor shows what landed
             return;
         }
@@ -256,6 +275,16 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private string _targetSlotText = "Add to first empty slot";
 
     /// <summary>Describes where the next "add" will land, for the button label.</summary>
+    /// <summary>
+    /// Reports an edit: shown on the status line, counted as unsaved, and added to the
+    /// session log. Everything that mutates the save should go through here.
+    /// </summary>
+    private void NoteChange(string description)
+    {
+        StatusText = description;
+        SaveState.NoteChange(description);
+    }
+
     public void RefreshTargetSlotText()
     {
         TargetSlotText = _selected is { IsParty: false } s
@@ -329,6 +358,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
             _sav = sav;
             _savPath = path;
+            SaveState.Reset();          // a different save: previous edits are moot
             sav.Metadata.SetExtraInfo(path);
             GameInfo.FilteredSources = new FilteredGameDataSource(sav, GameInfo.Sources);
             Detail.SetContext(sav, GameInfo.FilteredSources);
@@ -363,13 +393,13 @@ public partial class MainWindowViewModel : ViewModelBase
             Trainer = new TrainerEditorViewModel(sav);
             Bag = new BagViewModel(sav, _strings);
             Style = new TrainerStyleViewModel(sav, () =>
-                StatusText = "Trainer appearance updated. Remember to export the save (⌘S).");
+                NoteChange("Trainer appearance updated"));
             Blueberry = new BlueberryViewModel(sav, () =>
-                StatusText = "Blueberry Academy data updated. Remember to export the save (⌘S).");
+                NoteChange("Blueberry Academy data updated"));
             // Unlocking throw styles writes to the club board, so keep that view honest.
             Style.BoardChanged = () => Blueberry?.Reload();
             Records = new TrainerRecordsViewModel(sav, () =>
-                StatusText = "Trainer records updated. Remember to export the save (⌘S).");
+                NoteChange("Trainer records updated"));
             AddDb = new AddPokemonViewModel(sav, GameInfo.FilteredSources, _strings);
             AddDb.PreviewReady = pk => Preview.Load(pk);
             // The gift archive is ~2.6k entries with sprites; build it on first open
@@ -405,6 +435,7 @@ public partial class MainWindowViewModel : ViewModelBase
             StatusText = backup is null
                 ? $"Saved to {Path.GetFileName(path)}"
                 : $"Saved to {Path.GetFileName(path)} (previous version kept as {Path.GetFileName(backup)})";
+            SaveState.MarkSaved(Path.GetFileName(path));
             return true;
         }
         catch (Exception ex)
@@ -547,7 +578,7 @@ public partial class MainWindowViewModel : ViewModelBase
         WriteSlot(_selected, pk);
         RefreshSlotViews();
         Detail.Load(pk);
-        StatusText = $"Applied changes to {Detail.SpeciesName}. Remember to export the save (⌘S).";
+        NoteChange($"Applied changes to {Detail.SpeciesName}");
     }
 
     public void DeleteSlot(SlotViewModel slot)
@@ -719,7 +750,7 @@ public partial class MainWindowViewModel : ViewModelBase
         TrainerName = _sav.OT;
         TrainerIds = $"TID {_sav.DisplayTID:D6} · SID {_sav.DisplaySID:D4}";
         PlayTime = _sav.PlayTimeString;
-        StatusText = "Trainer info updated. Remember to export the save (⌘S).";
+        NoteChange("Trainer info updated.");
     }
 
     /// <summary>Reveals a search hit that lives in this save.</summary>

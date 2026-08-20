@@ -2,7 +2,9 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
@@ -30,6 +32,7 @@ public partial class MainWindow : Window
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
         AddHandler(DragDrop.DropEvent, OnDrop);
         Loaded += OnWindowLoaded;
+        HookShutdownRequest();
     }
 
     private void OnWindowLoaded(object? sender, RoutedEventArgs e)
@@ -55,6 +58,73 @@ public partial class MainWindow : Window
     public void OnOpenButtonClicked(object? sender, RoutedEventArgs e) => _ = OpenAsync();
 
     public void OnExportClicked(object? sender, EventArgs e) => _ = ExportAsync();
+
+    // ---- Closing with unsaved edits ----
+
+    /// <summary>Set once the user has decided, so the second close attempt goes through.</summary>
+    private bool _closeConfirmed;
+
+    protected override void OnClosing(WindowClosingEventArgs e)
+    {
+        if (!_closeConfirmed && VM.HasPendingWork)
+        {
+            // Editing happens against a copy in memory, so closing would silently
+            // discard it. Hold the window open and ask.
+            e.Cancel = true;
+            PromptBeforeLeaving();
+            return;
+        }
+        base.OnClosing(e);
+    }
+
+    /// <summary>
+    /// Cmd+Q asks the application to quit rather than closing the window, so it never
+    /// reaches OnClosing. Without this, the most common way a Mac user leaves an app
+    /// would still discard their edits silently.
+    /// </summary>
+    private void HookShutdownRequest()
+    {
+        if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime life)
+            return;
+        life.ShutdownRequested += (_, e) =>
+        {
+            if (_closeConfirmed || !VM.HasPendingWork)
+                return;
+            e.Cancel = true;
+            PromptBeforeLeaving();
+        };
+    }
+
+    private void PromptBeforeLeaving()
+    {
+        VM.ClosePromptNote = VM.Detail.IsDirty
+            ? "A Pokémon in the inspector also has edits that were never applied to its slot."
+            : string.Empty;
+        VM.IsClosePromptOpen = true;
+    }
+
+    public void OnCloseCancelClicked(object? sender, RoutedEventArgs e) => VM.IsClosePromptOpen = false;
+
+    public void OnCloseDiscardClicked(object? sender, RoutedEventArgs e)
+    {
+        _closeConfirmed = true;
+        VM.IsClosePromptOpen = false;
+        Close();
+    }
+
+    public void OnCloseExportClicked(object? sender, RoutedEventArgs e) => _ = ExportThenCloseAsync();
+
+    private async Task ExportThenCloseAsync()
+    {
+        VM.IsClosePromptOpen = false;
+        await ExportAsync();
+        // Only leave if the export actually landed; a cancelled picker keeps the work.
+        if (!VM.HasPendingWork)
+        {
+            _closeConfirmed = true;
+            Close();
+        }
+    }
     public void OnExportButtonClicked(object? sender, RoutedEventArgs e) => _ = ExportAsync();
 
     private void OnHeaderPressed(object? sender, PointerPressedEventArgs e)

@@ -136,6 +136,50 @@
                             </StackPanel>
                         </Border>
 
+                        <!-- Unsaved-changes state. Always visible while dirty, so the
+                             reminder lives here instead of in every status message. -->
+                        <Border Classes="card" Padding="12,10"
+                                IsVisible="{Binding SaveState.HasUnsavedChanges}"
+                                Background="{DynamicResource IllegalBgBrush}">
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="{Binding SaveState.CountText}"
+                                           FontSize="{StaticResource FontBody}" FontWeight="Bold"
+                                           Foreground="{DynamicResource IllegalFgBrush}"/>
+                                <TextBlock Text="{Binding SaveState.LastChange}"
+                                           FontSize="{StaticResource FontMicro}" Classes="secondary"
+                                           TextWrapping="Wrap"/>
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <Button Content="Export…" Classes="accent"
+                                            FontSize="{StaticResource FontMicro}" Padding="8,3"
+                                            Click="OnExportButtonClicked"/>
+                                    <Button Content="History" FontSize="{StaticResource FontMicro}" Padding="8,3"
+                                            Command="{Binding SaveState.ToggleLogCommand}"/>
+                                </StackPanel>
+
+                                <!-- Session log: what changed, newest first -->
+                                <Border IsVisible="{Binding SaveState.IsLogOpen}" CornerRadius="6"
+                                        Padding="8,6" Background="{DynamicResource SurfaceMutedBrush}">
+                                    <ScrollViewer MaxHeight="200">
+                                        <ItemsControl ItemsSource="{Binding SaveState.Log}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:ChangeLogEntry">
+                                                    <Grid ColumnDefinitions="52,*" ColumnSpacing="6" Margin="0,0,0,2">
+                                                        <TextBlock Grid.Column="0" Text="{Binding TimeText}"
+                                                                   FontSize="{StaticResource FontMicro}"
+                                                                   Classes="secondary"
+                                                                   FontFamily="Menlo, monospace"/>
+                                                        <TextBlock Grid.Column="1" Text="{Binding Description}"
+                                                                   FontSize="{StaticResource FontMicro}"
+                                                                   TextWrapping="Wrap"/>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+
                         <!-- Navigation -->
                         <StackPanel Spacing="2" IsVisible="{Binding HasSave}">
                             <TextBlock Classes="sectionTitle" Text="SAVE" Margin="6,4,0,4"/>
@@ -3948,6 +3992,32 @@
 
                     </Border>
         </Grid>
+
+            <!-- ══════ Close confirmation ══════ -->
+            <Border IsVisible="{Binding IsClosePromptOpen}" Background="#B0000000">
+                <Border Classes="card" Width="440" Padding="20"
+                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="Export before closing?"
+                                   FontSize="{StaticResource FontHeading}" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding SaveState.CountText}"
+                                   FontSize="{StaticResource FontBody}"
+                                   Foreground="{DynamicResource IllegalFgBrush}"/>
+                        <TextBlock FontSize="{StaticResource FontBody}" Classes="secondary"
+                                   TextWrapping="Wrap"
+                                   Text="Edits are made to a copy of the save in memory. Closing now discards them — the file on disk is untouched."/>
+                        <TextBlock Text="{Binding ClosePromptNote}"
+                                   IsVisible="{Binding HasUnappliedDetail}"
+                                   FontSize="{StaticResource FontBody}" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource IllegalFgBrush}"/>
+                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                            <Button Content="Cancel" Click="OnCloseCancelClicked"/>
+                            <Button Content="Discard and Close" Click="OnCloseDiscardClicked"/>
+                            <Button Content="Export…" Classes="accent" Click="OnCloseExportClicked"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Border>
 
         <!-- Drag ghost: follows the pointer while moving a Pokémon between slots -->
         <Canvas IsHitTestVisible="False">

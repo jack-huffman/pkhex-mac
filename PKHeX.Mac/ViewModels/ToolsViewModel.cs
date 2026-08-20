@@ -120,7 +120,7 @@ public partial class ToolsViewModel : ObservableObject
         BatchResult = $"Modified {modified} of {targets.Count} Pokémon"
                       + (skipped > 0 ? $", {skipped} unchanged" : string.Empty)
                       + (errors > 0 ? $", {errors} instruction error(s)" : string.Empty)
-                      + ". Remember to export the save (⌘S).";
+                      + ".";
     }
 
     /// <summary>The entities the selected scope covers, each with a write-back action.</summary>
