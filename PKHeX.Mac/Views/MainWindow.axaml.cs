@@ -54,14 +54,6 @@ public partial class MainWindow : Window
     public void OnOpenClicked(object? sender, EventArgs e) => _ = OpenAsync();
     public void OnOpenButtonClicked(object? sender, RoutedEventArgs e) => _ = OpenAsync();
 
-    /// <summary>Opens the save-discovery overlay, scanning on first use. Avalonia
-    /// matches handler signatures exactly, so the menu and the button need one each.</summary>
-    public void OnFindSavesClicked(object? sender, EventArgs e) => VM.Discovery.Show();
-
-    public void OnFindSavesButtonClicked(object? sender, RoutedEventArgs e) => VM.Discovery.Show();
-
-    private void OnDiscoveredSaveDoubleTapped(object? sender, TappedEventArgs e) =>
-        VM.Discovery.OpenSelectedCommand.Execute(null);
     public void OnExportClicked(object? sender, EventArgs e) => _ = ExportAsync();
     public void OnExportButtonClicked(object? sender, RoutedEventArgs e) => _ = ExportAsync();
 

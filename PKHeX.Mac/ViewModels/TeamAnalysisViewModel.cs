@@ -259,7 +259,9 @@ public sealed class TeamMemberViewModel
             : $"#{pk.Species}";
         Nickname = pk.Nickname == SpeciesName ? string.Empty : pk.Nickname;
         LevelText = $"Lv. {pk.CurrentLevel}";
+        // Pixel sprite for the dense grid rows, hi-res render for the team cards.
         Sprite = SpriteService.GetPokemonSprite(pk);
+        Artwork = SpriteService.GetPokemonArtwork(pk);
 
         Type1Name = TypeName(_type1, strings);
         Type2Name = TypeName(_type2, strings);
@@ -303,6 +305,7 @@ public sealed class TeamMemberViewModel
     public string Nickname { get; }
     public string LevelText { get; }
     public Bitmap? Sprite { get; }
+    public Bitmap? Artwork { get; }
     public string Type1Name { get; }
     public string Type2Name { get; }
     public bool HasType2 { get; }
