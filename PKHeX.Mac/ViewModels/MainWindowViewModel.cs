@@ -40,11 +40,13 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private GiftsViewModel? _giftDb;
     [ObservableProperty] private PokedexViewModel? _dex;
     [ObservableProperty] private ToolsViewModel? _tools;
+    [ObservableProperty] private EventFlagsViewModel? _eventFlags;
 
     public bool IsBoxesView => CurrentView == "boxes";
     public bool IsSaveView => CurrentView == "save";
     public bool IsDexView => CurrentView == "dex";
     public bool IsToolsView => CurrentView == "tools";
+    public bool IsFlagsView => CurrentView == "flags";
     public bool IsAddView => CurrentView == "add";
     public bool IsGiftsView => CurrentView == "gifts";
     public bool IsDatabaseView => IsAddView || IsGiftsView;
@@ -67,7 +69,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     /// <summary>Collapses the inspector column for the full-width Save view.</summary>
     public Avalonia.Controls.GridLength InspectorWidth =>
-        IsSaveView || IsDexView || IsToolsView
+        IsSaveView || IsDexView || IsToolsView || IsFlagsView
             ? new Avalonia.Controls.GridLength(0)
             : new Avalonia.Controls.GridLength(438);
 
@@ -77,6 +79,7 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsSaveView));
         OnPropertyChanged(nameof(IsDexView));
         OnPropertyChanged(nameof(IsToolsView));
+        OnPropertyChanged(nameof(IsFlagsView));
         OnPropertyChanged(nameof(IsAddView));
         OnPropertyChanged(nameof(IsGiftsView));
         OnPropertyChanged(nameof(IsDatabaseView));
@@ -100,6 +103,11 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             StatusText = "Select an empty slot in a box first — that's where the Pokémon will go.";
             return;
+        }
+        if (view == "flags" && _sav is not null)
+        {
+            EventFlags ??= new EventFlagsViewModel(_sav, () =>
+                StatusText = "Event flags updated. Remember to export the save (⌘S).");
         }
         if (view == "tools" && _sav is not null)
         {

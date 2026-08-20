@@ -139,6 +139,9 @@
                             <Button Classes="nav" Classes.selected="{Binding IsToolsView}"
                                     Command="{Binding SetViewCommand}" CommandParameter="tools"
                                     Content="🛠  Tools"/>
+                            <Button Classes="nav" Classes.selected="{Binding IsFlagsView}"
+                                    Command="{Binding SetViewCommand}" CommandParameter="flags"
+                                    Content="🚩  Event Flags"/>
 
                         </StackPanel>
 
@@ -309,6 +312,49 @@
                             </StackPanel>
                         </StackPanel>
                     </ScrollViewer>
+
+                    <!-- ══════ EVENT FLAGS view ══════ -->
+                    <Border Classes="card" IsVisible="{Binding IsFlagsView}" Margin="18,0,18,14">
+                        <DockPanel DataContext="{Binding EventFlags}" x:DataType="vm:EventFlagsViewModel">
+                            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
+                                <TextBlock DockPanel.Dock="Left" Text="Event Flags" FontSize="17" FontWeight="Bold"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding Summary}" FontSize="12"
+                                           Classes="secondary" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                            </DockPanel>
+
+                            <!-- Gen 8/9 keep progress in SCBlocks, so say so plainly -->
+                            <Border DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}" CornerRadius="10"
+                                    Padding="14" Background="{DynamicResource SurfaceMutedBrush}">
+                                <TextBlock Text="{Binding UnsupportedNote}" FontSize="13" TextWrapping="Wrap"
+                                           Classes="secondary"/>
+                            </Border>
+
+                            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10"
+                                  Margin="0,0,0,12" IsVisible="{Binding SupportsFlags}">
+                                <TextBox Grid.Column="0" Text="{Binding SearchText, Mode=TwoWay}"
+                                         Watermark="Search by flag number…"/>
+                                <CheckBox Grid.Column="1" IsChecked="{Binding SetOnly, Mode=TwoWay}"
+                                          Content="Set only" VerticalAlignment="Center"/>
+                                <Button Grid.Column="2" Content="Clear visible" FontSize="12"
+                                        Command="{Binding ClearVisibleCommand}"/>
+                            </Grid>
+
+                            <ListBox ItemsSource="{Binding Flags}" IsVisible="{Binding SupportsFlags}">
+                                <ListBox.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel/>
+                                    </ItemsPanelTemplate>
+                                </ListBox.ItemsPanel>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:EventFlagRowViewModel">
+                                        <CheckBox Content="{Binding Label}" FontSize="11" Width="130"
+                                                  IsChecked="{Binding Value, Mode=TwoWay}"/>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </DockPanel>
+                    </Border>
 
                     <!-- ══════ TOOLS view: batch editor + box report ══════ -->
                     <Border Classes="card" IsVisible="{Binding IsToolsView}" Margin="18,0,18,14">
