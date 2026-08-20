@@ -41,6 +41,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private PokedexViewModel? _dex;
     [ObservableProperty] private ToolsViewModel? _tools;
     [ObservableProperty] private EventFlagsViewModel? _eventFlags;
+    [ObservableProperty] private SaveBlocksViewModel? _saveBlocks;
 
     public bool IsBoxesView => CurrentView == "boxes";
     public bool IsSaveView => CurrentView == "save";
@@ -108,6 +109,12 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             EventFlags ??= new EventFlagsViewModel(_sav, () =>
                 StatusText = "Event flags updated. Remember to export the save (⌘S).");
+            if (SaveBlocks is null)
+            {
+                StatusText = "Reading save blocks…";
+                SaveBlocks = new SaveBlocksViewModel(_sav, () =>
+                    StatusText = "Save block changed. Remember to export the save (⌘S).");
+            }
         }
         if (view == "tools" && _sav is not null)
         {

@@ -141,7 +141,7 @@
                                     Content="🛠  Tools"/>
                             <Button Classes="nav" Classes.selected="{Binding IsFlagsView}"
                                     Command="{Binding SetViewCommand}" CommandParameter="flags"
-                                    Content="🚩  Event Flags"/>
+                                    Content="🚩  Flags &amp; Blocks"/>
 
                         </StackPanel>
 
@@ -317,47 +317,121 @@
                         </StackPanel>
                     </ScrollViewer>
 
-                    <!-- ══════ EVENT FLAGS view ══════ -->
+                    <!-- ══════ FLAGS & BLOCKS view ══════ -->
                     <Border Classes="card" IsVisible="{Binding IsFlagsView}" Margin="18,0,18,14">
-                        <DockPanel DataContext="{Binding EventFlags}" x:DataType="vm:EventFlagsViewModel">
-                            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
-                                <TextBlock DockPanel.Dock="Left" Text="Event Flags" FontSize="17" FontWeight="Bold"
-                                           VerticalAlignment="Center"/>
-                                <TextBlock DockPanel.Dock="Right" Text="{Binding Summary}" FontSize="12"
-                                           Classes="secondary" HorizontalAlignment="Right" VerticalAlignment="Center"/>
-                            </DockPanel>
+                        <TabControl Padding="0,10,0,0">
 
-                            <!-- Gen 8/9 keep progress in SCBlocks, so say so plainly -->
-                            <Border DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}" CornerRadius="10"
-                                    Padding="14" Background="{DynamicResource SurfaceMutedBrush}">
-                                <TextBlock Text="{Binding UnsupportedNote}" FontSize="13" TextWrapping="Wrap"
-                                           Classes="secondary"/>
-                            </Border>
+                            <!-- Gen 2-5 style flat event flag array -->
+                            <TabItem Header="Event Flags">
+                                <DockPanel DataContext="{Binding EventFlags}" x:DataType="vm:EventFlagsViewModel"
+                                           Margin="2,8,2,2">
+                                    <TextBlock DockPanel.Dock="Top" Text="{Binding Summary}" FontSize="12"
+                                               Classes="secondary" Margin="0,0,0,10"/>
 
-                            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10"
-                                  Margin="0,0,0,12" IsVisible="{Binding SupportsFlags}">
-                                <TextBox Grid.Column="0" Text="{Binding SearchText, Mode=TwoWay}"
-                                         Watermark="Search by flag number…"/>
-                                <CheckBox Grid.Column="1" IsChecked="{Binding SetOnly, Mode=TwoWay}"
-                                          Content="Set only" VerticalAlignment="Center"/>
-                                <Button Grid.Column="2" Content="Clear visible" FontSize="12"
-                                        Command="{Binding ClearVisibleCommand}"/>
-                            </Grid>
+                                    <Border DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}" CornerRadius="10"
+                                            Padding="14" Background="{DynamicResource SurfaceMutedBrush}">
+                                        <TextBlock Text="{Binding UnsupportedNote}" FontSize="13" TextWrapping="Wrap"
+                                                   Classes="secondary"/>
+                                    </Border>
 
-                            <ListBox Classes="plain" ItemsSource="{Binding Flags}" IsVisible="{Binding SupportsFlags}">
-                                <ListBox.ItemsPanel>
-                                    <ItemsPanelTemplate>
-                                        <WrapPanel/>
-                                    </ItemsPanelTemplate>
-                                </ListBox.ItemsPanel>
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:EventFlagRowViewModel">
-                                        <CheckBox Content="{Binding Label}" FontSize="11" Width="130"
-                                                  IsChecked="{Binding Value, Mode=TwoWay}"/>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
-                        </DockPanel>
+                                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10"
+                                          Margin="0,0,0,12" IsVisible="{Binding SupportsFlags}">
+                                        <TextBox Grid.Column="0" Text="{Binding SearchText, Mode=TwoWay}"
+                                                 Watermark="Search by flag number…"/>
+                                        <CheckBox Grid.Column="1" IsChecked="{Binding SetOnly, Mode=TwoWay}"
+                                                  Content="Set only" VerticalAlignment="Center"/>
+                                        <Button Grid.Column="2" Content="Clear visible" FontSize="12"
+                                                Command="{Binding ClearVisibleCommand}"/>
+                                    </Grid>
+
+                                    <ListBox Classes="plain" ItemsSource="{Binding Flags}"
+                                             IsVisible="{Binding SupportsFlags}">
+                                        <ListBox.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel/>
+                                            </ItemsPanelTemplate>
+                                        </ListBox.ItemsPanel>
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:EventFlagRowViewModel">
+                                                <CheckBox Content="{Binding Label}" FontSize="11" Width="130"
+                                                          IsChecked="{Binding Value, Mode=TwoWay}"/>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </DockPanel>
+                            </TabItem>
+
+                            <!-- Gen 8/9 SCBlock structure -->
+                            <TabItem Header="Save Blocks">
+                                <DockPanel DataContext="{Binding SaveBlocks}" x:DataType="vm:SaveBlocksViewModel"
+                                           Margin="2,8,2,2">
+                                    <Border DockPanel.Dock="Top" CornerRadius="10" Padding="12" Margin="0,0,0,10"
+                                            Background="{DynamicResource IllegalBgBrush}"
+                                            IsVisible="{Binding IsSupported}">
+                                        <TextBlock FontSize="11" TextWrapping="Wrap"
+                                                   Foreground="{DynamicResource IllegalFgBrush}"
+                                                   Text="Raw save data — nothing here is validated. These blocks replaced event flags in Gen 8/9; changing one can corrupt progress or trip anti-cheat. Your save is backed up automatically on export, but only edit blocks you understand."/>
+                                    </Border>
+
+                                    <Border DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}" CornerRadius="10"
+                                            Padding="14" Background="{DynamicResource SurfaceMutedBrush}">
+                                        <TextBlock FontSize="13" TextWrapping="Wrap" Classes="secondary"
+                                                   Text="This save format does not use SCBlocks. Generations 8 and 9 (Sword/Shield, BDSP, Legends, Scarlet/Violet) do."/>
+                                    </Border>
+
+                                    <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,10"
+                                                IsVisible="{Binding IsSupported}">
+                                        <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="10">
+                                            <TextBox Grid.Column="0" Text="{Binding SearchText, Mode=TwoWay}"
+                                                     Watermark="Search block name or hex key (e.g. KCurrentBox, WEVT_)…"/>
+                                            <CheckBox Grid.Column="1" IsChecked="{Binding NamedOnly, Mode=TwoWay}"
+                                                      Content="Known names only" VerticalAlignment="Center"/>
+                                            <CheckBox Grid.Column="2" IsChecked="{Binding EditableOnly, Mode=TwoWay}"
+                                                      Content="Editable only" VerticalAlignment="Center"/>
+                                            <Button Grid.Column="3" Content="Reset" FontSize="12"
+                                                    Command="{Binding ClearFiltersCommand}"/>
+                                        </Grid>
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Left" Text="{Binding Summary}" FontSize="11"
+                                                       Classes="secondary"/>
+                                            <TextBlock DockPanel.Dock="Right" Text="{Binding CapNotice}" FontSize="11"
+                                                       Classes="secondary" HorizontalAlignment="Right"/>
+                                        </DockPanel>
+                                    </StackPanel>
+
+                                    <ListBox Classes="plain" ItemsSource="{Binding Rows}" IsVisible="{Binding IsSupported}">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:ScBlockRowViewModel">
+                                                <Grid ColumnDefinitions="*,86,72,150" ColumnSpacing="10">
+                                                    <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Name}" FontSize="12"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Text="{Binding Error}" FontSize="10"
+                                                                   Foreground="{DynamicResource IllegalFgBrush}"
+                                                                   IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                                    </StackPanel>
+                                                    <TextBlock Grid.Column="1" Text="{Binding KeyText}" FontSize="10"
+                                                               FontFamily="Menlo, monospace" Classes="secondary"
+                                                               VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="2" Text="{Binding TypeName}" FontSize="10"
+                                                               Classes="secondary" VerticalAlignment="Center"/>
+
+                                                    <CheckBox Grid.Column="3" Content="Set" FontSize="11"
+                                                              IsVisible="{Binding IsBoolean}"
+                                                              IsChecked="{Binding BoolValue, Mode=TwoWay}"/>
+                                                    <TextBox Grid.Column="3" FontSize="11" Height="24" Padding="6,2"
+                                                             IsVisible="{Binding IsScalar}"
+                                                             Text="{Binding TextValue, Mode=TwoWay}"/>
+                                                    <TextBlock Grid.Column="3" Text="{Binding OpaqueText}" FontSize="10"
+                                                               Classes="secondary" VerticalAlignment="Center"
+                                                               IsVisible="{Binding IsOpaque}"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </DockPanel>
+                            </TabItem>
+                        </TabControl>
                     </Border>
 
                     <!-- ══════ TOOLS view: batch editor + box report ══════ -->
