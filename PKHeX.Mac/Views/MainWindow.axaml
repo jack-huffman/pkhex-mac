@@ -201,12 +201,6 @@
                 <Border DockPanel.Dock="Top" Height="46" Background="Transparent"
                         PointerPressed="OnHeaderPressed">
                     <DockPanel Margin="18,0,14,0">
-                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8"
-                                    VerticalAlignment="Center">
-                            <Button Content="Open" FontSize="12" Padding="12,4" Click="OnOpenButtonClicked"/>
-                            <Button Content="Export" FontSize="12" Padding="12,4" Click="OnExportButtonClicked"
-                                    IsEnabled="{Binding HasSave}"/>
-                        </StackPanel>
                         <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                             <TextBlock Text="PKHeX" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
                             <TextBlock Text="{Binding StatusText}" FontSize="11" Classes="secondary"
@@ -799,13 +793,15 @@
 
                     </Panel>
 
-                    <!-- ══════ INSPECTOR ══════ -->
-                    <Panel Grid.Column="1" Margin="0,0,18,14">
+                    <!-- ══════ INSPECTOR — styled to match the sidebar ══════ -->
+                    <Border Grid.Column="1" Background="{DynamicResource SidebarBrush}"
+                            BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1,0,0,0">
+                    <Panel Margin="14,0,14,14">
                         <!-- Database mode: browser on top, live preview + add below -->
                         <Grid RowDefinitions="*,Auto" RowSpacing="8" IsVisible="{Binding IsDatabaseView}">
                             <Panel Grid.Row="0">
                     <!-- ══════ Add Pokémon view ══════ -->
-                    <Border Classes="card" IsVisible="{Binding IsAddView}">
+                    <Border IsVisible="{Binding IsAddView}">
                         <DockPanel DataContext="{Binding AddDb}" x:DataType="vm:AddPokemonViewModel">
                             <TextBlock DockPanel.Dock="Top" Text="Add Pokémon from Encounter Database"
                                        FontSize="17" FontWeight="Bold" Margin="0,0,0,10"/>
@@ -828,7 +824,7 @@
                     </Border>
 
                     <!-- ══════ Mystery Gifts view: sprite tile grid ══════ -->
-                    <Border Classes="card" IsVisible="{Binding IsGiftsView}">
+                    <Border IsVisible="{Binding IsGiftsView}">
                         <DockPanel DataContext="{Binding GiftDb}" x:DataType="vm:GiftsViewModel">
                             <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
                                 <TextBlock DockPanel.Dock="Left" Text="Mystery Gift Database"
@@ -978,7 +974,7 @@
 
                         </Grid>
 
-                        <Border Classes="card" IsVisible="{Binding IsBoxesView}">
+                        <Border IsVisible="{Binding IsBoxesView}">
                             <StackPanel VerticalAlignment="Center" Spacing="8" IsVisible="{Binding !Detail.HasPokemon}">
                                 <ctrl:PokeBallIcon Width="42" Height="42" HorizontalAlignment="Center"
                                            IconBrush="{DynamicResource TextSecondaryBrush}"/>
@@ -1005,7 +1001,7 @@
                         </Border>
 
                         <Panel IsVisible="{Binding IsBoxesView}">
-                        <Border Classes="card" Padding="0"
+                        <Border Padding="0"
                                 DataContext="{Binding Detail}"
                                 x:DataType="vm:PokemonDetailViewModel"
                                 IsVisible="{Binding HasPokemon}">
@@ -2136,6 +2132,7 @@
                         </Border>
                         </Panel>
                     </Panel>
+                    </Border>
                 </Grid>
             </DockPanel>
         </Grid>
