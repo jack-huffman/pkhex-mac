@@ -437,6 +437,12 @@ public partial class MainWindow : Window
         _dragOverBoxIndex = VM.BoxNames.IndexOf(name);
     }
 
+    private void OnCopyReportClicked(object? sender, RoutedEventArgs e)
+    {
+        if (VM.Tools is { } tools && Clipboard is not null)
+            _ = Clipboard.SetTextAsync(tools.BuildReportText());
+    }
+
     private void OnSearchHitSelected(object? sender, SelectionChangedEventArgs e)
     {
         if (sender is ListBox { SelectedItem: SearchHitViewModel hit })

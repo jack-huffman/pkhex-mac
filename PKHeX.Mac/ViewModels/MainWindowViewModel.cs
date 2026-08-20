@@ -37,10 +37,12 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private AddPokemonViewModel? _addDb;
     [ObservableProperty] private GiftsViewModel? _giftDb;
     [ObservableProperty] private PokedexViewModel? _dex;
+    [ObservableProperty] private ToolsViewModel? _tools;
 
     public bool IsBoxesView => CurrentView == "boxes";
     public bool IsSaveView => CurrentView == "save";
     public bool IsDexView => CurrentView == "dex";
+    public bool IsToolsView => CurrentView == "tools";
     public bool IsAddView => CurrentView == "add";
     public bool IsGiftsView => CurrentView == "gifts";
     public bool IsDatabaseView => IsAddView || IsGiftsView;
@@ -63,13 +65,16 @@ public partial class MainWindowViewModel : ViewModelBase
 
     /// <summary>Collapses the inspector column for the full-width Save view.</summary>
     public Avalonia.Controls.GridLength InspectorWidth =>
-        IsSaveView || IsDexView ? new Avalonia.Controls.GridLength(0) : new Avalonia.Controls.GridLength(438);
+        IsSaveView || IsDexView || IsToolsView
+            ? new Avalonia.Controls.GridLength(0)
+            : new Avalonia.Controls.GridLength(438);
 
     partial void OnCurrentViewChanged(string value)
     {
         OnPropertyChanged(nameof(IsBoxesView));
         OnPropertyChanged(nameof(IsSaveView));
         OnPropertyChanged(nameof(IsDexView));
+        OnPropertyChanged(nameof(IsToolsView));
         OnPropertyChanged(nameof(IsAddView));
         OnPropertyChanged(nameof(IsGiftsView));
         OnPropertyChanged(nameof(IsDatabaseView));
@@ -93,6 +98,15 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             StatusText = "Select an empty slot in a box first — that's where the Pokémon will go.";
             return;
+        }
+        if (view == "tools" && _sav is not null)
+        {
+            Tools ??= new ToolsViewModel(_sav, _strings, () =>
+            {
+                RefreshSlotViews();
+                StatusText = "Batch changes applied. Remember to export the save (⌘S).";
+            });
+            Tools.CurrentBox = CurrentBox;
         }
         if (view == "dex" && Dex is null && _sav is not null)
         {

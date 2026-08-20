@@ -31,6 +31,7 @@ public partial class PokemonDetailViewModel : ObservableObject
             Stats.Add(new StatEditRowViewModel(this, i));
         History = new PokemonHistoryViewModel(strings, MarkDirty);
         Ribbons = new RibbonsViewModel(strings, MarkDirty);
+        TechRecords = new TechRecordViewModel(strings, MarkDirty);
     }
 
     /// <summary>Trainer &amp; History group (handler, memories, contest, markings, HOME).</summary>
@@ -38,6 +39,9 @@ public partial class PokemonDetailViewModel : ObservableObject
 
     /// <summary>Ribbons &amp; Marks group.</summary>
     public RibbonsViewModel Ribbons { get; }
+
+    /// <summary>Technical Record (TM history) group.</summary>
+    public TechRecordViewModel TechRecords { get; }
 
     public void SetContext(SaveFile sav, FilteredGameDataSource sources)
     {
@@ -213,6 +217,7 @@ public partial class PokemonDetailViewModel : ObservableObject
                 IsDirty = false;
                 History.Load(null);
                 Ribbons.Load(null);
+                TechRecords.Load(null);
                 return;
             }
 
@@ -256,6 +261,7 @@ public partial class PokemonDetailViewModel : ObservableObject
             LoadExtendedFields(p);
             History.Load(p);
             Ribbons.Load(p);
+            TechRecords.Load(p);
             RefreshDerived(p);
             IsDirty = false;
         }
