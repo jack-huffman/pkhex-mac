@@ -13,7 +13,7 @@ using PKHeX.Mac.Services;
 namespace PKHeX.Mac.ViewModels;
 
 /// <summary>
-/// Battle-readiness view of a team: what it is collectively weak to, and what its
+/// Battle-readiness view of the party: what it is collectively weak to, and what its
 /// moves cannot hit hard. Something PKHeX itself does not offer.
 /// </summary>
 /// <remarks>
@@ -42,10 +42,6 @@ public partial class TeamAnalysisViewModel : ObservableObject
         Analyze();
     }
 
-    public IReadOnlyList<string> ScopeChoices { get; } = ["Party", "Current box"];
-
-    [ObservableProperty] private int _scopeIndex;
-    [ObservableProperty] private int _boxIndex;
     [ObservableProperty] private string _summary = string.Empty;
     [ObservableProperty] private string _eraNote = string.Empty;
 
@@ -70,16 +66,6 @@ public partial class TeamAnalysisViewModel : ObservableObject
     /// </summary>
     public bool CoverageAvailable => MoveDataService.HasData;
 
-    partial void OnScopeIndexChanged(int value) => Analyze();
-
-    /// <summary>Called when the window's current box changes.</summary>
-    public void SetBox(int box)
-    {
-        BoxIndex = box;
-        if (ScopeIndex == 1)
-            Analyze();
-    }
-
     [RelayCommand]
     public void Refresh() => Analyze();
 
@@ -96,9 +82,7 @@ public partial class TeamAnalysisViewModel : ObservableObject
         OnPropertyChanged(nameof(HasMembers));
         if (Members.Count == 0)
         {
-            Summary = ScopeIndex == 0
-                ? "The party is empty."
-                : "This box has no Pokémon in it.";
+            Summary = "The party is empty.";
             OnPropertyChanged(nameof(HasFindings));
             return;
         }
@@ -123,24 +107,11 @@ public partial class TeamAnalysisViewModel : ObservableObject
 
     private IEnumerable<PKM> GetTeam()
     {
-        if (ScopeIndex == 0)
-        {
-            if (!_sav.HasParty)
-                yield break;
-            for (int i = 0; i < _sav.PartyCount; i++)
-            {
-                var pk = _sav.GetPartySlotAtIndex(i);
-                if (pk.Species != 0)
-                    yield return pk;
-            }
+        if (!_sav.HasParty)
             yield break;
-        }
-
-        if (!_sav.HasBox || (uint)BoxIndex >= _sav.BoxCount)
-            yield break;
-        for (int i = 0; i < _sav.BoxSlotCount; i++)
+        for (int i = 0; i < _sav.PartyCount; i++)
         {
-            var pk = _sav.GetBoxSlotAtIndex(BoxIndex, i);
+            var pk = _sav.GetPartySlotAtIndex(i);
             if (pk.Species != 0)
                 yield return pk;
         }
@@ -277,9 +248,8 @@ public sealed class TeamMemberViewModel
         // One pass builds both the display list and the damaging subset that feeds
         // offensive coverage. MoveChoice is the same shape the move pickers use, so
         // the type and category icons match the rest of the app.
-        // Party stats are only populated for the party; a box entry needs them
-        // recalculated before its attack stats can be read. This is a copy, so the
-        // save is untouched.
+        // Make sure the live stats are populated before reading the attack stats.
+        // This is a copy of the slot, so the save is untouched.
         pk.ResetPartyStats();
 
         var display = new List<MoveChoice>(4);

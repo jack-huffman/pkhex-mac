@@ -46,7 +46,6 @@ public partial class ToolsViewModel : ObservableObject
     [ObservableProperty] private string _batchResult = string.Empty;
     [ObservableProperty] private int _currentBox;
 
-    partial void OnCurrentBoxChanged(int value) => Team.SetBox(value);
 
     public IReadOnlyList<string> ScopeChoices { get; } = ["Current box", "All boxes", "Party"];
 
