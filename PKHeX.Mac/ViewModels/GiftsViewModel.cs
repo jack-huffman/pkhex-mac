@@ -163,6 +163,18 @@ public partial class GiftsViewModel : ObservableObject
             : string.Empty;
     }
 
+    /// <summary>Bound by the results list; routes through the same selection logic.</summary>
+    public GiftTileViewModel? SelectedTile
+    {
+        get => _selectedTile;
+        set
+        {
+            if (!ReferenceEquals(_selectedTile, value))
+                SelectTile(value);
+            OnPropertyChanged();
+        }
+    }
+
     [RelayCommand]
     public void SelectTile(GiftTileViewModel? tile)
     {

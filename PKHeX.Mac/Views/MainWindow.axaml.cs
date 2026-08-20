@@ -105,6 +105,9 @@ public partial class MainWindow : Window
 
     // ---- Reverting ----
 
+    /// <summary>Clears the slot selection, which empties the inspector.</summary>
+    public void OnCloseDetailClicked(object? sender, RoutedEventArgs e) => VM.SelectSlot(null);
+
     /// <summary>Leaves a database view without having to click a box slot to escape it.</summary>
     public void OnCloseDatabaseClicked(object? sender, RoutedEventArgs e) => VM.SetView("boxes");
 

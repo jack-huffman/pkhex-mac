@@ -461,6 +461,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private SlotViewModel? _selected;
 
+    /// <summary>Box the current selection lives in; -1 for the party or no selection.</summary>
+    private int _selectedBox = -1;
+
     public SaveFile? SAV => _sav;
     public string? SavePath => _savPath;
     public SlotViewModel? SelectedSlot => _selected;
@@ -646,6 +649,18 @@ public partial class MainWindowViewModel : ViewModelBase
             var pk = _sav.GetBoxSlotAtIndex(box, i);
             BoxSlots[i].Update(pk, _strings);
         }
+        RefreshSelectionHighlight(box);
+    }
+
+    /// <summary>
+    /// Shows the selection ring only while its own box is on screen. Switching away
+    /// hides it; coming back restores it, because the selection itself is untouched.
+    /// </summary>
+    private void RefreshSelectionHighlight(int box)
+    {
+        var selectedSlot = _selected is { IsParty: false } && _selectedBox == box ? _selected.Slot : -1;
+        for (int i = 0; i < BoxSlots.Count; i++)
+            BoxSlots[i].IsSelected = i == selectedSlot;
     }
 
     private void LoadParty()
@@ -702,6 +717,7 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_selected is not null)
             _selected.IsSelected = false;
         _selected = slot;
+        _selectedBox = slot is null || slot.IsParty ? -1 : CurrentBox;
         if (slot is not null)
             slot.IsSelected = true;
         Detail.Load(slot?.Pokemon);
