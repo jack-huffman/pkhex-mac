@@ -58,6 +58,37 @@
     </Window.KeyBindings>
 
     <Window.Resources>
+        <!-- One definition of a move row, shared by all eight move pickers.
+             Eight hand-copied duplicates is how they drift apart. -->
+        <DataTemplate x:Key="MoveRowTemplate" x:DataType="vm:MoveChoice">
+            <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
+                <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="{StaticResource FontBody}"
+                           MinWidth="70" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"/>
+                <Panel Grid.Column="1" IsVisible="{Binding IsRealMove}">
+                    <Image Source="{Binding TypeIcon}" Width="20" Height="20"
+                           IsVisible="{Binding HasTypeIcon}"
+                           ToolTip.Tip="{Binding TypeName}"/>
+                    <!-- Stellar has no symbol; fall back to the colour chip -->
+                    <Border Classes="chip" Padding="5,2" MinHeight="17"
+                            Background="{Binding TypeBrush}"
+                            IsVisible="{Binding !HasTypeIcon}">
+                        <TextBlock Text="{Binding TypeName}" FontSize="{StaticResource FontMicro}" FontWeight="SemiBold"
+                                   Foreground="White"/>
+                    </Border>
+                </Panel>
+                <ctrl:MoveCategoryIcon Grid.Column="2" Category="{Binding CategoryKind}"
+                                       Width="20" Height="20"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="3" Text="{Binding PowerText}" FontSize="{StaticResource FontMicro}"
+                           Classes="secondary" VerticalAlignment="Center"
+                           TextAlignment="Center" ToolTip.Tip="Base power"/>
+                <TextBlock Grid.Column="4" Text="{Binding AccuracyText}" FontSize="{StaticResource FontMicro}"
+                           Classes="secondary" VerticalAlignment="Center"
+                           TextAlignment="Center" ToolTip.Tip="Accuracy"/>
+            </Grid>
+        </DataTemplate>
+
         <!-- Type-matrix column width. The header, cells and totals are separate
              strips with no shared layout, so they must all use this. -->
         <x:Double x:Key="MatrixCellWidth">40</x:Double>
@@ -1149,37 +1180,8 @@
                                                                      SelectedItem="{Binding SelectedMove1, Mode=TwoWay}"
                                                                      FilterMode="Contains" MinimumPrefixLength="1"
                                                                      MaxDropDownHeight="320"
-                                                                     PlaceholderText="Type a move name…">
-                                                        <AutoCompleteBox.ItemTemplate>
-                                                            <DataTemplate x:DataType="vm:MoveChoice">
-                                                                <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
-                                                                    <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="{StaticResource FontBody}"
-                                                                               MinWidth="70" VerticalAlignment="Center"
-                                                                               TextTrimming="CharacterEllipsis"/>
-                                                                    <Panel Grid.Column="1" IsVisible="{Binding IsRealMove}">
-                                                                        <Image Source="{Binding TypeIcon}" Width="20" Height="20"
-                                                                               IsVisible="{Binding HasTypeIcon}"
-                                                                               ToolTip.Tip="{Binding TypeName}"/>
-                                                                        <!-- Stellar has no symbol; fall back to the colour chip -->
-                                                                        <Border Classes="chip" Padding="5,2" MinHeight="17"
-                                                                                Background="{Binding TypeBrush}"
-                                                                                IsVisible="{Binding !HasTypeIcon}">
-                                                                            <TextBlock Text="{Binding TypeName}" FontSize="{StaticResource FontMicro}" FontWeight="SemiBold"
-                                                                                       Foreground="White"/>
-                                                                        </Border>
-                                                                    </Panel>
-                                                                    <ctrl:MoveCategoryIcon Grid.Column="2" Category="{Binding CategoryKind}"
-                                                                                           Width="20" Height="20"
-                                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                                    <TextBlock Grid.Column="3" Text="{Binding PowerText}" FontSize="{StaticResource FontMicro}"
-                                                                               Classes="secondary" VerticalAlignment="Center"
-                                                                               TextAlignment="Center" ToolTip.Tip="Base power"/>
-                                                                    <TextBlock Grid.Column="4" Text="{Binding AccuracyText}" FontSize="{StaticResource FontMicro}"
-                                                                               Classes="secondary" VerticalAlignment="Center"
-                                                                               TextAlignment="Center" ToolTip.Tip="Accuracy"/>
-                                                                </Grid>
-                                                            </DataTemplate>
-                                                        </AutoCompleteBox.ItemTemplate>
+                                                                     PlaceholderText="Type a move name…"
+                                                                     ItemTemplate="{StaticResource MoveRowTemplate}">
                                                     </AutoCompleteBox>
                                                     <!-- Type and category of the chosen move, since a text field
                                                          cannot show them the way the dropdown row does -->
@@ -1202,37 +1204,8 @@
                                                                      SelectedItem="{Binding SelectedMove2, Mode=TwoWay}"
                                                                      FilterMode="Contains" MinimumPrefixLength="1"
                                                                      MaxDropDownHeight="320"
-                                                                     PlaceholderText="Type a move name…">
-                                                        <AutoCompleteBox.ItemTemplate>
-                                                            <DataTemplate x:DataType="vm:MoveChoice">
-                                                                <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
-                                                                    <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="{StaticResource FontBody}"
-                                                                               MinWidth="70" VerticalAlignment="Center"
-                                                                               TextTrimming="CharacterEllipsis"/>
-                                                                    <Panel Grid.Column="1" IsVisible="{Binding IsRealMove}">
-                                                                        <Image Source="{Binding TypeIcon}" Width="20" Height="20"
-                                                                               IsVisible="{Binding HasTypeIcon}"
-                                                                               ToolTip.Tip="{Binding TypeName}"/>
-                                                                        <!-- Stellar has no symbol; fall back to the colour chip -->
-                                                                        <Border Classes="chip" Padding="5,2" MinHeight="17"
-                                                                                Background="{Binding TypeBrush}"
-                                                                                IsVisible="{Binding !HasTypeIcon}">
-                                                                            <TextBlock Text="{Binding TypeName}" FontSize="{StaticResource FontMicro}" FontWeight="SemiBold"
-                                                                                       Foreground="White"/>
-                                                                        </Border>
-                                                                    </Panel>
-                                                                    <ctrl:MoveCategoryIcon Grid.Column="2" Category="{Binding CategoryKind}"
-                                                                                           Width="20" Height="20"
-                                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                                    <TextBlock Grid.Column="3" Text="{Binding PowerText}" FontSize="{StaticResource FontMicro}"
-                                                                               Classes="secondary" VerticalAlignment="Center"
-                                                                               TextAlignment="Center" ToolTip.Tip="Base power"/>
-                                                                    <TextBlock Grid.Column="4" Text="{Binding AccuracyText}" FontSize="{StaticResource FontMicro}"
-                                                                               Classes="secondary" VerticalAlignment="Center"
-                                                                               TextAlignment="Center" ToolTip.Tip="Accuracy"/>
-                                                                </Grid>
-                                                            </DataTemplate>
-                                                        </AutoCompleteBox.ItemTemplate>
+                                                                     PlaceholderText="Type a move name…"
+                                                                     ItemTemplate="{StaticResource MoveRowTemplate}">
                                                     </AutoCompleteBox>
                                                     <!-- Type and category of the chosen move, since a text field
                                                          cannot show them the way the dropdown row does -->
@@ -1255,37 +1228,8 @@
                                                                      SelectedItem="{Binding SelectedMove3, Mode=TwoWay}"
                                                                      FilterMode="Contains" MinimumPrefixLength="1"
                                                                      MaxDropDownHeight="320"
-                                                                     PlaceholderText="Type a move name…">
-                                                        <AutoCompleteBox.ItemTemplate>
-                                                            <DataTemplate x:DataType="vm:MoveChoice">
-                                                                <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
-                                                                    <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="{StaticResource FontBody}"
-                                                                               MinWidth="70" VerticalAlignment="Center"
-                                                                               TextTrimming="CharacterEllipsis"/>
-                                                                    <Panel Grid.Column="1" IsVisible="{Binding IsRealMove}">
-                                                                        <Image Source="{Binding TypeIcon}" Width="20" Height="20"
-                                                                               IsVisible="{Binding HasTypeIcon}"
-                                                                               ToolTip.Tip="{Binding TypeName}"/>
-                                                                        <!-- Stellar has no symbol; fall back to the colour chip -->
-                                                                        <Border Classes="chip" Padding="5,2" MinHeight="17"
-                                                                                Background="{Binding TypeBrush}"
-                                                                                IsVisible="{Binding !HasTypeIcon}">
-                                                                            <TextBlock Text="{Binding TypeName}" FontSize="{StaticResource FontMicro}" FontWeight="SemiBold"
-                                                                                       Foreground="White"/>
-                                                                        </Border>
-                                                                    </Panel>
-                                                                    <ctrl:MoveCategoryIcon Grid.Column="2" Category="{Binding CategoryKind}"
-                                                                                           Width="20" Height="20"
-                                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                                    <TextBlock Grid.Column="3" Text="{Binding PowerText}" FontSize="{StaticResource FontMicro}"
-                                                                               Classes="secondary" VerticalAlignment="Center"
-                                                                               TextAlignment="Center" ToolTip.Tip="Base power"/>
-                                                                    <TextBlock Grid.Column="4" Text="{Binding AccuracyText}" FontSize="{StaticResource FontMicro}"
-                                                                               Classes="secondary" VerticalAlignment="Center"
-                                                                               TextAlignment="Center" ToolTip.Tip="Accuracy"/>
-                                                                </Grid>
-                                                            </DataTemplate>
-                                                        </AutoCompleteBox.ItemTemplate>
+                                                                     PlaceholderText="Type a move name…"
+                                                                     ItemTemplate="{StaticResource MoveRowTemplate}">
                                                     </AutoCompleteBox>
                                                     <!-- Type and category of the chosen move, since a text field
                                                          cannot show them the way the dropdown row does -->
@@ -1308,37 +1252,8 @@
                                                                      SelectedItem="{Binding SelectedMove4, Mode=TwoWay}"
                                                                      FilterMode="Contains" MinimumPrefixLength="1"
                                                                      MaxDropDownHeight="320"
-                                                                     PlaceholderText="Type a move name…">
-                                                        <AutoCompleteBox.ItemTemplate>
-                                                            <DataTemplate x:DataType="vm:MoveChoice">
-                                                                <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
-                                                                    <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="{StaticResource FontBody}"
-                                                                               MinWidth="70" VerticalAlignment="Center"
-                                                                               TextTrimming="CharacterEllipsis"/>
-                                                                    <Panel Grid.Column="1" IsVisible="{Binding IsRealMove}">
-                                                                        <Image Source="{Binding TypeIcon}" Width="20" Height="20"
-                                                                               IsVisible="{Binding HasTypeIcon}"
-                                                                               ToolTip.Tip="{Binding TypeName}"/>
-                                                                        <!-- Stellar has no symbol; fall back to the colour chip -->
-                                                                        <Border Classes="chip" Padding="5,2" MinHeight="17"
-                                                                                Background="{Binding TypeBrush}"
-                                                                                IsVisible="{Binding !HasTypeIcon}">
-                                                                            <TextBlock Text="{Binding TypeName}" FontSize="{StaticResource FontMicro}" FontWeight="SemiBold"
-                                                                                       Foreground="White"/>
-                                                                        </Border>
-                                                                    </Panel>
-                                                                    <ctrl:MoveCategoryIcon Grid.Column="2" Category="{Binding CategoryKind}"
-                                                                                           Width="20" Height="20"
-                                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                                    <TextBlock Grid.Column="3" Text="{Binding PowerText}" FontSize="{StaticResource FontMicro}"
-                                                                               Classes="secondary" VerticalAlignment="Center"
-                                                                               TextAlignment="Center" ToolTip.Tip="Base power"/>
-                                                                    <TextBlock Grid.Column="4" Text="{Binding AccuracyText}" FontSize="{StaticResource FontMicro}"
-                                                                               Classes="secondary" VerticalAlignment="Center"
-                                                                               TextAlignment="Center" ToolTip.Tip="Accuracy"/>
-                                                                </Grid>
-                                                            </DataTemplate>
-                                                        </AutoCompleteBox.ItemTemplate>
+                                                                     PlaceholderText="Type a move name…"
+                                                                     ItemTemplate="{StaticResource MoveRowTemplate}">
                                                     </AutoCompleteBox>
                                                     <!-- Type and category of the chosen move, since a text field
                                                          cannot show them the way the dropdown row does -->
@@ -1364,148 +1279,32 @@
                                                                          SelectedItem="{Binding SelectedRelearn1, Mode=TwoWay}"
                                                                          FilterMode="Contains" MinimumPrefixLength="1"
                                                                          MaxDropDownHeight="320"
-                                                                         PlaceholderText="Type a move name…">
-                                                        <AutoCompleteBox.ItemTemplate>
-                                                            <DataTemplate x:DataType="vm:MoveChoice">
-                                                                <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
-                                                                    <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="{StaticResource FontBody}"
-                                                                               MinWidth="70" VerticalAlignment="Center"
-                                                                               TextTrimming="CharacterEllipsis"/>
-                                                                    <Panel Grid.Column="1" IsVisible="{Binding IsRealMove}">
-                                                                        <Image Source="{Binding TypeIcon}" Width="20" Height="20"
-                                                                               IsVisible="{Binding HasTypeIcon}"
-                                                                               ToolTip.Tip="{Binding TypeName}"/>
-                                                                        <!-- Stellar has no symbol; fall back to the colour chip -->
-                                                                        <Border Classes="chip" Padding="5,2" MinHeight="17"
-                                                                                Background="{Binding TypeBrush}"
-                                                                                IsVisible="{Binding !HasTypeIcon}">
-                                                                            <TextBlock Text="{Binding TypeName}" FontSize="{StaticResource FontMicro}" FontWeight="SemiBold"
-                                                                                       Foreground="White"/>
-                                                                        </Border>
-                                                                    </Panel>
-                                                                    <ctrl:MoveCategoryIcon Grid.Column="2" Category="{Binding CategoryKind}"
-                                                                                           Width="20" Height="20"
-                                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                                    <TextBlock Grid.Column="3" Text="{Binding PowerText}" FontSize="{StaticResource FontMicro}"
-                                                                               Classes="secondary" VerticalAlignment="Center"
-                                                                               TextAlignment="Center" ToolTip.Tip="Base power"/>
-                                                                    <TextBlock Grid.Column="4" Text="{Binding AccuracyText}" FontSize="{StaticResource FontMicro}"
-                                                                               Classes="secondary" VerticalAlignment="Center"
-                                                                               TextAlignment="Center" ToolTip.Tip="Accuracy"/>
-                                                                </Grid>
-                                                            </DataTemplate>
-                                                        </AutoCompleteBox.ItemTemplate>
+                                                                         PlaceholderText="Type a move name…"
+                                                                     ItemTemplate="{StaticResource MoveRowTemplate}">
                                                         </AutoCompleteBox>
                                                         <AutoCompleteBox HorizontalAlignment="Stretch"
                                                                          ItemsSource="{Binding MoveChoices}"
                                                                          SelectedItem="{Binding SelectedRelearn2, Mode=TwoWay}"
                                                                          FilterMode="Contains" MinimumPrefixLength="1"
                                                                          MaxDropDownHeight="320"
-                                                                         PlaceholderText="Type a move name…">
-                                                        <AutoCompleteBox.ItemTemplate>
-                                                            <DataTemplate x:DataType="vm:MoveChoice">
-                                                                <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
-                                                                    <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="{StaticResource FontBody}"
-                                                                               MinWidth="70" VerticalAlignment="Center"
-                                                                               TextTrimming="CharacterEllipsis"/>
-                                                                    <Panel Grid.Column="1" IsVisible="{Binding IsRealMove}">
-                                                                        <Image Source="{Binding TypeIcon}" Width="20" Height="20"
-                                                                               IsVisible="{Binding HasTypeIcon}"
-                                                                               ToolTip.Tip="{Binding TypeName}"/>
-                                                                        <!-- Stellar has no symbol; fall back to the colour chip -->
-                                                                        <Border Classes="chip" Padding="5,2" MinHeight="17"
-                                                                                Background="{Binding TypeBrush}"
-                                                                                IsVisible="{Binding !HasTypeIcon}">
-                                                                            <TextBlock Text="{Binding TypeName}" FontSize="{StaticResource FontMicro}" FontWeight="SemiBold"
-                                                                                       Foreground="White"/>
-                                                                        </Border>
-                                                                    </Panel>
-                                                                    <ctrl:MoveCategoryIcon Grid.Column="2" Category="{Binding CategoryKind}"
-                                                                                           Width="20" Height="20"
-                                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                                    <TextBlock Grid.Column="3" Text="{Binding PowerText}" FontSize="{StaticResource FontMicro}"
-                                                                               Classes="secondary" VerticalAlignment="Center"
-                                                                               TextAlignment="Center" ToolTip.Tip="Base power"/>
-                                                                    <TextBlock Grid.Column="4" Text="{Binding AccuracyText}" FontSize="{StaticResource FontMicro}"
-                                                                               Classes="secondary" VerticalAlignment="Center"
-                                                                               TextAlignment="Center" ToolTip.Tip="Accuracy"/>
-                                                                </Grid>
-                                                            </DataTemplate>
-                                                        </AutoCompleteBox.ItemTemplate>
+                                                                         PlaceholderText="Type a move name…"
+                                                                     ItemTemplate="{StaticResource MoveRowTemplate}">
                                                         </AutoCompleteBox>
                                                         <AutoCompleteBox HorizontalAlignment="Stretch"
                                                                          ItemsSource="{Binding MoveChoices}"
                                                                          SelectedItem="{Binding SelectedRelearn3, Mode=TwoWay}"
                                                                          FilterMode="Contains" MinimumPrefixLength="1"
                                                                          MaxDropDownHeight="320"
-                                                                         PlaceholderText="Type a move name…">
-                                                        <AutoCompleteBox.ItemTemplate>
-                                                            <DataTemplate x:DataType="vm:MoveChoice">
-                                                                <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
-                                                                    <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="{StaticResource FontBody}"
-                                                                               MinWidth="70" VerticalAlignment="Center"
-                                                                               TextTrimming="CharacterEllipsis"/>
-                                                                    <Panel Grid.Column="1" IsVisible="{Binding IsRealMove}">
-                                                                        <Image Source="{Binding TypeIcon}" Width="20" Height="20"
-                                                                               IsVisible="{Binding HasTypeIcon}"
-                                                                               ToolTip.Tip="{Binding TypeName}"/>
-                                                                        <!-- Stellar has no symbol; fall back to the colour chip -->
-                                                                        <Border Classes="chip" Padding="5,2" MinHeight="17"
-                                                                                Background="{Binding TypeBrush}"
-                                                                                IsVisible="{Binding !HasTypeIcon}">
-                                                                            <TextBlock Text="{Binding TypeName}" FontSize="{StaticResource FontMicro}" FontWeight="SemiBold"
-                                                                                       Foreground="White"/>
-                                                                        </Border>
-                                                                    </Panel>
-                                                                    <ctrl:MoveCategoryIcon Grid.Column="2" Category="{Binding CategoryKind}"
-                                                                                           Width="20" Height="20"
-                                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                                    <TextBlock Grid.Column="3" Text="{Binding PowerText}" FontSize="{StaticResource FontMicro}"
-                                                                               Classes="secondary" VerticalAlignment="Center"
-                                                                               TextAlignment="Center" ToolTip.Tip="Base power"/>
-                                                                    <TextBlock Grid.Column="4" Text="{Binding AccuracyText}" FontSize="{StaticResource FontMicro}"
-                                                                               Classes="secondary" VerticalAlignment="Center"
-                                                                               TextAlignment="Center" ToolTip.Tip="Accuracy"/>
-                                                                </Grid>
-                                                            </DataTemplate>
-                                                        </AutoCompleteBox.ItemTemplate>
+                                                                         PlaceholderText="Type a move name…"
+                                                                     ItemTemplate="{StaticResource MoveRowTemplate}">
                                                         </AutoCompleteBox>
                                                         <AutoCompleteBox HorizontalAlignment="Stretch"
                                                                          ItemsSource="{Binding MoveChoices}"
                                                                          SelectedItem="{Binding SelectedRelearn4, Mode=TwoWay}"
                                                                          FilterMode="Contains" MinimumPrefixLength="1"
                                                                          MaxDropDownHeight="320"
-                                                                         PlaceholderText="Type a move name…">
-                                                        <AutoCompleteBox.ItemTemplate>
-                                                            <DataTemplate x:DataType="vm:MoveChoice">
-                                                                <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
-                                                                    <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="{StaticResource FontBody}"
-                                                                               MinWidth="70" VerticalAlignment="Center"
-                                                                               TextTrimming="CharacterEllipsis"/>
-                                                                    <Panel Grid.Column="1" IsVisible="{Binding IsRealMove}">
-                                                                        <Image Source="{Binding TypeIcon}" Width="20" Height="20"
-                                                                               IsVisible="{Binding HasTypeIcon}"
-                                                                               ToolTip.Tip="{Binding TypeName}"/>
-                                                                        <!-- Stellar has no symbol; fall back to the colour chip -->
-                                                                        <Border Classes="chip" Padding="5,2" MinHeight="17"
-                                                                                Background="{Binding TypeBrush}"
-                                                                                IsVisible="{Binding !HasTypeIcon}">
-                                                                            <TextBlock Text="{Binding TypeName}" FontSize="{StaticResource FontMicro}" FontWeight="SemiBold"
-                                                                                       Foreground="White"/>
-                                                                        </Border>
-                                                                    </Panel>
-                                                                    <ctrl:MoveCategoryIcon Grid.Column="2" Category="{Binding CategoryKind}"
-                                                                                           Width="20" Height="20"
-                                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                                                    <TextBlock Grid.Column="3" Text="{Binding PowerText}" FontSize="{StaticResource FontMicro}"
-                                                                               Classes="secondary" VerticalAlignment="Center"
-                                                                               TextAlignment="Center" ToolTip.Tip="Base power"/>
-                                                                    <TextBlock Grid.Column="4" Text="{Binding AccuracyText}" FontSize="{StaticResource FontMicro}"
-                                                                               Classes="secondary" VerticalAlignment="Center"
-                                                                               TextAlignment="Center" ToolTip.Tip="Accuracy"/>
-                                                                </Grid>
-                                                            </DataTemplate>
-                                                        </AutoCompleteBox.ItemTemplate>
+                                                                         PlaceholderText="Type a move name…"
+                                                                     ItemTemplate="{StaticResource MoveRowTemplate}">
                                                         </AutoCompleteBox>
                                                     </StackPanel>
                                                 </StackPanel>
