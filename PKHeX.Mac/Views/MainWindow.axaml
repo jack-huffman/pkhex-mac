@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:PKHeX.Mac.ViewModels"
         xmlns:core="using:PKHeX.Core"
+        xmlns:ctrl="using:PKHeX.Mac.Controls"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="800"
@@ -1447,12 +1448,8 @@
                                                                         <TextBlock Text="{Binding TypeName}" FontSize="9" FontWeight="SemiBold"
                                                                                    Foreground="White" TextAlignment="Center"/>
                                                                     </Border>
-                                                                    <Border Grid.Column="2" Classes="chip" Padding="4,1"
-                                                                            Background="{Binding CategoryBrush}"
-                                                                            IsVisible="{Binding HasCategory}">
-                                                                        <TextBlock Text="{Binding CategoryLabel}" FontSize="9" FontWeight="SemiBold"
-                                                                                   Foreground="White" TextAlignment="Center"/>
-                                                                    </Border>
+                                                                    <ctrl:MoveCategoryIcon Grid.Column="2" Category="{Binding CategoryKind}"
+                                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                     <TextBlock Grid.Column="3" Text="{Binding PowerText}" FontSize="10"
                                                                                Classes="secondary" VerticalAlignment="Center"
                                                                                TextAlignment="Center" ToolTip.Tip="Base power"/>
@@ -1469,6 +1466,13 @@
                                                                     VerticalAlignment="Center"
                                                                     DataContext="{Binding MoveInfo1}" x:DataType="vm:MoveChoice"
                                                                     IsVisible="{Binding $self.DataContext, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                            <Border Classes="chip" Padding="6,1" Background="{Binding TypeBrush}"
+                                                                    VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding TypeName}" FontSize="9" FontWeight="SemiBold"
+                                                                           Foreground="White"/>
+                                                            </Border>
+                                                            <ctrl:MoveCategoryIcon Category="{Binding CategoryKind}"
+                                                                                   VerticalAlignment="Center"/>
                                                             <TextBlock Text="{Binding StatLine}" FontSize="10" Classes="secondary"
                                                                        VerticalAlignment="Center"/>
                                                         </StackPanel>
@@ -1497,12 +1501,8 @@
                                                                         <TextBlock Text="{Binding TypeName}" FontSize="9" FontWeight="SemiBold"
                                                                                    Foreground="White" TextAlignment="Center"/>
                                                                     </Border>
-                                                                    <Border Grid.Column="2" Classes="chip" Padding="4,1"
-                                                                            Background="{Binding CategoryBrush}"
-                                                                            IsVisible="{Binding HasCategory}">
-                                                                        <TextBlock Text="{Binding CategoryLabel}" FontSize="9" FontWeight="SemiBold"
-                                                                                   Foreground="White" TextAlignment="Center"/>
-                                                                    </Border>
+                                                                    <ctrl:MoveCategoryIcon Grid.Column="2" Category="{Binding CategoryKind}"
+                                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                     <TextBlock Grid.Column="3" Text="{Binding PowerText}" FontSize="10"
                                                                                Classes="secondary" VerticalAlignment="Center"
                                                                                TextAlignment="Center" ToolTip.Tip="Base power"/>
@@ -1519,6 +1519,13 @@
                                                                     VerticalAlignment="Center"
                                                                     DataContext="{Binding MoveInfo2}" x:DataType="vm:MoveChoice"
                                                                     IsVisible="{Binding $self.DataContext, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                            <Border Classes="chip" Padding="6,1" Background="{Binding TypeBrush}"
+                                                                    VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding TypeName}" FontSize="9" FontWeight="SemiBold"
+                                                                           Foreground="White"/>
+                                                            </Border>
+                                                            <ctrl:MoveCategoryIcon Category="{Binding CategoryKind}"
+                                                                                   VerticalAlignment="Center"/>
                                                             <TextBlock Text="{Binding StatLine}" FontSize="10" Classes="secondary"
                                                                        VerticalAlignment="Center"/>
                                                         </StackPanel>
@@ -1547,12 +1554,8 @@
                                                                         <TextBlock Text="{Binding TypeName}" FontSize="9" FontWeight="SemiBold"
                                                                                    Foreground="White" TextAlignment="Center"/>
                                                                     </Border>
-                                                                    <Border Grid.Column="2" Classes="chip" Padding="4,1"
-                                                                            Background="{Binding CategoryBrush}"
-                                                                            IsVisible="{Binding HasCategory}">
-                                                                        <TextBlock Text="{Binding CategoryLabel}" FontSize="9" FontWeight="SemiBold"
-                                                                                   Foreground="White" TextAlignment="Center"/>
-                                                                    </Border>
+                                                                    <ctrl:MoveCategoryIcon Grid.Column="2" Category="{Binding CategoryKind}"
+                                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                     <TextBlock Grid.Column="3" Text="{Binding PowerText}" FontSize="10"
                                                                                Classes="secondary" VerticalAlignment="Center"
                                                                                TextAlignment="Center" ToolTip.Tip="Base power"/>
@@ -1569,6 +1572,13 @@
                                                                     VerticalAlignment="Center"
                                                                     DataContext="{Binding MoveInfo3}" x:DataType="vm:MoveChoice"
                                                                     IsVisible="{Binding $self.DataContext, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                            <Border Classes="chip" Padding="6,1" Background="{Binding TypeBrush}"
+                                                                    VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding TypeName}" FontSize="9" FontWeight="SemiBold"
+                                                                           Foreground="White"/>
+                                                            </Border>
+                                                            <ctrl:MoveCategoryIcon Category="{Binding CategoryKind}"
+                                                                                   VerticalAlignment="Center"/>
                                                             <TextBlock Text="{Binding StatLine}" FontSize="10" Classes="secondary"
                                                                        VerticalAlignment="Center"/>
                                                         </StackPanel>
@@ -1597,12 +1607,8 @@
                                                                         <TextBlock Text="{Binding TypeName}" FontSize="9" FontWeight="SemiBold"
                                                                                    Foreground="White" TextAlignment="Center"/>
                                                                     </Border>
-                                                                    <Border Grid.Column="2" Classes="chip" Padding="4,1"
-                                                                            Background="{Binding CategoryBrush}"
-                                                                            IsVisible="{Binding HasCategory}">
-                                                                        <TextBlock Text="{Binding CategoryLabel}" FontSize="9" FontWeight="SemiBold"
-                                                                                   Foreground="White" TextAlignment="Center"/>
-                                                                    </Border>
+                                                                    <ctrl:MoveCategoryIcon Grid.Column="2" Category="{Binding CategoryKind}"
+                                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                     <TextBlock Grid.Column="3" Text="{Binding PowerText}" FontSize="10"
                                                                                Classes="secondary" VerticalAlignment="Center"
                                                                                TextAlignment="Center" ToolTip.Tip="Base power"/>
@@ -1619,6 +1625,13 @@
                                                                     VerticalAlignment="Center"
                                                                     DataContext="{Binding MoveInfo4}" x:DataType="vm:MoveChoice"
                                                                     IsVisible="{Binding $self.DataContext, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                                            <Border Classes="chip" Padding="6,1" Background="{Binding TypeBrush}"
+                                                                    VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding TypeName}" FontSize="9" FontWeight="SemiBold"
+                                                                           Foreground="White"/>
+                                                            </Border>
+                                                            <ctrl:MoveCategoryIcon Category="{Binding CategoryKind}"
+                                                                                   VerticalAlignment="Center"/>
                                                             <TextBlock Text="{Binding StatLine}" FontSize="10" Classes="secondary"
                                                                        VerticalAlignment="Center"/>
                                                         </StackPanel>
@@ -1656,12 +1669,8 @@
                                                                         <TextBlock Text="{Binding TypeName}" FontSize="9" FontWeight="SemiBold"
                                                                                    Foreground="White" TextAlignment="Center"/>
                                                                     </Border>
-                                                                    <Border Grid.Column="2" Classes="chip" Padding="4,1"
-                                                                            Background="{Binding CategoryBrush}"
-                                                                            IsVisible="{Binding HasCategory}">
-                                                                        <TextBlock Text="{Binding CategoryLabel}" FontSize="9" FontWeight="SemiBold"
-                                                                                   Foreground="White" TextAlignment="Center"/>
-                                                                    </Border>
+                                                                    <ctrl:MoveCategoryIcon Grid.Column="2" Category="{Binding CategoryKind}"
+                                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                     <TextBlock Grid.Column="3" Text="{Binding PowerText}" FontSize="10"
                                                                                Classes="secondary" VerticalAlignment="Center"
                                                                                TextAlignment="Center" ToolTip.Tip="Base power"/>
@@ -1687,12 +1696,8 @@
                                                                         <TextBlock Text="{Binding TypeName}" FontSize="9" FontWeight="SemiBold"
                                                                                    Foreground="White" TextAlignment="Center"/>
                                                                     </Border>
-                                                                    <Border Grid.Column="2" Classes="chip" Padding="4,1"
-                                                                            Background="{Binding CategoryBrush}"
-                                                                            IsVisible="{Binding HasCategory}">
-                                                                        <TextBlock Text="{Binding CategoryLabel}" FontSize="9" FontWeight="SemiBold"
-                                                                                   Foreground="White" TextAlignment="Center"/>
-                                                                    </Border>
+                                                                    <ctrl:MoveCategoryIcon Grid.Column="2" Category="{Binding CategoryKind}"
+                                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                     <TextBlock Grid.Column="3" Text="{Binding PowerText}" FontSize="10"
                                                                                Classes="secondary" VerticalAlignment="Center"
                                                                                TextAlignment="Center" ToolTip.Tip="Base power"/>
@@ -1718,12 +1723,8 @@
                                                                         <TextBlock Text="{Binding TypeName}" FontSize="9" FontWeight="SemiBold"
                                                                                    Foreground="White" TextAlignment="Center"/>
                                                                     </Border>
-                                                                    <Border Grid.Column="2" Classes="chip" Padding="4,1"
-                                                                            Background="{Binding CategoryBrush}"
-                                                                            IsVisible="{Binding HasCategory}">
-                                                                        <TextBlock Text="{Binding CategoryLabel}" FontSize="9" FontWeight="SemiBold"
-                                                                                   Foreground="White" TextAlignment="Center"/>
-                                                                    </Border>
+                                                                    <ctrl:MoveCategoryIcon Grid.Column="2" Category="{Binding CategoryKind}"
+                                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                     <TextBlock Grid.Column="3" Text="{Binding PowerText}" FontSize="10"
                                                                                Classes="secondary" VerticalAlignment="Center"
                                                                                TextAlignment="Center" ToolTip.Tip="Base power"/>
@@ -1749,12 +1750,8 @@
                                                                         <TextBlock Text="{Binding TypeName}" FontSize="9" FontWeight="SemiBold"
                                                                                    Foreground="White" TextAlignment="Center"/>
                                                                     </Border>
-                                                                    <Border Grid.Column="2" Classes="chip" Padding="4,1"
-                                                                            Background="{Binding CategoryBrush}"
-                                                                            IsVisible="{Binding HasCategory}">
-                                                                        <TextBlock Text="{Binding CategoryLabel}" FontSize="9" FontWeight="SemiBold"
-                                                                                   Foreground="White" TextAlignment="Center"/>
-                                                                    </Border>
+                                                                    <ctrl:MoveCategoryIcon Grid.Column="2" Category="{Binding CategoryKind}"
+                                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                     <TextBlock Grid.Column="3" Text="{Binding PowerText}" FontSize="10"
                                                                                Classes="secondary" VerticalAlignment="Center"
                                                                                TextAlignment="Center" ToolTip.Tip="Base power"/>

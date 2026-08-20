@@ -34,6 +34,7 @@ public sealed class MoveChoice
         Pp = MoveInfo.GetPP(context, move);
 
         var facts = MoveDataService.Get(move);
+        CategoryKind = facts.Category;
         PowerText = facts.PowerText;
         AccuracyText = facts.AccuracyText;
         CategoryLabel = facts.CategoryLabel;
@@ -47,6 +48,7 @@ public sealed class MoveChoice
     public string TypeName { get; }
     public IBrush? TypeBrush { get; }
     public string CategoryLabel { get; } = string.Empty;
+    public MoveDataService.Category CategoryKind { get; } = MoveDataService.Category.Unknown;
     public IBrush? CategoryBrush { get; }
     public string PowerText { get; } = "—";
     public string AccuracyText { get; } = "—";
