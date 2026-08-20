@@ -141,10 +141,13 @@
                         <TextBlock Classes="sectionTitle" Text="BOXES" IsVisible="{Binding HasSave}" Margin="6,6,0,0"/>
                     </StackPanel>
 
-                    <!-- Box list -->
+                    <!-- Box list. Tapped (not SelectionChanged) drives the view switch so
+                         clicking the already-selected box still returns to the grid. -->
                     <ListBox Margin="10,0,10,10"
+                             Opacity="{Binding BoxListOpacity}"
                              ItemsSource="{Binding BoxNames}"
-                             SelectedIndex="{Binding CurrentBox, Mode=TwoWay}">
+                             SelectedIndex="{Binding CurrentBox, Mode=TwoWay}"
+                             Tapped="OnBoxListTapped">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding}" FontSize="13"/>

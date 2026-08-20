@@ -43,6 +43,10 @@ public partial class MainWindowViewModel : ViewModelBase
     public bool IsGiftsView => CurrentView == "gifts";
     public bool IsDatabaseView => IsAddView || IsGiftsView;
 
+    /// <summary>Dims the box list while another view is showing, so its selection
+    /// does not read as the active section.</summary>
+    public double BoxListOpacity => IsBoxesView ? 1.0 : 0.5;
+
     /// <summary>Collapses the inspector column for the full-width Save view.</summary>
     public Avalonia.Controls.GridLength InspectorWidth =>
         IsSaveView ? new Avalonia.Controls.GridLength(0) : new Avalonia.Controls.GridLength(392);
@@ -55,6 +59,7 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsGiftsView));
         OnPropertyChanged(nameof(IsDatabaseView));
         OnPropertyChanged(nameof(InspectorWidth));
+        OnPropertyChanged(nameof(BoxListOpacity));
     }
 
     [RelayCommand]
@@ -65,6 +70,9 @@ public partial class MainWindowViewModel : ViewModelBase
             StatusText = "Open a save file first (⌘O).";
             return;
         }
+        if (CurrentView == view)
+            return; // already here: keep any preview/selection intact
+
         if (view == "gifts" && GiftDb is null && _sav is not null)
         {
             StatusText = "Loading the Mystery Gift archive…";

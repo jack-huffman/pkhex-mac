@@ -418,6 +418,10 @@ public partial class MainWindow : Window
     // Trainer / database views (in-window, via sidebar navigation)
     // =====================================================================
 
+    /// <summary>Any tap in the box list returns to the box grid, even when the
+    /// tapped box was already the selected one (no SelectionChanged fires then).</summary>
+    private void OnBoxListTapped(object? sender, Avalonia.Input.TappedEventArgs e) => VM.SetView("boxes");
+
     public void OnTrainerClicked(object? sender, EventArgs e) => VM.SetView("save");
     public void OnBagClicked(object? sender, EventArgs e) => VM.SetView("save");
     public void OnAddPokemonClicked(object? sender, EventArgs e) => VM.SetView("add");
