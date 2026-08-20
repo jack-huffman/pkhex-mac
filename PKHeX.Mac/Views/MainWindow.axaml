@@ -1444,12 +1444,12 @@
                                                               SelectedValueBinding="{Binding Value, x:DataType=vm:MoveChoice}">
                                                         <ComboBox.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:MoveChoice">
-                                                                <Grid ColumnDefinitions="*,24,30,28,28" ColumnSpacing="6">
+                                                                <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
                                                                     <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12"
                                                                                MinWidth="70" VerticalAlignment="Center"
                                                                                TextTrimming="CharacterEllipsis"/>
                                                                     <Panel Grid.Column="1" IsVisible="{Binding IsRealMove}">
-                                                                        <Image Source="{Binding TypeIcon}" Width="19" Height="19"
+                                                                        <Image Source="{Binding TypeIcon}" Width="20" Height="20"
                                                                                IsVisible="{Binding HasTypeIcon}"
                                                                                ToolTip.Tip="{Binding TypeName}"/>
                                                                         <!-- Stellar has no symbol; fall back to the colour chip -->
@@ -1461,7 +1461,7 @@
                                                                         </Border>
                                                                     </Panel>
                                                                     <ctrl:MoveCategoryIcon Grid.Column="2" Category="{Binding CategoryKind}"
-                                                                                           Width="26" Height="17"
+                                                                                           Width="20" Height="20"
                                                                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                     <TextBlock Grid.Column="3" Text="{Binding PowerText}" FontSize="10"
                                                                                Classes="secondary" VerticalAlignment="Center"
@@ -1484,12 +1484,12 @@
                                                               SelectedValueBinding="{Binding Value, x:DataType=vm:MoveChoice}">
                                                         <ComboBox.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:MoveChoice">
-                                                                <Grid ColumnDefinitions="*,24,30,28,28" ColumnSpacing="6">
+                                                                <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
                                                                     <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12"
                                                                                MinWidth="70" VerticalAlignment="Center"
                                                                                TextTrimming="CharacterEllipsis"/>
                                                                     <Panel Grid.Column="1" IsVisible="{Binding IsRealMove}">
-                                                                        <Image Source="{Binding TypeIcon}" Width="19" Height="19"
+                                                                        <Image Source="{Binding TypeIcon}" Width="20" Height="20"
                                                                                IsVisible="{Binding HasTypeIcon}"
                                                                                ToolTip.Tip="{Binding TypeName}"/>
                                                                         <!-- Stellar has no symbol; fall back to the colour chip -->
@@ -1501,7 +1501,7 @@
                                                                         </Border>
                                                                     </Panel>
                                                                     <ctrl:MoveCategoryIcon Grid.Column="2" Category="{Binding CategoryKind}"
-                                                                                           Width="26" Height="17"
+                                                                                           Width="20" Height="20"
                                                                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                     <TextBlock Grid.Column="3" Text="{Binding PowerText}" FontSize="10"
                                                                                Classes="secondary" VerticalAlignment="Center"
@@ -1524,12 +1524,12 @@
                                                               SelectedValueBinding="{Binding Value, x:DataType=vm:MoveChoice}">
                                                         <ComboBox.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:MoveChoice">
-                                                                <Grid ColumnDefinitions="*,24,30,28,28" ColumnSpacing="6">
+                                                                <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
                                                                     <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12"
                                                                                MinWidth="70" VerticalAlignment="Center"
                                                                                TextTrimming="CharacterEllipsis"/>
                                                                     <Panel Grid.Column="1" IsVisible="{Binding IsRealMove}">
-                                                                        <Image Source="{Binding TypeIcon}" Width="19" Height="19"
+                                                                        <Image Source="{Binding TypeIcon}" Width="20" Height="20"
                                                                                IsVisible="{Binding HasTypeIcon}"
                                                                                ToolTip.Tip="{Binding TypeName}"/>
                                                                         <!-- Stellar has no symbol; fall back to the colour chip -->
@@ -1541,7 +1541,7 @@
                                                                         </Border>
                                                                     </Panel>
                                                                     <ctrl:MoveCategoryIcon Grid.Column="2" Category="{Binding CategoryKind}"
-                                                                                           Width="26" Height="17"
+                                                                                           Width="20" Height="20"
                                                                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                     <TextBlock Grid.Column="3" Text="{Binding PowerText}" FontSize="10"
                                                                                Classes="secondary" VerticalAlignment="Center"
@@ -1564,12 +1564,12 @@
                                                               SelectedValueBinding="{Binding Value, x:DataType=vm:MoveChoice}">
                                                         <ComboBox.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:MoveChoice">
-                                                                <Grid ColumnDefinitions="*,24,30,28,28" ColumnSpacing="6">
+                                                                <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
                                                                     <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12"
                                                                                MinWidth="70" VerticalAlignment="Center"
                                                                                TextTrimming="CharacterEllipsis"/>
                                                                     <Panel Grid.Column="1" IsVisible="{Binding IsRealMove}">
-                                                                        <Image Source="{Binding TypeIcon}" Width="19" Height="19"
+                                                                        <Image Source="{Binding TypeIcon}" Width="20" Height="20"
                                                                                IsVisible="{Binding HasTypeIcon}"
                                                                                ToolTip.Tip="{Binding TypeName}"/>
                                                                         <!-- Stellar has no symbol; fall back to the colour chip -->
@@ -1581,7 +1581,7 @@
                                                                         </Border>
                                                                     </Panel>
                                                                     <ctrl:MoveCategoryIcon Grid.Column="2" Category="{Binding CategoryKind}"
-                                                                                           Width="26" Height="17"
+                                                                                           Width="20" Height="20"
                                                                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                     <TextBlock Grid.Column="3" Text="{Binding PowerText}" FontSize="10"
                                                                                Classes="secondary" VerticalAlignment="Center"
@@ -1607,12 +1607,12 @@
                                                               SelectedValueBinding="{Binding Value, x:DataType=vm:MoveChoice}">
                                                         <ComboBox.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:MoveChoice">
-                                                                <Grid ColumnDefinitions="*,24,30,28,28" ColumnSpacing="6">
+                                                                <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
                                                                     <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12"
                                                                                MinWidth="70" VerticalAlignment="Center"
                                                                                TextTrimming="CharacterEllipsis"/>
                                                                     <Panel Grid.Column="1" IsVisible="{Binding IsRealMove}">
-                                                                        <Image Source="{Binding TypeIcon}" Width="19" Height="19"
+                                                                        <Image Source="{Binding TypeIcon}" Width="20" Height="20"
                                                                                IsVisible="{Binding HasTypeIcon}"
                                                                                ToolTip.Tip="{Binding TypeName}"/>
                                                                         <!-- Stellar has no symbol; fall back to the colour chip -->
@@ -1624,7 +1624,7 @@
                                                                         </Border>
                                                                     </Panel>
                                                                     <ctrl:MoveCategoryIcon Grid.Column="2" Category="{Binding CategoryKind}"
-                                                                                           Width="26" Height="17"
+                                                                                           Width="20" Height="20"
                                                                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                     <TextBlock Grid.Column="3" Text="{Binding PowerText}" FontSize="10"
                                                                                Classes="secondary" VerticalAlignment="Center"
@@ -1641,12 +1641,12 @@
                                                               SelectedValueBinding="{Binding Value, x:DataType=vm:MoveChoice}">
                                                         <ComboBox.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:MoveChoice">
-                                                                <Grid ColumnDefinitions="*,24,30,28,28" ColumnSpacing="6">
+                                                                <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
                                                                     <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12"
                                                                                MinWidth="70" VerticalAlignment="Center"
                                                                                TextTrimming="CharacterEllipsis"/>
                                                                     <Panel Grid.Column="1" IsVisible="{Binding IsRealMove}">
-                                                                        <Image Source="{Binding TypeIcon}" Width="19" Height="19"
+                                                                        <Image Source="{Binding TypeIcon}" Width="20" Height="20"
                                                                                IsVisible="{Binding HasTypeIcon}"
                                                                                ToolTip.Tip="{Binding TypeName}"/>
                                                                         <!-- Stellar has no symbol; fall back to the colour chip -->
@@ -1658,7 +1658,7 @@
                                                                         </Border>
                                                                     </Panel>
                                                                     <ctrl:MoveCategoryIcon Grid.Column="2" Category="{Binding CategoryKind}"
-                                                                                           Width="26" Height="17"
+                                                                                           Width="20" Height="20"
                                                                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                     <TextBlock Grid.Column="3" Text="{Binding PowerText}" FontSize="10"
                                                                                Classes="secondary" VerticalAlignment="Center"
@@ -1675,12 +1675,12 @@
                                                               SelectedValueBinding="{Binding Value, x:DataType=vm:MoveChoice}">
                                                         <ComboBox.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:MoveChoice">
-                                                                <Grid ColumnDefinitions="*,24,30,28,28" ColumnSpacing="6">
+                                                                <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
                                                                     <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12"
                                                                                MinWidth="70" VerticalAlignment="Center"
                                                                                TextTrimming="CharacterEllipsis"/>
                                                                     <Panel Grid.Column="1" IsVisible="{Binding IsRealMove}">
-                                                                        <Image Source="{Binding TypeIcon}" Width="19" Height="19"
+                                                                        <Image Source="{Binding TypeIcon}" Width="20" Height="20"
                                                                                IsVisible="{Binding HasTypeIcon}"
                                                                                ToolTip.Tip="{Binding TypeName}"/>
                                                                         <!-- Stellar has no symbol; fall back to the colour chip -->
@@ -1692,7 +1692,7 @@
                                                                         </Border>
                                                                     </Panel>
                                                                     <ctrl:MoveCategoryIcon Grid.Column="2" Category="{Binding CategoryKind}"
-                                                                                           Width="26" Height="17"
+                                                                                           Width="20" Height="20"
                                                                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                     <TextBlock Grid.Column="3" Text="{Binding PowerText}" FontSize="10"
                                                                                Classes="secondary" VerticalAlignment="Center"
@@ -1709,12 +1709,12 @@
                                                               SelectedValueBinding="{Binding Value, x:DataType=vm:MoveChoice}">
                                                         <ComboBox.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:MoveChoice">
-                                                                <Grid ColumnDefinitions="*,24,30,28,28" ColumnSpacing="6">
+                                                                <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
                                                                     <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12"
                                                                                MinWidth="70" VerticalAlignment="Center"
                                                                                TextTrimming="CharacterEllipsis"/>
                                                                     <Panel Grid.Column="1" IsVisible="{Binding IsRealMove}">
-                                                                        <Image Source="{Binding TypeIcon}" Width="19" Height="19"
+                                                                        <Image Source="{Binding TypeIcon}" Width="20" Height="20"
                                                                                IsVisible="{Binding HasTypeIcon}"
                                                                                ToolTip.Tip="{Binding TypeName}"/>
                                                                         <!-- Stellar has no symbol; fall back to the colour chip -->
@@ -1726,7 +1726,7 @@
                                                                         </Border>
                                                                     </Panel>
                                                                     <ctrl:MoveCategoryIcon Grid.Column="2" Category="{Binding CategoryKind}"
-                                                                                           Width="26" Height="17"
+                                                                                           Width="20" Height="20"
                                                                                            HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                                                     <TextBlock Grid.Column="3" Text="{Binding PowerText}" FontSize="10"
                                                                                Classes="secondary" VerticalAlignment="Center"
