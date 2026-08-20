@@ -56,6 +56,9 @@
     </Window.KeyBindings>
 
     <Window.Resources>
+        <!-- Type-matrix column width. The header, cells and totals are separate
+             strips with no shared layout, so they must all use this. -->
+        <x:Double x:Key="MatrixCellWidth">40</x:Double>
         <DataTemplate x:Key="SlotTemplate" x:DataType="vm:SlotViewModel">
             <Border Classes="slot" Classes.selected="{Binding IsSelected}"
                     Classes.dragover="{Binding IsDragOver}"
@@ -1512,7 +1515,8 @@
                                                             </ItemsControl.ItemsPanel>
                                                             <ItemsControl.ItemTemplate>
                                                                 <DataTemplate x:DataType="vm:MatrixColumnViewModel">
-                                                                    <Border Width="40" Padding="0,2"
+                                                                    <Border Width="{StaticResource MatrixCellWidth}"
+                                                                            Padding="0,2"
                                                                             ToolTip.Tip="{Binding Tooltip}">
                                                                         <StackPanel Spacing="1">
                                                                             <Image Source="{Binding TypeIcon}"
@@ -1551,16 +1555,18 @@
                                                                         </ItemsControl.ItemsPanel>
                                                                         <ItemsControl.ItemTemplate>
                                                                             <DataTemplate x:DataType="vm:MatrixCellViewModel">
-                                                                                <Border Width="40" Height="28" Margin="0,0,1,0"
-                                                                                        CornerRadius="4"
-                                                                                        Background="{Binding Background}"
-                                                                                        ToolTip.Tip="{Binding Tooltip}">
-                                                                                    <TextBlock Text="{Binding Text}" FontSize="11"
-                                                                                               FontWeight="SemiBold"
-                                                                                               Foreground="{Binding Foreground}"
-                                                                                               HorizontalAlignment="Center"
-                                                                                               VerticalAlignment="Center"/>
-                                                                                </Border>
+                                                                                <Panel Width="{StaticResource MatrixCellWidth}"
+                                                                                       Height="28">
+                                                                                    <Border Margin="0,0,1,0" CornerRadius="4"
+                                                                                            Background="{Binding Background}"
+                                                                                            ToolTip.Tip="{Binding Tooltip}">
+                                                                                        <TextBlock Text="{Binding Text}" FontSize="11"
+                                                                                                   FontWeight="SemiBold"
+                                                                                                   Foreground="{Binding Foreground}"
+                                                                                                   HorizontalAlignment="Center"
+                                                                                                   VerticalAlignment="Center"/>
+                                                                                    </Border>
+                                                                                </Panel>
                                                                             </DataTemplate>
                                                                         </ItemsControl.ItemTemplate>
                                                                     </ItemsControl>
@@ -1583,7 +1589,8 @@
                                                             </ItemsControl.ItemsPanel>
                                                             <ItemsControl.ItemTemplate>
                                                                 <DataTemplate x:DataType="vm:MatrixColumnViewModel">
-                                                                    <TextBlock Width="40" Text="{Binding WeakText}"
+                                                                    <TextBlock Width="{StaticResource MatrixCellWidth}"
+                                                                               Text="{Binding WeakText}"
                                                                                FontSize="11" FontWeight="SemiBold"
                                                                                Foreground="{Binding WeakBrush}"
                                                                                TextAlignment="Center"/>
@@ -1602,7 +1609,8 @@
                                                             </ItemsControl.ItemsPanel>
                                                             <ItemsControl.ItemTemplate>
                                                                 <DataTemplate x:DataType="vm:MatrixColumnViewModel">
-                                                                    <TextBlock Width="40" Text="{Binding ResistText}"
+                                                                    <TextBlock Width="{StaticResource MatrixCellWidth}"
+                                                                               Text="{Binding ResistText}"
                                                                                FontSize="11" FontWeight="SemiBold"
                                                                                Foreground="{Binding ResistBrush}"
                                                                                TextAlignment="Center"/>
