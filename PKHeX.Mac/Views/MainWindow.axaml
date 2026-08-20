@@ -3,6 +3,7 @@
         xmlns:vm="using:PKHeX.Mac.ViewModels"
         xmlns:core="using:PKHeX.Core"
         xmlns:ctrl="using:PKHeX.Mac.Controls"
+        xmlns:svc="using:PKHeX.Mac.Services"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="800"
@@ -23,6 +24,7 @@
             <NativeMenuItem Header="File">
                 <NativeMenu>
                     <NativeMenuItem Header="Open Save File…" Gesture="Cmd+O" Click="OnOpenClicked"/>
+                    <NativeMenuItem Header="Find Saves on This Mac…" Gesture="Cmd+F" Click="OnFindSavesClicked"/>
                     <NativeMenuItem Header="Export Save As…" Gesture="Cmd+S" Click="OnExportClicked"/>
                     <NativeMenuItemSeparator/>
                     <NativeMenuItem Header="Import Showdown Set from Clipboard" Gesture="Cmd+Shift+I" Click="OnShowdownImportClicked"/>
@@ -219,8 +221,11 @@
                                 <TextBlock Text="PKHeX for Mac" FontSize="26" FontWeight="Bold" HorizontalAlignment="Center"/>
                                 <TextBlock Text="Open a decrypted save file (⌘O) or drop one anywhere in this window"
                                            FontSize="13" Classes="secondary" HorizontalAlignment="Center"/>
-                                <Button Content="Open Save File…" Classes="accent" HorizontalAlignment="Center"
-                                        Margin="0,12,0,0" Click="OnOpenButtonClicked"/>
+                                <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center"
+                                            Margin="0,12,0,0">
+                                    <Button Content="Find My Saves" Classes="accent" Click="OnFindSavesButtonClicked"/>
+                                    <Button Content="Open Save File…" Click="OnOpenButtonClicked"/>
+                                </StackPanel>
                             </StackPanel>
 
                             <StackPanel IsVisible="{Binding HasSave}" Spacing="14">
@@ -3278,8 +3283,75 @@
                         </Panel>
                     </Panel>
                     </DockPanel>
+
                     </Border>
         </Grid>
+
+            <!-- ══════ Save discovery overlay ══════ -->
+            <Border IsVisible="{Binding Discovery.IsOpen}" Background="#B0000000">
+                <Border Classes="card" Width="720" MaxHeight="560" Padding="18"
+                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <DockPanel DataContext="{Binding Discovery}" x:DataType="vm:SaveDiscoveryViewModel">
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                            <TextBlock DockPanel.Dock="Left" Text="Saves on this Mac" FontSize="17"
+                                       FontWeight="Bold" VerticalAlignment="Center"/>
+                            <Button DockPanel.Dock="Right" Content="✕" FontSize="13" Padding="8,2"
+                                    Command="{Binding CloseCommand}"/>
+                        </DockPanel>
+
+                        <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,10">
+                            <TextBlock FontSize="11" Classes="secondary" TextWrapping="Wrap"
+                                       Text="Checks inserted SD cards for the usual console backup layouts, the macOS emulator save folders, and your Downloads, Documents and Desktop."/>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Content="Scan again" FontSize="12"
+                                        IsEnabled="{Binding !IsScanning}"
+                                        Command="{Binding ScanCommand}"/>
+                                <Button Content="Stop" FontSize="12"
+                                        IsVisible="{Binding IsScanning}"
+                                        Command="{Binding CancelCommand}"/>
+                                <TextBlock Text="{Binding Status}" FontSize="11" Classes="secondary"
+                                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </StackPanel>
+
+                        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8"
+                                    HorizontalAlignment="Right" Margin="0,12,0,0">
+                            <Button Content="Open Selected Save" Classes="accent"
+                                    IsEnabled="{Binding HasResults}"
+                                    Command="{Binding OpenSelectedCommand}"/>
+                        </StackPanel>
+
+                        <ListBox Classes="plain" ItemsSource="{Binding Results}"
+                                 SelectedItem="{Binding Selected, Mode=TwoWay}"
+                                 DoubleTapped="OnDiscoveredSaveDoubleTapped">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="svc:DiscoveredSave">
+                                    <Grid ColumnDefinitions="66,*,Auto" ColumnSpacing="10" Margin="0,3">
+                                        <Border Grid.Column="0" Classes="chip" Padding="6,2"
+                                                Background="{DynamicResource SurfaceMutedBrush}"
+                                                VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Game}" FontSize="11" FontWeight="Bold"
+                                                       HorizontalAlignment="Center"/>
+                                        </Border>
+                                        <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Detail}" FontSize="12"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding Path}" FontSize="9" Classes="secondary"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Spacing="1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding ModifiedText}" FontSize="10"
+                                                       Classes="secondary" TextAlignment="Right"/>
+                                            <TextBlock Text="{Binding Source}" FontSize="9"
+                                                       Classes="secondary" TextAlignment="Right"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+                </Border>
+            </Border>
 
         <!-- Drag ghost: follows the pointer while moving a Pokémon between slots -->
         <Canvas IsHitTestVisible="False">

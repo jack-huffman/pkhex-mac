@@ -22,6 +22,13 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         Detail = new PokemonDetailViewModel(_strings);
         Preview = new PokemonPreviewViewModel(_strings);
+        Discovery.OpenRequested = found =>
+        {
+            if (LoadSave(found.Path, out var error))
+                StatusText = $"Opened {found.Game} — {found.Trainer} ({found.FileName}).";
+            else
+                StatusText = error.Replace('\n', ' ');
+        };
         for (int i = 0; i < 30; i++)
             BoxSlots.Add(new SlotViewModel(0, i));
         for (int i = 0; i < 6; i++)
@@ -30,6 +37,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public PokemonDetailViewModel Detail { get; }
     public PokemonPreviewViewModel Preview { get; }
+
+    /// <summary>Finds saves on this Mac; opens over whatever view is showing.</summary>
+    public SaveDiscoveryViewModel Discovery { get; } = new();
 
     // ---- In-window views (sidebar navigation) ----
 
