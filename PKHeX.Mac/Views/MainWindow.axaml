@@ -99,7 +99,13 @@
 
     <!-- Frosted backdrop -->
     <Panel Background="{DynamicResource WindowBackdropBrush}">
-        <Grid ColumnDefinitions="238,*">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="238"/>
+                <ColumnDefinition Width="*"/>
+                <!-- Collapses to 0 for the full-width views -->
+                <ColumnDefinition Width="{Binding InspectorWidth}"/>
+            </Grid.ColumnDefinitions>
 
             <!-- ═══════════ SIDEBAR (full height, translucent) ═══════════ -->
             <Border Grid.Column="0" Background="{DynamicResource SidebarBrush}"
@@ -197,17 +203,6 @@
             <!-- ═══════════ MAIN AREA ═══════════ -->
             <DockPanel Grid.Column="1">
 
-                <!-- Header / drag strip with toolbar -->
-                <Border DockPanel.Dock="Top" Height="46" Background="Transparent"
-                        PointerPressed="OnHeaderPressed">
-                    <DockPanel Margin="18,0,14,0">
-                        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
-                            <TextBlock Text="PKHeX" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
-                            <TextBlock Text="{Binding StatusText}" FontSize="11" Classes="secondary"
-                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="520"/>
-                        </StackPanel>
-                    </DockPanel>
-                </Border>
 
                 <!-- Update banner -->
                 <Border DockPanel.Dock="Top" Margin="18,0,18,10" Padding="14,8" CornerRadius="10"
@@ -222,17 +217,18 @@
                     </DockPanel>
                 </Border>
 
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="{Binding InspectorWidth}"/>
-                    </Grid.ColumnDefinitions>
+                <!-- Status line: quiet, out of the way, but edits still report here -->
+                <Border DockPanel.Dock="Bottom" Padding="18,5" Background="Transparent">
+                    <TextBlock Text="{Binding StatusText}" FontSize="11" Classes="secondary"
+                               TextTrimming="CharacterEllipsis"/>
+                </Border>
 
+                <Grid>
                     <!-- ══════ CENTER: switched by sidebar navigation ══════ -->
-                    <Panel Grid.Column="0">
+                    <Panel>
 
                     <!-- Boxes view -->
-                    <ScrollViewer IsVisible="{Binding ShowBoxes}" Padding="18,0,10,14">
+                    <ScrollViewer IsVisible="{Binding ShowBoxes}" Padding="18,14,10,14">
                         <StackPanel>
                             <!-- Empty state -->
                             <StackPanel IsVisible="{Binding !HasSave}" HorizontalAlignment="Center"
@@ -291,7 +287,7 @@
                     </ScrollViewer>
 
                     <!-- ══════ FLAGS & BLOCKS view ══════ -->
-                    <Border Classes="card" IsVisible="{Binding IsFlagsView}" Margin="18,0,18,14">
+                    <Border Classes="card" IsVisible="{Binding IsFlagsView}" Margin="18,14,18,14">
                         <TabControl Padding="0,10,0,0">
 
                             <!-- Gen 2-5 style flat event flag array -->
@@ -408,7 +404,7 @@
                     </Border>
 
                     <!-- ══════ TOOLS view: batch editor + box report ══════ -->
-                    <Border Classes="card" IsVisible="{Binding IsToolsView}" Margin="18,0,18,14">
+                    <Border Classes="card" IsVisible="{Binding IsToolsView}" Margin="18,14,18,14">
                         <TabControl DataContext="{Binding Tools}" x:DataType="vm:ToolsViewModel" Padding="0,10,0,0">
 
                             <TabItem Header="Batch Edit">
@@ -514,7 +510,7 @@
                     </Border>
 
                     <!-- ══════ POKÉDEX view ══════ -->
-                    <Border Classes="card" IsVisible="{Binding IsDexView}" Margin="18,0,18,14">
+                    <Border Classes="card" IsVisible="{Binding IsDexView}" Margin="18,14,18,14">
                         <DockPanel DataContext="{Binding Dex}" x:DataType="vm:PokedexViewModel">
                             <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
                                 <TextBlock DockPanel.Dock="Left" Text="Pokédex" FontSize="17" FontWeight="Bold"
@@ -663,7 +659,7 @@
                     </Border>
 
                     <!-- ══════ SAVE view: trainer identity + bag, side by side ══════ -->
-                    <DockPanel IsVisible="{Binding IsSaveView}" Margin="18,0,18,14">
+                    <DockPanel IsVisible="{Binding IsSaveView}" Margin="18,14,18,14">
 
                     <!-- Action bar, docked so it can never overlap the cards -->
                     <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8"
@@ -793,10 +789,17 @@
 
                     </Panel>
 
+                </Grid>
+            </DockPanel>
+
                     <!-- ══════ INSPECTOR — styled to match the sidebar ══════ -->
-                    <Border Grid.Column="1" Background="{DynamicResource SidebarBrush}"
+                    <Border Grid.Column="2" Background="{DynamicResource SidebarBrush}"
                             BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1,0,0,0">
-                    <Panel Margin="14,0,14,14">
+                    <DockPanel>
+                    <!-- Matches the sidebar's title-bar strip so content lines up -->
+                    <Border DockPanel.Dock="Top" Height="46" Background="Transparent"
+                            PointerPressed="OnHeaderPressed"/>
+                    <Panel Margin="14,14,14,14">
                         <!-- Database mode: browser on top, live preview + add below -->
                         <Grid RowDefinitions="*,Auto" RowSpacing="8" IsVisible="{Binding IsDatabaseView}">
                             <Panel Grid.Row="0">
@@ -2142,9 +2145,8 @@
                         </Border>
                         </Panel>
                     </Panel>
+                    </DockPanel>
                     </Border>
-                </Grid>
-            </DockPanel>
         </Grid>
 
         <!-- Drag ghost: follows the pointer while moving a Pokémon between slots -->
