@@ -1073,10 +1073,25 @@
                             <StackPanel DockPanel.Dock="Top" Spacing="8">
                                 <StackPanel>
                                     <TextBlock Classes="fieldLabel" Text="Species"/>
-                                    <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesChoices}"
-                                              SelectedValue="{Binding SpeciesValue, Mode=TwoWay}"
-                                              SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
-                                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                                    <!-- Type-ahead beats scrolling 1000+ entries -->
+                                    <AutoCompleteBox HorizontalAlignment="Stretch"
+                                                     ItemsSource="{Binding SpeciesOptions}"
+                                                     SelectedItem="{Binding SelectedSpecies, Mode=TwoWay}"
+                                                     FilterMode="Contains"
+                                                     MinimumPrefixLength="1"
+                                                     MaxDropDownHeight="320"
+                                                     Watermark="Start typing a species name…">
+                                        <AutoCompleteBox.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:SpeciesChoice">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <Image Source="{Binding Sprite}" Width="34" Height="28"
+                                                           RenderOptions.BitmapInterpolationMode="None"/>
+                                                    <TextBlock Text="{Binding Name}" FontSize="13"
+                                                               VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </DataTemplate>
+                                        </AutoCompleteBox.ItemTemplate>
+                                    </AutoCompleteBox>
                                 </StackPanel>
                                 <CheckBox IsChecked="{Binding MakeShiny, Mode=TwoWay}" Content="Make Shiny ★ (if possible)"/>
                                 <TextBlock Classes="fieldLabel" Text="Legal encounters — pick one to preview"/>

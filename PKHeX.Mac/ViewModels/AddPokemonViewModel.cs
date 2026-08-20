@@ -5,6 +5,7 @@ using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PKHeX.Core;
+using PKHeX.Mac.Services;
 
 namespace PKHeX.Mac.ViewModels;
 
@@ -23,9 +24,25 @@ public partial class AddPokemonViewModel : ObservableObject
         _sav = sav;
         _strings = strings;
         SpeciesChoices = sources.Species.Where(s => s.Value != 0).ToList();
+        SpeciesOptions = SpeciesChoices
+            .Select(c => new SpeciesChoice(c.Value, c.Text))
+            .OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     public IReadOnlyList<ComboItem> SpeciesChoices { get; }
+
+    /// <summary>Species for the type-ahead field, each with its sprite.</summary>
+    public IReadOnlyList<SpeciesChoice> SpeciesOptions { get; }
+
+    /// <summary>Bound to the autocomplete box; picking an entry drives the search.</summary>
+    [ObservableProperty] private SpeciesChoice? _selectedSpecies;
+
+    partial void OnSelectedSpeciesChanged(SpeciesChoice? value)
+    {
+        if (value is not null)
+            SpeciesValue = value.Value;
+    }
     public ObservableCollection<string> EncounterDescriptions { get; } = [];
 
     [ObservableProperty] private int _speciesValue;
@@ -115,4 +132,22 @@ public partial class AddPokemonViewModel : ObservableObject
         StatusText = $"Previewing {name} (Lv.{pk.CurrentLevel}){(pk.IsShiny ? " ★" : string.Empty)}.";
         PreviewReady?.Invoke(pk);
     }
+}
+
+/// <summary>A species entry for the type-ahead picker.</summary>
+public sealed class SpeciesChoice
+{
+    public SpeciesChoice(int value, string name)
+    {
+        Value = value;
+        Name = name;
+        Sprite = SpriteService.GetSprite((ushort)value, 0, 0, 0, shiny: false, EntityContext.None);
+    }
+
+    public int Value { get; }
+    public string Name { get; }
+    public Avalonia.Media.Imaging.Bitmap? Sprite { get; }
+
+    /// <summary>The autocomplete box matches and displays on this.</summary>
+    public override string ToString() => Name;
 }
