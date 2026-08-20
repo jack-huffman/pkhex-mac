@@ -11,8 +11,9 @@ using PKHeX.Mac.Services;
 namespace PKHeX.Mac.ViewModels;
 
 /// <summary>
-/// Tera Raid editor for Scarlet/Violet: the live raid crystals in each region, the
-/// seven-star event capture records, and the progression that gates both.
+/// Raid editor. For Scarlet/Violet: the live Tera crystals in each region, the
+/// seven-star event capture records, and the progression that gates both. For
+/// Sword/Shield: the Max Raid nests across Galar and both DLC areas.
 /// </summary>
 public partial class RaidsViewModel : ObservableObject
 {
@@ -24,9 +25,22 @@ public partial class RaidsViewModel : ObservableObject
     {
         _sav = sav;
         _onChanged = onChanged;
-        IsSupported = sav is SAV9SV;
+        IsSupported = sav is SAV9SV or SAV8SWSH;
+
+        if (sav is SAV8SWSH swsh)
+        {
+            // Sword/Shield keeps Max Raid nests, not Tera crystals.
+            IsSwsh = true;
+            AddNestRegion("Galar", swsh.RaidGalar, RaidSpawnList8.RaidCountLegal_O0);
+            AddNestRegion("Isle of Armor", swsh.RaidArmor, RaidSpawnList8.RaidCountLegal_R1);
+            AddNestRegion("Crown Tundra", swsh.RaidCrown, RaidSpawnList8.RaidCountLegal_R2);
+            SelectedNestRegion = NestRegions.FirstOrDefault();
+            return;
+        }
+
         if (sav is not SAV9SV sv)
             return;
+        IsSv = true;
 
         var raids = sv.RaidSevenStar.GetAllRaids();
         for (int i = 0; i < raids.Length; i++)
@@ -54,6 +68,13 @@ public partial class RaidsViewModel : ObservableObject
         ApplyFilter();
     }
 
+    private void AddNestRegion(string name, RaidSpawnList8 list, int legalCount)
+    {
+        if (list.CountAll == 0)
+            return;
+        NestRegions.Add(new NestRegionViewModel(name, list, legalCount, _onChanged));
+    }
+
     private void AddRegion(string name, RaidSpawnList9 list, int legalCount)
     {
         // A save from before a DLC has an empty block for that region.
@@ -63,6 +84,11 @@ public partial class RaidsViewModel : ObservableObject
     }
 
     public bool IsSupported { get; }
+
+    /// <summary>Which game's raid model this save uses; drives which tabs appear.</summary>
+    public bool IsSv { get; }
+    public bool IsSwsh { get; }
+
     public ObservableCollection<RaidRowViewModel> Rows { get; } = [];
     public ObservableCollection<RaidFlagViewModel> Unlocks { get; } = [];
     public ObservableCollection<RaidCounterViewModel> Counters { get; } = [];
@@ -73,6 +99,13 @@ public partial class RaidsViewModel : ObservableObject
     [ObservableProperty] private RaidRegionViewModel? _selectedRegion;
 
     public bool HasRegions => Regions.Count > 0;
+
+    /// <summary>Sword/Shield Max Raid nests, one list per area.</summary>
+    public ObservableCollection<NestRegionViewModel> NestRegions { get; } = [];
+
+    [ObservableProperty] private NestRegionViewModel? _selectedNestRegion;
+
+    public bool HasNests => NestRegions.Count > 0;
 
     /// <summary>Seven-star records only accumulate once that tier is unlocked.</summary>
     [ObservableProperty] private bool _sevenStarUnlocked;
@@ -463,5 +496,231 @@ public partial class RaidCounterViewModel : ObservableObject
             return;
         _progress.SetInt(_block, value);
         _onChanged();
+    }
+}
+
+/// <summary>
+/// One Sword/Shield area's Max Raid nests. Bulk activation deliberately skips the
+/// Watchtower den, which the game treats specially — the same exclusion PKHeX makes.
+/// </summary>
+public partial class NestRegionViewModel : ObservableObject
+{
+    /// <summary>The Watchtower den is special-cased by the game.</summary>
+    private const int WatchtowerIndex = 16;
+
+    private readonly RaidSpawnList8 _list;
+    private readonly Action _onChanged;
+    private readonly List<NestRowViewModel> _all = [];
+
+    public NestRegionViewModel(string name, RaidSpawnList8 list, int legalCount, Action onChanged)
+    {
+        _list = list;
+        _onChanged = onChanged;
+        Name = name;
+        LegalCount = legalCount;
+
+        var dens = list.GetAllRaids();
+        // Only the first `CountUsed` entries are dens the game actually places.
+        var used = Math.Min(list.CountUsed, dens.Length);
+        for (int i = 0; i < used; i++)
+            _all.Add(new NestRowViewModel(this, i, dens[i], i == WatchtowerIndex));
+
+        ApplyFilter();
+    }
+
+    public string Name { get; }
+    public int LegalCount { get; }
+
+    public ObservableCollection<NestRowViewModel> Dens { get; } = [];
+
+    [ObservableProperty] private bool _activeOnly;
+    [ObservableProperty] private bool _makeRare;
+    [ObservableProperty] private bool _makeEvent;
+    [ObservableProperty] private string _summary = string.Empty;
+    [ObservableProperty] private NestRowViewModel? _selectedDen;
+
+    public override string ToString() => Name;
+
+    partial void OnActiveOnlyChanged(bool value) => ApplyFilter();
+
+    private void ApplyFilter()
+    {
+        Dens.Clear();
+        foreach (var den in _all)
+        {
+            if (ActiveOnly && !den.IsActive)
+                continue;
+            Dens.Add(den);
+        }
+        RefreshSummary();
+    }
+
+    internal void RefreshSummary()
+    {
+        var active = _all.Count(d => d.IsActive);
+        var rare = _all.Count(d => d.IsActive && d.IsRare);
+        var events = _all.Count(d => d.IsActive && d.IsEvent);
+        Summary = $"{active} active of {_all.Count} dens · {rare} rare · {events} event";
+    }
+
+    internal void NotifyChanged()
+    {
+        RefreshSummary();
+        _onChanged();
+    }
+
+    /// <summary>Activates every den with a random star count and encounter roll.</summary>
+    [RelayCommand]
+    public void ActivateAll()
+    {
+        _list.ActivateAllRaids(MakeRare, MakeEvent);
+        Reload();
+        _onChanged();
+    }
+
+    [RelayCommand]
+    public void DeactivateAll()
+    {
+        _list.DectivateAllRaids();
+        Reload();
+        _onChanged();
+    }
+
+    /// <summary>Clears the watts-collected flag so every active den pays out again.</summary>
+    [RelayCommand]
+    public void ResetWatts()
+    {
+        foreach (var den in _all.Where(d => d.WattsHarvested))
+            den.WattsHarvested = false;
+        NotifyChanged();
+    }
+
+    private void Reload()
+    {
+        foreach (var den in _all)
+            den.Reload();
+        ApplyFilter();
+    }
+}
+
+/// <summary>One Max Raid nest: whether it is up, its tier, and what it will spawn.</summary>
+public partial class NestRowViewModel : ObservableObject
+{
+    private readonly NestRegionViewModel _parent;
+    private readonly RaidSpawnDetail _detail;
+    private bool _loading;
+
+    public NestRowViewModel(NestRegionViewModel parent, int index, RaidSpawnDetail detail, bool isWatchtower)
+    {
+        _parent = parent;
+        _detail = detail;
+        Index = index;
+        IsWatchtower = isWatchtower;
+        Label = isWatchtower ? $"Den {index + 1} · Watchtower" : $"Den {index + 1}";
+        Reload();
+    }
+
+    public int Index { get; }
+    public string Label { get; }
+
+    /// <summary>Bulk operations skip this den, so the UI says so.</summary>
+    public bool IsWatchtower { get; }
+
+    /// <summary>Stars are stored 0–4 for a 1–5★ raid.</summary>
+    public IReadOnlyList<string> StarChoices { get; } = ["1★", "2★", "3★", "4★", "5★"];
+
+    public bool IsActive => _detail.IsActive;
+
+    [ObservableProperty] private bool _active;
+    [ObservableProperty] private int _starIndex;
+    [ObservableProperty] private bool _isRare;
+    [ObservableProperty] private bool _isEvent;
+    [ObservableProperty] private bool _isWishingPiece;
+    [ObservableProperty] private bool _wattsHarvested;
+    [ObservableProperty] private string _seedText = string.Empty;
+    [ObservableProperty] private string _error = string.Empty;
+
+    internal void Reload()
+    {
+        _loading = true;
+        Active = _detail.IsActive;
+        StarIndex = Math.Clamp((int)_detail.Stars, 0, 4);
+        IsRare = _detail.IsRare;
+        IsEvent = _detail.IsEvent;
+        IsWishingPiece = _detail.IsWishingPiece;
+        WattsHarvested = _detail.WattsHarvested;
+        SeedText = $"{_detail.Seed:X16}";
+        _loading = false;
+        OnPropertyChanged(nameof(IsActive));
+    }
+
+    partial void OnActiveChanged(bool value)
+    {
+        if (_loading)
+            return;
+        // DenType carries activation; going inactive also clears tier and roll.
+        if (value)
+            _detail.Activate((byte)StarIndex, (byte)(1 + (Index % 100)), IsRare, IsEvent);
+        else
+            _detail.Deactivate();
+        Reload();
+        _parent.NotifyChanged();
+    }
+
+    partial void OnStarIndexChanged(int value)
+    {
+        if (_loading || (uint)value > 4)
+            return;
+        _detail.Stars = (byte)value;
+        _parent.NotifyChanged();
+    }
+
+    partial void OnIsRareChanged(bool value)
+    {
+        if (_loading)
+            return;
+        _detail.IsRare = value;
+        Reload();
+        _parent.NotifyChanged();
+    }
+
+    partial void OnIsEventChanged(bool value)
+    {
+        if (_loading)
+            return;
+        _detail.IsEvent = value;
+        Reload();
+        _parent.NotifyChanged();
+    }
+
+    partial void OnIsWishingPieceChanged(bool value)
+    {
+        if (_loading)
+            return;
+        _detail.IsWishingPiece = value;
+        Reload();
+        _parent.NotifyChanged();
+    }
+
+    partial void OnWattsHarvestedChanged(bool value)
+    {
+        if (_loading)
+            return;
+        _detail.WattsHarvested = value;
+        _parent.NotifyChanged();
+    }
+
+    partial void OnSeedTextChanged(string value)
+    {
+        if (_loading)
+            return;
+        if (!ulong.TryParse(value.Trim(), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var seed))
+        {
+            Error = "16 hex digits";
+            return;
+        }
+        Error = string.Empty;
+        _detail.Seed = seed;
+        _parent.NotifyChanged();
     }
 }

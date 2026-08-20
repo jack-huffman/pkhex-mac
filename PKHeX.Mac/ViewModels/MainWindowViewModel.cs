@@ -44,6 +44,8 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private SaveBlocksViewModel? _saveBlocks;
     [ObservableProperty] private RaidsViewModel? _raids;
     [ObservableProperty] private TrainerStyleViewModel? _style;
+    [ObservableProperty] private BlueberryViewModel? _blueberry;
+    [ObservableProperty] private TrainerRecordsViewModel? _records;
     [ObservableProperty] private SearchViewModel? _search;
 
     public bool IsBoxesView => CurrentView == "boxes";
@@ -308,8 +310,13 @@ public partial class MainWindowViewModel : ViewModelBase
 
             RebuildBoxSlots();
             CurrentBox = 0;
+            WallpaperChoices = BoxWallpapers.GetChoices(sav, _strings);
+            OnPropertyChanged(nameof(WallpaperChoices));
+            OnPropertyChanged(nameof(CanSetWallpaper));
             _switchingBox = true;
             CurrentBoxName = BoxNames.Count > 0 ? BoxNames[0] : string.Empty;
+            if (CanSetWallpaper)
+                CurrentWallpaper = BoxWallpapers.Get(sav, 0);
             _switchingBox = false;
             LoadBox(0);
             LoadParty();
@@ -320,6 +327,12 @@ public partial class MainWindowViewModel : ViewModelBase
             Bag = new BagViewModel(sav, _strings);
             Style = new TrainerStyleViewModel(sav, () =>
                 StatusText = "Trainer appearance updated. Remember to export the save (⌘S).");
+            Blueberry = new BlueberryViewModel(sav, () =>
+                StatusText = "Blueberry Academy data updated. Remember to export the save (⌘S).");
+            // Unlocking throw styles writes to the club board, so keep that view honest.
+            Style.BoardChanged = () => Blueberry?.Reload();
+            Records = new TrainerRecordsViewModel(sav, () =>
+                StatusText = "Trainer records updated. Remember to export the save (⌘S).");
             AddDb = new AddPokemonViewModel(sav, GameInfo.FilteredSources, _strings);
             AddDb.PreviewReady = pk => Preview.Load(pk);
             // The gift archive is ~2.6k entries with sprites; build it on first open
@@ -409,6 +422,8 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         _switchingBox = true;
         CurrentBoxName = (uint)value < BoxNames.Count ? BoxNames[value] : $"Box {value + 1}";
+        if (CanSetWallpaper)
+            CurrentWallpaper = BoxWallpapers.Get(_sav, value);
         _switchingBox = false;
         LoadBox(value);
         CurrentView = "boxes"; // clicking a box in the sidebar returns to the box view
@@ -419,6 +434,23 @@ public partial class MainWindowViewModel : ViewModelBase
     /// support this; others simply ignore the edit.
     /// </summary>
     public bool CanRenameBox => _sav is IBoxDetailName;
+
+    // ---- Box wallpaper ----
+
+    public IReadOnlyList<string> WallpaperChoices { get; private set; } = [];
+    public bool CanSetWallpaper => WallpaperChoices.Count > 0;
+
+    [ObservableProperty] private int _currentWallpaper;
+
+    partial void OnCurrentWallpaperChanged(int value)
+    {
+        if (_switchingBox || _sav is null || !CanSetWallpaper)
+            return;
+        if ((uint)CurrentBox >= _sav.BoxCount || (uint)value >= (uint)WallpaperChoices.Count)
+            return;
+        BoxWallpapers.Set(_sav, CurrentBox, value);
+        StatusText = $"Box wallpaper set to {WallpaperChoices[value]}. Remember to export the save (⌘S).";
+    }
 
     partial void OnCurrentBoxNameChanged(string value)
     {

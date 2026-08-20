@@ -254,6 +254,16 @@
                                             <Button Grid.Column="2" Content="›" FontSize="15" Padding="10,2"
                                                     Command="{Binding NextBoxCommand}"/>
                                         </Grid>
+                                        <!-- Wallpaper for this box. Sword/Shield and Scarlet/Violet
+                                             ship no names for theirs, so they read as numbers. -->
+                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8"
+                                              IsVisible="{Binding CanSetWallpaper}">
+                                            <TextBlock Grid.Column="0" Text="Wallpaper" FontSize="11"
+                                                       Classes="secondary" VerticalAlignment="Center"/>
+                                            <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" FontSize="11"
+                                                      ItemsSource="{Binding WallpaperChoices}"
+                                                      SelectedIndex="{Binding CurrentWallpaper, Mode=TwoWay}"/>
+                                        </Grid>
                                         <ItemsControl ItemsSource="{Binding BoxSlots}" HorizontalAlignment="Center"
                                                       ItemTemplate="{StaticResource SlotTemplate}">
                                             <ItemsControl.ItemsPanel>
@@ -532,7 +542,7 @@
                     <Border Classes="card" IsVisible="{Binding IsRaidsView}" Margin="18,14,18,14">
                         <DockPanel DataContext="{Binding Raids}" x:DataType="vm:RaidsViewModel">
                             <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
-                                <TextBlock DockPanel.Dock="Left" Text="Tera Raids" FontSize="17"
+                                <TextBlock DockPanel.Dock="Left" Text="Raids" FontSize="17"
                                            FontWeight="Bold" VerticalAlignment="Center"/>
                                 <TextBlock DockPanel.Dock="Right" Text="{Binding Summary}" FontSize="12"
                                            Classes="secondary" HorizontalAlignment="Right" VerticalAlignment="Center"/>
@@ -541,13 +551,100 @@
                             <Border DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}" CornerRadius="10"
                                     Padding="14" Background="{DynamicResource SurfaceMutedBrush}">
                                 <TextBlock FontSize="13" TextWrapping="Wrap" Classes="secondary"
-                                           Text="Tera Raid data only exists in Scarlet and Violet."/>
+                                           Text="Raid data only exists in Sword/Shield and Scarlet/Violet."/>
                             </Border>
 
                             <TabControl IsVisible="{Binding IsSupported}" Padding="0,6,0,0">
 
+                                <!-- ── Sword/Shield Max Raid nests ── -->
+                                <TabItem Header="Max Raid Dens" IsVisible="{Binding IsSwsh}">
+                                    <DockPanel Margin="2,8,2,2">
+                                        <Grid DockPanel.Dock="Top" ColumnDefinitions="240,*" ColumnSpacing="12"
+                                              Margin="0,0,0,10">
+                                            <ComboBox Grid.Column="0" HorizontalAlignment="Stretch"
+                                                      ItemsSource="{Binding NestRegions}"
+                                                      SelectedItem="{Binding SelectedNestRegion, Mode=TwoWay}"/>
+                                            <TextBlock Grid.Column="1" FontSize="11" Classes="secondary"
+                                                       VerticalAlignment="Center" TextWrapping="Wrap"
+                                                       Text="Each den stores a 64-bit seed, a star tier and flags for rare, event and wishing-piece raids."/>
+                                        </Grid>
+
+                                        <Panel>
+                                            <TextBlock IsVisible="{Binding !HasNests}" FontSize="13" Classes="secondary"
+                                                       TextWrapping="Wrap" VerticalAlignment="Top"
+                                                       Text="This save has no raid nest blocks."/>
+                                            <ContentControl Content="{Binding SelectedNestRegion}">
+                                                <ContentControl.ContentTemplate>
+                                                    <DataTemplate x:DataType="vm:NestRegionViewModel">
+                                                        <DockPanel>
+                                                            <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,10">
+                                                                <TextBlock Text="{Binding Summary}" FontSize="11" Classes="secondary"/>
+                                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                                    <CheckBox Content="Active only" FontSize="12"
+                                                                              IsChecked="{Binding ActiveOnly, Mode=TwoWay}"
+                                                                              VerticalAlignment="Center"/>
+                                                                    <CheckBox Content="as rare" FontSize="12"
+                                                                              IsChecked="{Binding MakeRare, Mode=TwoWay}"
+                                                                              VerticalAlignment="Center"
+                                                                              ToolTip.Tip="Applies to the Activate all action."/>
+                                                                    <CheckBox Content="as event" FontSize="12"
+                                                                              IsChecked="{Binding MakeEvent, Mode=TwoWay}"
+                                                                              VerticalAlignment="Center"
+                                                                              ToolTip.Tip="Applies to the Activate all action."/>
+                                                                    <Button Content="Activate all" FontSize="12"
+                                                                            Command="{Binding ActivateAllCommand}"
+                                                                            ToolTip.Tip="Turns on every den with a random tier and encounter roll. Skips the Watchtower, which the game handles specially."/>
+                                                                    <Button Content="Deactivate all" FontSize="12"
+                                                                            Command="{Binding DeactivateAllCommand}"/>
+                                                                    <Button Content="Reset watts" FontSize="12"
+                                                                            Command="{Binding ResetWattsCommand}"
+                                                                            ToolTip.Tip="Clears the collected flag so every active den pays watts again."/>
+                                                                </StackPanel>
+                                                            </StackPanel>
+
+                                                            <ListBox Classes="plain" ItemsSource="{Binding Dens}"
+                                                                     SelectedItem="{Binding SelectedDen, Mode=TwoWay}">
+                                                                <ListBox.ItemTemplate>
+                                                                    <DataTemplate x:DataType="vm:NestRowViewModel">
+                                                                        <Grid ColumnDefinitions="130,58,70,74,110,160,86"
+                                                                              ColumnSpacing="8">
+                                                                            <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="12"
+                                                                                       FontWeight="SemiBold" VerticalAlignment="Center"
+                                                                                       TextTrimming="CharacterEllipsis"/>
+                                                                            <CheckBox Grid.Column="1" Content="Up" FontSize="11"
+                                                                                      IsChecked="{Binding Active, Mode=TwoWay}"
+                                                                                      VerticalAlignment="Center"/>
+                                                                            <ComboBox Grid.Column="2" HorizontalAlignment="Stretch"
+                                                                                      FontSize="11"
+                                                                                      ItemsSource="{Binding StarChoices}"
+                                                                                      SelectedIndex="{Binding StarIndex, Mode=TwoWay}"/>
+                                                                            <CheckBox Grid.Column="3" Content="Rare" FontSize="11"
+                                                                                      IsChecked="{Binding IsRare, Mode=TwoWay}"
+                                                                                      VerticalAlignment="Center"/>
+                                                                            <CheckBox Grid.Column="4" Content="Wishing" FontSize="11"
+                                                                                      IsChecked="{Binding IsWishingPiece, Mode=TwoWay}"
+                                                                                      VerticalAlignment="Center"/>
+                                                                            <TextBox Grid.Column="5" Text="{Binding SeedText, Mode=TwoWay}"
+                                                                                     FontSize="11" FontFamily="Menlo, monospace"
+                                                                                     ToolTip.Tip="Raid seed (64-bit hex)"/>
+                                                                            <CheckBox Grid.Column="6" Content="Watts" FontSize="11"
+                                                                                      IsChecked="{Binding WattsHarvested, Mode=TwoWay}"
+                                                                                      VerticalAlignment="Center"
+                                                                                      ToolTip.Tip="Watts already collected from this den."/>
+                                                                        </Grid>
+                                                                    </DataTemplate>
+                                                                </ListBox.ItemTemplate>
+                                                            </ListBox>
+                                                        </DockPanel>
+                                                    </DataTemplate>
+                                                </ContentControl.ContentTemplate>
+                                            </ContentControl>
+                                        </Panel>
+                                    </DockPanel>
+                                </TabItem>
+
                                 <!-- ── Live raid crystals, per region ── -->
-                                <TabItem Header="Active Dens">
+                                <TabItem Header="Active Dens" IsVisible="{Binding IsSv}">
                                     <DockPanel Margin="2,8,2,2">
                                         <Grid DockPanel.Dock="Top" ColumnDefinitions="240,*" ColumnSpacing="12"
                                               Margin="0,0,0,10">
@@ -635,7 +732,7 @@
                                 </TabItem>
 
                                 <!-- ── Seven-star event capture records ── -->
-                                <TabItem Header="Event Records">
+                                <TabItem Header="Event Records" IsVisible="{Binding IsSv}">
                                     <DockPanel Margin="2,8,2,2">
                                         <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,10">
                                             <TextBlock Text="{Binding EmptyNote}" FontSize="11" TextWrapping="Wrap"
@@ -670,7 +767,7 @@
                                 </TabItem>
 
                                 <!-- ── Tier unlocks and win tallies ── -->
-                                <TabItem Header="Progression">
+                                <TabItem Header="Progression" IsVisible="{Binding IsSv}">
                                     <ScrollViewer Margin="2,8,2,2">
                                         <Grid ColumnDefinitions="*,*" ColumnSpacing="18">
                                             <StackPanel Grid.Column="0" Spacing="6">
@@ -1241,29 +1338,90 @@
                             </DockPanel>
                             </TabItem>
 
-                            <!-- ── Blueberry Academy support board ── -->
+                            <!-- ── Blueberry Academy: club perks and quest tallies ── -->
                             <TabItem Header="Blueberry Perks">
-                            <DockPanel DataContext="{Binding Style}" x:DataType="vm:TrainerStyleViewModel"
+                            <DockPanel DataContext="{Binding Blueberry}" x:DataType="vm:BlueberryViewModel"
                                        Margin="2,8,2,2">
-                                <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !HasSupportBoard}"
+                                <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}"
                                            FontSize="13" Classes="secondary" TextWrapping="Wrap"
-                                           Text="The Blueberry Academy support board only exists in Scarlet and Violet with the Indigo Disk DLC."/>
-                                <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,12"
-                                            IsVisible="{Binding HasSupportBoard}">
+                                           Text="The Blueberry Academy club room only exists in Scarlet and Violet with the Indigo Disk DLC."/>
+                                <StackPanel DockPanel.Dock="Top" Spacing="9" Margin="0,0,0,12"
+                                            IsVisible="{Binding IsSupported}">
+                                    <TextBlock Text="{Binding Summary}" FontSize="12" FontWeight="SemiBold"/>
+                                    <Grid ColumnDefinitions="Auto,120,Auto,120" ColumnSpacing="8">
+                                        <TextBlock Grid.Column="0" Text="BBQs solo" FontSize="11"
+                                                   Classes="secondary" VerticalAlignment="Center"/>
+                                        <NumericUpDown Grid.Column="1" MinWidth="112" FontSize="11"
+                                                       Value="{Binding QuestsSolo, Mode=TwoWay}"
+                                                       Minimum="0" Maximum="9999999" FormatString="0"
+                                                       Increment="1" HorizontalContentAlignment="Right"/>
+                                        <TextBlock Grid.Column="2" Text="in a group" FontSize="11"
+                                                   Classes="secondary" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                                        <NumericUpDown Grid.Column="3" MinWidth="112" FontSize="11"
+                                                       Value="{Binding QuestsGroup, Mode=TwoWay}"
+                                                       Minimum="0" Maximum="9999999" FormatString="0"
+                                                       Increment="1" HorizontalContentAlignment="Right"/>
+                                    </Grid>
                                     <TextBlock FontSize="11" Classes="secondary" TextWrapping="Wrap"
-                                               Text="Everything the clubs can sell you, bought with Blueberry Points. The three baseball-club rows are what make the extra ball-throwing styles selectable; the art-club and music-club rows unlock room décor and albums."/>
+                                               Text="Everything the clubs can sell you, bought with Blueberry Points. The three baseball-club rows are what make the extra ball-throwing styles selectable; art and music club rows unlock room décor and albums."/>
                                     <Button Content="Buy all club perks" FontSize="12" HorizontalAlignment="Left"
-                                            Command="{Binding UnlockClubPerksCommand}"/>
+                                            Command="{Binding BuyAllPerksCommand}"/>
                                     <TextBlock Text="{Binding Status}" FontSize="11"
                                                Foreground="{DynamicResource LegalFgBrush}" TextWrapping="Wrap"
                                                IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                                 </StackPanel>
-                                <ScrollViewer IsVisible="{Binding HasSupportBoard}">
-                                    <ItemsControl ItemsSource="{Binding ClubPurchases}">
+                                <ScrollViewer IsVisible="{Binding IsSupported}">
+                                    <ItemsControl ItemsSource="{Binding Purchases}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="vm:StyleToggleViewModel">
                                                 <CheckBox Content="{Binding Label}" FontSize="12" Margin="0,1"
                                                           IsChecked="{Binding Value, Mode=TwoWay}"/>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </DockPanel>
+                            </TabItem>
+
+                            <!-- ── Lifetime trainer stat records ── -->
+                            <TabItem Header="Records">
+                            <DockPanel DataContext="{Binding Records}" x:DataType="vm:TrainerRecordsViewModel"
+                                       Margin="2,8,2,2">
+                                <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}"
+                                           FontSize="13" Classes="secondary" TextWrapping="Wrap"
+                                           Text="This save format does not keep lifetime stat records. Gen 6, Gen 7, BDSP and Sword/Shield do; Scarlet and Violet scattered the equivalents across individual save blocks instead — see Save Blocks."/>
+                                <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,12"
+                                            IsVisible="{Binding IsSupported}">
+                                    <TextBlock Text="{Binding Summary}" FontSize="12" FontWeight="SemiBold"/>
+                                    <TextBlock FontSize="11" Classes="secondary" TextWrapping="Wrap"
+                                               Text="Each record has its own ceiling and the game clamps to it, so a value that refuses to grow has hit its max."/>
+                                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                                        <TextBox Grid.Column="0" Text="{Binding SearchText, Mode=TwoWay}"
+                                                 FontSize="12" Watermark="Search records…"/>
+                                        <CheckBox Grid.Column="1" Content="With a value" FontSize="12"
+                                                  IsChecked="{Binding NonZeroOnly, Mode=TwoWay}"
+                                                  VerticalAlignment="Center"/>
+                                        <Button Grid.Column="2" Content="Clear all" FontSize="12"
+                                                Command="{Binding ClearAllCommand}"/>
+                                    </Grid>
+                                </StackPanel>
+                                <ScrollViewer IsVisible="{Binding IsSupported}">
+                                    <ItemsControl ItemsSource="{Binding Rows}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:RecordRowViewModel">
+                                                <Grid ColumnDefinitions="*,150,86" ColumnSpacing="8" Margin="0,2">
+                                                    <StackPanel Grid.Column="0" Spacing="0" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Label}" FontSize="12"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                        <TextBlock Text="{Binding IdText}" FontSize="9" Classes="secondary"/>
+                                                    </StackPanel>
+                                                    <NumericUpDown Grid.Column="1" MinWidth="140" FontSize="11"
+                                                                   Value="{Binding Value, Mode=TwoWay}"
+                                                                   Minimum="0" Maximum="999999999" FormatString="0"
+                                                                   Increment="1" HorizontalContentAlignment="Right"/>
+                                                    <TextBlock Grid.Column="2" Text="{Binding MaxText}" FontSize="10"
+                                                               Classes="secondary" VerticalAlignment="Center"/>
+                                                </Grid>
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>

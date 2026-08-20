@@ -12,8 +12,9 @@ using PKHeX.Core;
 namespace PKHeX.Mac.ViewModels;
 
 /// <summary>
-/// The player's look and flourishes in Scarlet/Violet and Legends Z-A: ball-throwing
-/// style, worn outfit, facial appearance, and the club perks that unlock them.
+/// The player's look in Scarlet/Violet and Legends Z-A: ball-throwing style, worn
+/// outfit and facial appearance. The club perks that unlock the extra throw styles
+/// live in <see cref="BlueberryViewModel"/>.
 /// </summary>
 /// <remarks>
 /// Outfit slots hold opaque 64-bit item identifiers with no name table anywhere in
@@ -28,8 +29,11 @@ public partial class TrainerStyleViewModel : ObservableObject
 {
     private readonly SaveFile _sav;
     private readonly Action _onChanged;
-    private readonly BlueberrySupportBoard9? _board;
     private bool _loading;
+
+    /// <summary>Raised after an unlock writes to the club support board, so the
+    /// Blueberry view can re-read it.</summary>
+    public Action? BoardChanged { get; set; }
 
     public TrainerStyleViewModel(SaveFile sav, Action onChanged)
     {
@@ -48,7 +52,6 @@ public partial class TrainerStyleViewModel : ObservableObject
                 _loading = true;
                 ThrowStyleIndex = Math.Clamp((int)sv.ThrowStyle - 1, 0, ThrowStyleChoices.Count - 1);
                 _loading = false;
-                _board = sv.BlueberryClubRoom.SupportBoard;
                 break;
             case SAV9ZA za:
                 IsSupported = true;
@@ -63,21 +66,14 @@ public partial class TrainerStyleViewModel : ObservableObject
         // Outfit ids are hashes; appearance traits are small option indexes.
         AddFields(Outfit, fashion, hex: true);
         AddFields(Appearance, appearance, hex: false);
-        if (_board is not null)
-            AddPurchases(_board);
-
-        // Club perks have their own tab, so they stay out of this summary.
-        HasSupportBoard = ClubPurchases.Count > 0;
         Summary = $"{Outfit.Count} outfit slots · {Appearance.Count} appearance traits";
     }
 
     public bool IsSupported { get; }
     public bool HasThrowStyle { get; }
-    public bool HasSupportBoard { get; }
 
     public ObservableCollection<StyleFieldViewModel> Outfit { get; } = [];
     public ObservableCollection<StyleFieldViewModel> Appearance { get; } = [];
-    public ObservableCollection<StyleToggleViewModel> ClubPurchases { get; } = [];
 
     /// <summary>Names for <see cref="ThrowStyle9"/>, in its numeric order.</summary>
     public IReadOnlyList<string> ThrowStyleChoices { get; } =
@@ -107,8 +103,9 @@ public partial class TrainerStyleViewModel : ObservableObject
     {
         if (_sav is not SAV9SV sv)
             return;
+        // This also marks the baseball-club board entries bought.
         sv.UnlockAllThrowStyles();
-        RefreshPurchases();
+        BoardChanged?.Invoke();
         Status = "All nine throw styles unlocked.";
         _onChanged();
     }
@@ -130,27 +127,6 @@ public partial class TrainerStyleViewModel : ObservableObject
         _onChanged();
     }
 
-    /// <summary>Marks every Blueberry Academy club perk as bought and already seen.</summary>
-    [RelayCommand]
-    public void UnlockClubPerks()
-    {
-        if (_board is null)
-            return;
-        foreach (var row in ClubPurchases)
-        {
-            // "Unread" is the new-item badge; buying without clearing it looks wrong in-game.
-            row.Value = !row.IsUnreadFlag;
-        }
-        Status = "All club perks marked as purchased.";
-        _onChanged();
-    }
-
-    private void RefreshPurchases()
-    {
-        foreach (var row in ClubPurchases)
-            row.Reload();
-    }
-
     /// <summary>Discovers the numeric slots on a fashion or appearance block.</summary>
     private void AddFields(ObservableCollection<StyleFieldViewModel> target, object? source, bool hex)
     {
@@ -163,16 +139,6 @@ public partial class TrainerStyleViewModel : ObservableObject
             if (prop.PropertyType != typeof(ulong) && prop.PropertyType != typeof(uint))
                 continue;
             target.Add(new StyleFieldViewModel(source, prop, hex, _onChanged));
-        }
-    }
-
-    private void AddPurchases(BlueberrySupportBoard9 board)
-    {
-        foreach (var prop in typeof(BlueberrySupportBoard9).GetProperties(BindingFlags.Public | BindingFlags.Instance))
-        {
-            if (prop.PropertyType != typeof(bool) || !prop.CanRead || !prop.CanWrite)
-                continue;
-            ClubPurchases.Add(new StyleToggleViewModel(board, prop, _onChanged));
         }
     }
 
