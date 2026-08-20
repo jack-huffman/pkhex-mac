@@ -11,6 +11,23 @@
 
     <Application.Resources>
         <ResourceDictionary>
+            <!-- ============ TYPE SCALE ============
+                 Five steps, named by role. Every FontSize in the app resolves to one
+                 of these so sizes cannot drift apart: the file previously carried
+                 twelve distinct values, five of them within 4px of each other, which
+                 made the hierarchy do no work.
+                   micro   9  uppercase labels, badges, supporting meta
+                   body   12  default content, list rows, form fields
+                   heading 15  card and group headings
+                   title  17  view titles
+                   hero   26  empty-state headline
+            -->
+            <x:Double x:Key="FontMicro">9</x:Double>
+            <x:Double x:Key="FontBody">12</x:Double>
+            <x:Double x:Key="FontHeading">15</x:Double>
+            <x:Double x:Key="FontTitle">17</x:Double>
+            <x:Double x:Key="FontHero">26</x:Double>
+
             <ResourceDictionary.ThemeDictionaries>
                 <!-- ============ LIGHT ============ -->
                 <ResourceDictionary x:Key="Light">
@@ -124,14 +141,14 @@
             <Setter Property="TextAlignment" Value="Center"/>
         </Style>
         <Style Selector="TextBlock.sectionTitle">
-            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontSize" Value="{StaticResource FontMicro}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="LetterSpacing" Value="0.8"/>
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
             <Setter Property="Margin" Value="4,0,0,6"/>
         </Style>
         <Style Selector="TextBlock.fieldLabel">
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
             <Setter Property="Margin" Value="0,0,0,3"/>
         </Style>
@@ -161,7 +178,7 @@
             <Setter Property="Maximum" Value="100"/>
         </Style>
         <Style Selector="TextBox.statNum">
-            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
             <Setter Property="MinHeight" Value="22"/>
             <Setter Property="Height" Value="22"/>
             <Setter Property="Width" Value="46"/>
