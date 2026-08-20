@@ -46,6 +46,11 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private TrainerStyleViewModel? _style;
     [ObservableProperty] private BlueberryViewModel? _blueberry;
     [ObservableProperty] private TrainerRecordsViewModel? _records;
+    [ObservableProperty] private DaycareViewModel? _daycare;
+    [ObservableProperty] private GiftAlbumViewModel? _giftAlbum;
+    [ObservableProperty] private GameExtrasViewModel? _extras;
+    [ObservableProperty] private MailViewModel? _mail;
+    [ObservableProperty] private HallOfFameViewModel? _hallOfFame;
     [ObservableProperty] private SearchViewModel? _search;
 
     public bool IsBoxesView => CurrentView == "boxes";
@@ -55,6 +60,7 @@ public partial class MainWindowViewModel : ViewModelBase
     public bool IsFlagsView => CurrentView == "flags";
     public bool IsRaidsView => CurrentView == "raids";
     public bool IsSearchView => CurrentView == "search";
+    public bool IsGameDataView => CurrentView == "gamedata";
     public bool IsAddView => CurrentView == "add";
     public bool IsGiftsView => CurrentView == "gifts";
     public bool IsDatabaseView => IsAddView || IsGiftsView;
@@ -77,7 +83,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     /// <summary>Collapses the inspector column for the full-width Save view.</summary>
     public Avalonia.Controls.GridLength InspectorWidth =>
-        IsSaveView || IsDexView || IsToolsView || IsFlagsView || IsRaidsView || IsSearchView
+        IsSaveView || IsDexView || IsToolsView || IsFlagsView || IsRaidsView || IsSearchView || IsGameDataView
             ? new Avalonia.Controls.GridLength(0)
             : new Avalonia.Controls.GridLength(438);
 
@@ -90,6 +96,7 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsFlagsView));
         OnPropertyChanged(nameof(IsRaidsView));
         OnPropertyChanged(nameof(IsSearchView));
+        OnPropertyChanged(nameof(IsGameDataView));
         OnPropertyChanged(nameof(IsAddView));
         OnPropertyChanged(nameof(IsGiftsView));
         OnPropertyChanged(nameof(IsDatabaseView));
@@ -116,6 +123,22 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         if (view == "search" && _sav is not null)
             Search ??= new SearchViewModel(_sav, _strings, GameInfo.FilteredSources);
+        if (view == "gamedata" && _sav is not null)
+        {
+            Daycare ??= BuildDaycare(_sav);
+            if (GiftAlbum is null)
+            {
+                StatusText = "Reading the Mystery Gift album…";
+                GiftAlbum = new GiftAlbumViewModel(_sav, _strings, () =>
+                    StatusText = "Gift album updated. Remember to export the save (⌘S).");
+            }
+            Extras ??= new GameExtrasViewModel(_sav, () =>
+                StatusText = "Save structure edited. Remember to export the save (⌘S).");
+            Mail ??= new MailViewModel(_sav, _strings, () =>
+                StatusText = "Mail updated. Remember to export the save (⌘S).");
+            HallOfFame ??= new HallOfFameViewModel(_sav, _strings, () =>
+                StatusText = "Hall of Fame updated. Remember to export the save (⌘S).");
+        }
         if (view == "raids" && _sav is not null)
         {
             Raids ??= new RaidsViewModel(_sav, () =>
@@ -160,6 +183,25 @@ public partial class MainWindowViewModel : ViewModelBase
             Preview.Load(null);
         CurrentView = view;
         RefreshTargetSlotText();
+    }
+
+    /// <summary>
+    /// Builds the daycare editor, wiring its box transfers to the selected slot so a
+    /// boarded parent can be moved into storage and edited with the full inspector.
+    /// </summary>
+    private DaycareViewModel BuildDaycare(SaveFile sav)
+    {
+        var vm = new DaycareViewModel(sav, _strings, () =>
+            StatusText = "Daycare updated. Remember to export the save (⌘S).");
+        vm.ReadSelectedSlot = () => _selected?.Pokemon;
+        vm.WriteSelectedSlot = pk =>
+        {
+            if (_selected is null)
+                return;
+            WriteSlot(_selected, pk);
+            RefreshSlotViews();
+        };
+        return vm;
     }
 
     /// <summary>Applies trainer identity and bag edits together, then returns to the boxes.</summary>
@@ -310,13 +352,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
             RebuildBoxSlots();
             CurrentBox = 0;
-            WallpaperChoices = BoxWallpapers.GetChoices(sav, _strings);
-            OnPropertyChanged(nameof(WallpaperChoices));
-            OnPropertyChanged(nameof(CanSetWallpaper));
             _switchingBox = true;
             CurrentBoxName = BoxNames.Count > 0 ? BoxNames[0] : string.Empty;
-            if (CanSetWallpaper)
-                CurrentWallpaper = BoxWallpapers.Get(sav, 0);
             _switchingBox = false;
             LoadBox(0);
             LoadParty();
@@ -422,48 +459,9 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         _switchingBox = true;
         CurrentBoxName = (uint)value < BoxNames.Count ? BoxNames[value] : $"Box {value + 1}";
-        if (CanSetWallpaper)
-            CurrentWallpaper = BoxWallpapers.Get(_sav, value);
         _switchingBox = false;
         LoadBox(value);
         CurrentView = "boxes"; // clicking a box in the sidebar returns to the box view
-    }
-
-    /// <summary>
-    /// Renames the current box in the save. Only formats that expose box names
-    /// support this; others simply ignore the edit.
-    /// </summary>
-    public bool CanRenameBox => _sav is IBoxDetailName;
-
-    // ---- Box wallpaper ----
-
-    public IReadOnlyList<string> WallpaperChoices { get; private set; } = [];
-    public bool CanSetWallpaper => WallpaperChoices.Count > 0;
-
-    [ObservableProperty] private int _currentWallpaper;
-
-    partial void OnCurrentWallpaperChanged(int value)
-    {
-        if (_switchingBox || _sav is null || !CanSetWallpaper)
-            return;
-        if ((uint)CurrentBox >= _sav.BoxCount || (uint)value >= (uint)WallpaperChoices.Count)
-            return;
-        BoxWallpapers.Set(_sav, CurrentBox, value);
-        StatusText = $"Box wallpaper set to {WallpaperChoices[value]}. Remember to export the save (⌘S).";
-    }
-
-    partial void OnCurrentBoxNameChanged(string value)
-    {
-        if (_switchingBox || _sav is not IBoxDetailName named || !_sav.HasBox)
-            return;
-        if ((uint)CurrentBox >= _sav.BoxCount)
-            return;
-        named.SetBoxName(CurrentBox, value);
-        // Keep the sidebar list in step with the edit.
-        var stored = named.GetBoxName(CurrentBox);
-        if ((uint)CurrentBox < BoxNames.Count && BoxNames[CurrentBox] != stored)
-            BoxNames[CurrentBox] = stored;
-        StatusText = $"Renamed box to \"{stored}\". Remember to export the save (⌘S).";
     }
 
     private void LoadBox(int box)
