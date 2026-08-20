@@ -1425,20 +1425,14 @@
                                     <TabItem Header="Moves">
                                         <ScrollViewer>
                                             <StackPanel Spacing="8" Margin="2,6,6,2">
-                                                <DockPanel>
-                                                    <TextBlock DockPanel.Dock="Left" Classes="sectionTitle" Text="MOVES" Margin="0,0,0,0"/>
-                                                    <Button DockPanel.Dock="Right" Content="Suggest" FontSize="10" Padding="8,1"
-                                                            HorizontalAlignment="Right"
-                                                            ToolTip.Tip="Fill these four slots with a legal moveset"
-                                                            Command="{Binding SuggestMovesCommand}"/>
-                                                </DockPanel>
-                                                <Grid ColumnDefinitions="*,44,38" ColumnSpacing="6" Margin="0,0,0,-2">
+                                                <TextBlock Classes="sectionTitle" Text="MOVES" Margin="0"/>
+                                                <Grid ColumnDefinitions="*,50,40" ColumnSpacing="8" Margin="0,0,0,-2">
                                                     <TextBlock Grid.Column="1" Text="PP Ups" FontSize="9" Classes="secondary"
                                                                TextAlignment="Center"/>
                                                     <TextBlock Grid.Column="2" Text="PP" FontSize="9" Classes="secondary"
                                                                TextAlignment="Center"/>
                                                 </Grid>
-                                                <Grid ColumnDefinitions="*,44,38" ColumnSpacing="6">
+                                                <Grid ColumnDefinitions="*,50,40" ColumnSpacing="8">
                                                     <ComboBox Grid.Column="0" HorizontalAlignment="Stretch" ItemsSource="{Binding MoveChoices}"
                                                               SelectedValue="{Binding Move1, Mode=TwoWay}"
                                                               SelectedValueBinding="{Binding Value, x:DataType=vm:MoveChoice}">
@@ -1467,14 +1461,12 @@
                                                             </DataTemplate>
                                                         </ComboBox.ItemTemplate>
                                                     </ComboBox>
-                                                    <NumericUpDown Grid.Column="1" Value="{Binding PpUps1, Mode=TwoWay}" Minimum="0" Maximum="3"
-                                                                   FormatString="0" Increment="1" FontSize="11"
-                                                                   ShowButtonSpinner="False" HorizontalContentAlignment="Center"
-                                                                   ToolTip.Tip="PP Ups applied (0-3)"/>
+                                                    <TextBox Grid.Column="1" Classes="statNum" Text="{Binding PpUps1, Mode=TwoWay}"
+                                                             ToolTip.Tip="PP Ups applied (0-3)"/>
                                                     <TextBlock Grid.Column="2" Text="{Binding Pp1}" FontSize="10"
                                                                Classes="secondary" VerticalAlignment="Center" TextAlignment="Center"/>
                                                 </Grid>
-                                                <Grid ColumnDefinitions="*,44,38" ColumnSpacing="6">
+                                                <Grid ColumnDefinitions="*,50,40" ColumnSpacing="8">
                                                     <ComboBox Grid.Column="0" HorizontalAlignment="Stretch" ItemsSource="{Binding MoveChoices}"
                                                               SelectedValue="{Binding Move2, Mode=TwoWay}"
                                                               SelectedValueBinding="{Binding Value, x:DataType=vm:MoveChoice}">
@@ -1503,14 +1495,12 @@
                                                             </DataTemplate>
                                                         </ComboBox.ItemTemplate>
                                                     </ComboBox>
-                                                    <NumericUpDown Grid.Column="1" Value="{Binding PpUps2, Mode=TwoWay}" Minimum="0" Maximum="3"
-                                                                   FormatString="0" Increment="1" FontSize="11"
-                                                                   ShowButtonSpinner="False" HorizontalContentAlignment="Center"
-                                                                   ToolTip.Tip="PP Ups applied (0-3)"/>
+                                                    <TextBox Grid.Column="1" Classes="statNum" Text="{Binding PpUps2, Mode=TwoWay}"
+                                                             ToolTip.Tip="PP Ups applied (0-3)"/>
                                                     <TextBlock Grid.Column="2" Text="{Binding Pp2}" FontSize="10"
                                                                Classes="secondary" VerticalAlignment="Center" TextAlignment="Center"/>
                                                 </Grid>
-                                                <Grid ColumnDefinitions="*,44,38" ColumnSpacing="6">
+                                                <Grid ColumnDefinitions="*,50,40" ColumnSpacing="8">
                                                     <ComboBox Grid.Column="0" HorizontalAlignment="Stretch" ItemsSource="{Binding MoveChoices}"
                                                               SelectedValue="{Binding Move3, Mode=TwoWay}"
                                                               SelectedValueBinding="{Binding Value, x:DataType=vm:MoveChoice}">
@@ -1539,14 +1529,12 @@
                                                             </DataTemplate>
                                                         </ComboBox.ItemTemplate>
                                                     </ComboBox>
-                                                    <NumericUpDown Grid.Column="1" Value="{Binding PpUps3, Mode=TwoWay}" Minimum="0" Maximum="3"
-                                                                   FormatString="0" Increment="1" FontSize="11"
-                                                                   ShowButtonSpinner="False" HorizontalContentAlignment="Center"
-                                                                   ToolTip.Tip="PP Ups applied (0-3)"/>
+                                                    <TextBox Grid.Column="1" Classes="statNum" Text="{Binding PpUps3, Mode=TwoWay}"
+                                                             ToolTip.Tip="PP Ups applied (0-3)"/>
                                                     <TextBlock Grid.Column="2" Text="{Binding Pp3}" FontSize="10"
                                                                Classes="secondary" VerticalAlignment="Center" TextAlignment="Center"/>
                                                 </Grid>
-                                                <Grid ColumnDefinitions="*,44,38" ColumnSpacing="6">
+                                                <Grid ColumnDefinitions="*,50,40" ColumnSpacing="8">
                                                     <ComboBox Grid.Column="0" HorizontalAlignment="Stretch" ItemsSource="{Binding MoveChoices}"
                                                               SelectedValue="{Binding Move4, Mode=TwoWay}"
                                                               SelectedValueBinding="{Binding Value, x:DataType=vm:MoveChoice}">
@@ -1575,22 +1563,14 @@
                                                             </DataTemplate>
                                                         </ComboBox.ItemTemplate>
                                                     </ComboBox>
-                                                    <NumericUpDown Grid.Column="1" Value="{Binding PpUps4, Mode=TwoWay}" Minimum="0" Maximum="3"
-                                                                   FormatString="0" Increment="1" FontSize="11"
-                                                                   ShowButtonSpinner="False" HorizontalContentAlignment="Center"
-                                                                   ToolTip.Tip="PP Ups applied (0-3)"/>
+                                                    <TextBox Grid.Column="1" Classes="statNum" Text="{Binding PpUps4, Mode=TwoWay}"
+                                                             ToolTip.Tip="PP Ups applied (0-3)"/>
                                                     <TextBlock Grid.Column="2" Text="{Binding Pp4}" FontSize="10"
                                                                Classes="secondary" VerticalAlignment="Center" TextAlignment="Center"/>
                                                 </Grid>
 
                                                 <StackPanel IsVisible="{Binding HasRelearnMoves}">
-                                                    <DockPanel Margin="2,10,0,6">
-                                                        <TextBlock DockPanel.Dock="Left" Classes="sectionTitle" Text="RELEARN MOVES" Margin="0"/>
-                                                        <Button DockPanel.Dock="Right" Content="Suggest" FontSize="10" Padding="8,1"
-                                                                HorizontalAlignment="Right"
-                                                                ToolTip.Tip="Use the relearn moves this encounter provides"
-                                                                Command="{Binding SuggestRelearnMovesCommand}"/>
-                                                    </DockPanel>
+                                                    <TextBlock Classes="sectionTitle" Text="RELEARN MOVES" Margin="2,10,0,6"/>
                                                     <StackPanel Spacing="8">
                                                         <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding MoveChoices}"
                                                               SelectedValue="{Binding Relearn1, Mode=TwoWay}"
