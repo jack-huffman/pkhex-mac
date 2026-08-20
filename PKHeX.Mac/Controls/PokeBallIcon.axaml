@@ -3,27 +3,32 @@
              xmlns:ctrl="using:PKHeX.Mac.Controls"
              x:Class="PKHeX.Mac.Controls.PokeBallIcon"
              x:Name="Root">
-    <!-- Pure outline Poké Ball: shell ring, a band running from the shell into the
-         centre button on both sides, and a hollow button. Everything is stroked in
-         one colour with nothing filled, so it sits correctly on any background.
-         The band overlaps both rings slightly, which is invisible in a single
-         colour and guarantees no hairline gaps at any render size. -->
+    <!-- Poké Ball, transcoded from the supplied 24x24 vector: the two shell halves
+         are filled shapes notched around the button, and the button itself is a ring
+         drawn with the even-odd rule (the "F0" prefix) so its centre is a genuine
+         hole. Colour comes from IconBrush, so it follows the theme. -->
     <Viewbox Stretch="Uniform">
-        <Canvas Width="100" Height="100">
+        <Canvas Width="24" Height="24">
 
-            <!-- Shell -->
-            <Ellipse Canvas.Left="8" Canvas.Top="8" Width="84" Height="84"
-                     Stroke="{Binding #Root.Stroke}" StrokeThickness="7"/>
+            <!-- Lower shell -->
+            <Path Fill="{Binding #Root.IconBrush}"
+                  Data="M21.9012 13H16.8506C16.3873 15.2822 14.3696 17 11.9506 17C9.53167 17
+                        7.51391 15.2822 7.05064 13H2C2.50172 18.0533 6.76528 22 11.9506 22C17.136
+                        22 21.3995 18.0533 21.9012 13Z"/>
 
-            <!-- Band, shell to button, both sides -->
-            <Rectangle Canvas.Left="8" Canvas.Top="46.5" Width="32" Height="7"
-                       Fill="{Binding #Root.Stroke}"/>
-            <Rectangle Canvas.Left="60" Canvas.Top="46.5" Width="32" Height="7"
-                       Fill="{Binding #Root.Stroke}"/>
+            <!-- Upper shell -->
+            <Path Fill="{Binding #Root.IconBrush}"
+                  Data="M21.9012 11C21.3995 5.94668 17.136 2 11.9506 2C6.76528 2 2.50172 5.94668
+                        2 11H7.05064C7.51391 8.71776 9.53167 7 11.9506 7C14.3696 7 16.3873 8.71776
+                        16.8506 11H21.9012Z"/>
 
-            <!-- Button -->
-            <Ellipse Canvas.Left="41.5" Canvas.Top="41.5" Width="17" Height="17"
-                     Stroke="{Binding #Root.Stroke}" StrokeThickness="7"/>
+            <!-- Button ring, centre punched out -->
+            <Path Fill="{Binding #Root.IconBrush}"
+                  Data="F0 M11.9506 15C13.6075 15 14.9506 13.6569 14.9506 12C14.9506 10.3431
+                        13.6075 9 11.9506 9C10.2938 9 8.95062 10.3431 8.95062 12C8.95062 13.6569
+                        10.2938 15 11.9506 15ZM13.4506 12C13.4506 12.8284 12.7791 13.5 11.9506
+                        13.5C11.1222 13.5 10.4506 12.8284 10.4506 12C10.4506 11.1716 11.1222 10.5
+                        11.9506 10.5C12.7791 10.5 13.4506 11.1716 13.4506 12Z"/>
         </Canvas>
     </Viewbox>
 </UserControl>

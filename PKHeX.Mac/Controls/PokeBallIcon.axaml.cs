@@ -6,19 +6,19 @@ using Avalonia.Media;
 namespace PKHeX.Mac.Controls;
 
 /// <summary>
-/// An outline Poké Ball, used as the empty-state mark. Vector-drawn so it stays
-/// crisp at any size and inherits the surrounding text colour.
+/// A Poké Ball, drawn as vector geometry so it stays crisp at any size and takes
+/// its colour from the theme.
 /// </summary>
 public partial class PokeBallIcon : UserControl
 {
-    public static readonly StyledProperty<IBrush?> StrokeProperty =
-        AvaloniaProperty.Register<PokeBallIcon, IBrush?>(nameof(Stroke));
+    public static readonly StyledProperty<IBrush?> IconBrushProperty =
+        AvaloniaProperty.Register<PokeBallIcon, IBrush?>(nameof(IconBrush));
 
-    /// <summary>Colour of the shell, band and button.</summary>
-    public IBrush? Stroke
+    /// <summary>Colour of the whole icon.</summary>
+    public IBrush? IconBrush
     {
-        get => GetValue(StrokeProperty);
-        set => SetValue(StrokeProperty, value);
+        get => GetValue(IconBrushProperty);
+        set => SetValue(IconBrushProperty, value);
     }
 
     public PokeBallIcon() => InitializeComponent();

@@ -244,7 +244,7 @@
                             <StackPanel IsVisible="{Binding !HasSave}" HorizontalAlignment="Center"
                                         Spacing="10" Margin="0,170,0,0">
                                 <ctrl:PokeBallIcon Width="58" Height="58" HorizontalAlignment="Center"
-                                                   Stroke="{DynamicResource TextSecondaryBrush}"/>
+                                                   IconBrush="{DynamicResource TextSecondaryBrush}"/>
                                 <TextBlock Text="PKHeX for Mac" FontSize="26" FontWeight="Bold" HorizontalAlignment="Center"/>
                                 <TextBlock Text="Open a decrypted save file (⌘O) or drop one anywhere in this window"
                                            FontSize="13" Classes="secondary" HorizontalAlignment="Center"/>
@@ -585,7 +585,7 @@
                                     <StackPanel VerticalAlignment="Center" Spacing="8"
                                                 IsVisible="{Binding SelectedRow, Converter={x:Static ObjectConverters.IsNull}}">
                                         <ctrl:PokeBallIcon Width="36" Height="36" HorizontalAlignment="Center"
-                                                   Stroke="{DynamicResource TextSecondaryBrush}"/>
+                                                   IconBrush="{DynamicResource TextSecondaryBrush}"/>
                                         <TextBlock Text="Select a species to see everything the dex records for it"
                                                    FontSize="12" Classes="secondary" HorizontalAlignment="Center"
                                                    TextAlignment="Center" TextWrapping="Wrap"/>
@@ -982,7 +982,7 @@
                         <Border Classes="card" IsVisible="{Binding IsBoxesView}">
                             <StackPanel VerticalAlignment="Center" Spacing="8" IsVisible="{Binding !Detail.HasPokemon}">
                                 <ctrl:PokeBallIcon Width="42" Height="42" HorizontalAlignment="Center"
-                                           Stroke="{DynamicResource TextSecondaryBrush}"/>
+                                           IconBrush="{DynamicResource TextSecondaryBrush}"/>
 
                                 <!-- Nothing selected -->
                                 <TextBlock Text="Select a Pokémon" FontSize="13" Classes="secondary"
