@@ -186,6 +186,8 @@ public partial class PokemonDetailViewModel : ObservableObject
     [ObservableProperty] private string _natureEffectText = string.Empty;
     [ObservableProperty] private int _statTotal;
     [ObservableProperty] private double _statTotalPercent;
+    [ObservableProperty] private int _baseStatTotal;
+    [ObservableProperty] private double _baseStatTotalPercent;
 
     /// <summary>Game-legal ceiling on the sum of all EVs (510 from Gen 3 on).</summary>
     public int EvTotalLimit => EffortValues.Max510;
@@ -407,6 +409,11 @@ public partial class PokemonDetailViewModel : ObservableObject
         foreach (var row in Stats)
             StatTotal += row.Stat;
         StatTotalPercent = Math.Min(100.0, StatTotal / 2200.0 * 100.0);
+
+        // Base stat total is the species constant (the number dex apps show);
+        // keep it alongside the live total so the two aren't confused.
+        BaseStatTotal = _pk.PersonalInfo.GetBaseStatTotal();
+        BaseStatTotalPercent = Math.Min(100.0, BaseStatTotal / 720.0 * 100.0);
     }
 
     /// <summary>Recomputes the shared EV pool and pushes each row's remaining headroom.</summary>

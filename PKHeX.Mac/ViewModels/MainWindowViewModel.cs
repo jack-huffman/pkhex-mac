@@ -47,6 +47,14 @@ public partial class MainWindowViewModel : ViewModelBase
     /// destination slot can be picked before adding.</summary>
     public bool ShowBoxes => IsBoxesView || IsDatabaseView;
 
+    /// <summary>
+    /// The databases only make sense when there is somewhere to put the result, so
+    /// they unlock once an empty box slot is selected.
+    /// </summary>
+    public bool CanUseDatabases => HasSave && _selected is { IsParty: false, IsEmpty: true };
+
+    [ObservableProperty] private string _databaseHint = "Select an empty box slot to add a Pokémon";
+
     /// <summary>Dims the box list while another view is showing, so its selection
     /// does not read as the active section.</summary>
     public double BoxListOpacity => IsBoxesView ? 1.0 : 0.5;
@@ -78,6 +86,11 @@ public partial class MainWindowViewModel : ViewModelBase
         if (CurrentView == view)
             return; // already here: keep any preview/selection intact
 
+        if (view is "add" or "gifts" && !CanUseDatabases)
+        {
+            StatusText = "Select an empty slot in a box first — that's where the Pokémon will go.";
+            return;
+        }
         if (view == "gifts" && GiftDb is null && _sav is not null)
         {
             StatusText = "Loading the Mystery Gift archive…";
@@ -134,7 +147,7 @@ public partial class MainWindowViewModel : ViewModelBase
             RefreshSlotViews();
             var name = (uint)clone.Species < _strings.specieslist.Length ? _strings.specieslist[clone.Species] : $"#{clone.Species}";
             StatusText = $"Placed {name} in {CurrentBoxName}, slot {slot.Slot + 1}. Remember to export the save (⌘S).";
-            RefreshTargetSlotText();
+            SelectSlot(BoxSlots[slot.Slot]); // reselect so the editor shows what landed
             return;
         }
         if (!TryAddToCurrentBox(clone, out var message))
@@ -150,6 +163,7 @@ public partial class MainWindowViewModel : ViewModelBase
         TargetSlotText = _selected is { IsParty: false } s
             ? $"Add to {CurrentBoxName}, slot {s.Slot + 1}"
             : "Add to first empty slot";
+        OnPropertyChanged(nameof(CanUseDatabases));
     }
 
     public ObservableCollection<SlotViewModel> BoxSlots { get; } = [];
@@ -380,6 +394,10 @@ public partial class MainWindowViewModel : ViewModelBase
             slot.IsSelected = true;
         Detail.Load(slot?.Pokemon);
         RefreshTargetSlotText();
+        OnPropertyChanged(nameof(CanUseDatabases));
+        if (IsDatabaseView && !CanUseDatabases)
+            CurrentView = "boxes"; // the chosen slot is no longer empty
+
     }
 
     [RelayCommand]

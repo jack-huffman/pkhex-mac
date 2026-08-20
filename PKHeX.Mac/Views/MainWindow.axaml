@@ -129,13 +129,19 @@
                             <Button Classes="nav" Classes.selected="{Binding IsSaveView}"
                                     Command="{Binding SetViewCommand}" CommandParameter="save"
                                     Content="👤  Trainer &amp; Bag"/>
-                            <TextBlock Classes="sectionTitle" Text="DATABASES" Margin="6,10,0,4"/>
+                            <TextBlock Classes="sectionTitle" Text="DATABASES" Margin="6,10,0,4"
+                                       IsVisible="{Binding CanUseDatabases}"/>
                             <Button Classes="nav" Classes.selected="{Binding IsAddView}"
+                                    IsVisible="{Binding CanUseDatabases}"
                                     Command="{Binding SetViewCommand}" CommandParameter="add"
                                     Content="✚  Add Pokémon"/>
                             <Button Classes="nav" Classes.selected="{Binding IsGiftsView}"
+                                    IsVisible="{Binding CanUseDatabases}"
                                     Command="{Binding SetViewCommand}" CommandParameter="gifts"
                                     Content="🎁  Mystery Gifts"/>
+                            <TextBlock Text="{Binding DatabaseHint}" FontSize="10" Classes="secondary"
+                                       TextWrapping="Wrap" Margin="6,6,0,0"
+                                       IsVisible="{Binding !CanUseDatabases}"/>
                         </StackPanel>
 
                         <TextBlock Classes="sectionTitle" Text="BOXES" IsVisible="{Binding HasSave}" Margin="6,6,0,0"/>
@@ -367,6 +373,9 @@
 
                     <!-- ══════ INSPECTOR ══════ -->
                     <Panel Grid.Column="1" Margin="0,0,18,14">
+                        <!-- Database mode: browser on top, live preview + add below -->
+                        <Grid RowDefinitions="*,Auto" RowSpacing="8" IsVisible="{Binding IsDatabaseView}">
+                            <Panel Grid.Row="0">
                     <!-- ══════ Add Pokémon view ══════ -->
                     <Border Classes="card" IsVisible="{Binding IsAddView}">
                         <DockPanel DataContext="{Binding AddDb}" x:DataType="vm:AddPokemonViewModel">
@@ -383,11 +392,6 @@
                                 <CheckBox IsChecked="{Binding MakeShiny, Mode=TwoWay}" Content="Make Shiny ★ (if possible)"/>
                                 <TextBlock Classes="fieldLabel" Text="Legal encounters — pick one to preview"/>
                             </StackPanel>
-                            <Button DockPanel.Dock="Bottom"
-                                    Content="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).TargetSlotText}"
-                                    Classes="accent" Margin="0,8,0,0"
-                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                                    Click="OnAddPreviewClicked"/>
                             <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusText}" FontSize="12"
                                        Classes="secondary" TextWrapping="Wrap" Margin="0,8,0,0"/>
                             <ListBox Margin="0,4,0,0" ItemsSource="{Binding EncounterDescriptions}"
@@ -407,35 +411,33 @@
 
                             <!-- Filters -->
                             <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,10">
-                                <Grid ColumnDefinitions="*,168,168,Auto" ColumnSpacing="10">
-                                    <TextBox Grid.Column="0" Text="{Binding SearchText, Mode=TwoWay}"
-                                             Watermark="Search species, event, or game…"/>
-                                    <ComboBox Grid.Column="1" HorizontalAlignment="Stretch"
+                                <TextBox Text="{Binding SearchText, Mode=TwoWay}"
+                                         Watermark="Search species, event, or game…"/>
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
+                                    <ComboBox Grid.Column="0" HorizontalAlignment="Stretch" FontSize="12"
                                               ItemsSource="{Binding GenerationChoices}"
                                               SelectedIndex="{Binding SelectedGenerationIndex, Mode=TwoWay}"/>
-                                    <ComboBox Grid.Column="2" HorizontalAlignment="Stretch"
+                                    <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" FontSize="12"
                                               ItemsSource="{Binding GameChoices}"
                                               SelectedIndex="{Binding SelectedGameIndex, Mode=TwoWay}"/>
-                                    <Button Grid.Column="3" Content="Clear" FontSize="12"
+                                </Grid>
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
+                                    <CheckBox Grid.Column="0" IsChecked="{Binding ShinyOnly, Mode=TwoWay}"
+                                              Content="Shiny only" FontSize="12"/>
+                                    <CheckBox Grid.Column="1" IsChecked="{Binding EggsOnly, Mode=TwoWay}"
+                                              Content="Eggs only" FontSize="12"/>
+                                </Grid>
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                                    <CheckBox Grid.Column="0" IsChecked="{Binding AddableOnly, Mode=TwoWay}" FontSize="12"
+                                              Content="Only gifts this save accepts"/>
+                                    <Button Grid.Column="1" Content="Clear" FontSize="11" Padding="10,3"
                                             Command="{Binding ClearFiltersCommand}"/>
                                 </Grid>
-                                <StackPanel Orientation="Horizontal" Spacing="16">
-                                    <CheckBox IsChecked="{Binding ShinyOnly, Mode=TwoWay}" Content="Shiny only"/>
-                                    <CheckBox IsChecked="{Binding EggsOnly, Mode=TwoWay}" Content="Eggs only"/>
-                                    <CheckBox IsChecked="{Binding AddableOnly, Mode=TwoWay}"
-                                              Content="Only gifts this save can accept"/>
-
-                                </StackPanel>
                             </StackPanel>
 
                             <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusText}" FontSize="12"
                                        Classes="secondary" TextWrapping="Wrap" Margin="0,8,0,0"/>
 
-                            <Button DockPanel.Dock="Bottom"
-                                    Content="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).TargetSlotText}"
-                                    Classes="accent" Margin="0,8,0,0"
-                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                                    Click="OnAddPreviewClicked"/>
                             <Button DockPanel.Dock="Bottom" Content="{Binding LoadMoreLabel}"
                                     IsVisible="{Binding HasMore}" Margin="0,8,0,0"
                                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
@@ -483,9 +485,10 @@
                     </Border>
 
 
+                            </Panel>
+
                         <!-- Compact preview of the selected database entry -->
-                        <Border Classes="card" Padding="12" IsVisible="{Binding IsDatabaseView}"
-                                VerticalAlignment="Bottom" Margin="0,8,0,0">
+                        <Border Grid.Row="1" Classes="card" Padding="12">
                             <StackPanel DataContext="{Binding Preview}" x:DataType="vm:PokemonPreviewViewModel"
                                         Spacing="8">
                                 <TextBlock Text="Select an entry to preview it here" FontSize="12" Classes="secondary"
@@ -537,8 +540,16 @@
                                         </StackPanel>
                                     </StackPanel>
                                 </Grid>
+
+                                <Button Content="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).TargetSlotText}"
+                                        Classes="accent" HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Center"
+                                        IsEnabled="{Binding HasPokemon}"
+                                        Click="OnAddPreviewClicked"/>
                             </StackPanel>
                         </Border>
+
+                        </Grid>
 
                         <Border Classes="card" IsVisible="{Binding IsBoxesView}">
                             <StackPanel VerticalAlignment="Center" Spacing="8" IsVisible="{Binding !Detail.HasPokemon}">
@@ -853,8 +864,22 @@
                                                     </ItemsControl.ItemTemplate>
                                                 </ItemsControl>
 
-                                                <!-- Total, matching the per-stat rows -->
-                                                <Grid ColumnDefinitions="46,44,*" ColumnSpacing="8" Margin="0,2,0,6">
+                                                <!-- Totals: species base-stat total, and the live in-battle sum -->
+                                                <Separator Margin="0,2,0,6"/>
+                                                <Grid ColumnDefinitions="46,44,*" ColumnSpacing="8" Margin="0,0,0,5"
+                                                      ToolTip.Tip="Base stat total — a constant for this species, the number dex apps show">
+                                                    <TextBlock Grid.Column="0" Text="BST" FontSize="12" FontWeight="Bold"
+                                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                                               VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding BaseStatTotal}" FontSize="13"
+                                                               FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                    <ProgressBar Grid.Column="2" Classes="statbar"
+                                                                 Value="{Binding BaseStatTotalPercent}"
+                                                                 Foreground="{DynamicResource TextSecondaryBrush}"
+                                                                 VerticalAlignment="Center"/>
+                                                </Grid>
+                                                <Grid ColumnDefinitions="46,44,*" ColumnSpacing="8" Margin="0,0,0,6"
+                                                      ToolTip.Tip="Sum of this Pokémon's actual stats at its current level, IVs, EVs and nature">
                                                     <TextBlock Grid.Column="0" Text="TOT" FontSize="12" FontWeight="Bold"
                                                                Foreground="{DynamicResource TextSecondaryBrush}"
                                                                VerticalAlignment="Center"/>
