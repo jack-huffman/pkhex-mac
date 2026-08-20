@@ -1011,7 +1011,6 @@
                                     <Image Source="{Binding Artwork}" Height="150"
                                            RenderOptions.BitmapInterpolationMode="HighQuality"/>
                                     <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                        <Image Source="{Binding BallSprite}" Width="20" Height="20" VerticalAlignment="Center"/>
                                         <TextBlock Text="{Binding SpeciesName}" FontSize="19" FontWeight="Bold" VerticalAlignment="Center"/>
                                         <Border Classes="chip" Background="{DynamicResource SurfaceMutedBrush}" VerticalAlignment="Center">
                                             <TextBlock Text="{Binding LevelBadge}" FontSize="10" Classes="secondary"/>
