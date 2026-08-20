@@ -367,6 +367,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     /// <summary>Applies trainer identity and bag edits together, then returns to the boxes.</summary>
+    [RelayCommand]
     public void ApplySave()
     {
         Trainer?.Apply();
@@ -377,6 +378,7 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     /// <summary>Discards unapplied trainer/bag edits by rebuilding both editors from the save.</summary>
+    [RelayCommand]
     public void ResetSave()
     {
         if (_sav is null)

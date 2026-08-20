@@ -1,0 +1,375 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PKHeX.Mac.ViewModels"
+             xmlns:core="using:PKHeX.Core"
+             xmlns:ctrl="using:PKHeX.Mac.Controls"
+             x:Class="PKHeX.Mac.Views.Panels.TrainerPanel"
+             x:DataType="vm:MainWindowViewModel">
+
+    <DockPanel IsVisible="{Binding IsSaveView}" Margin="18,14,18,14">
+
+    <!-- Action bar, docked so it can never overlap the cards -->
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8"
+                HorizontalAlignment="Right" Margin="0,12,0,0">
+        <Button Content="Revert" Command="{Binding ResetSaveCommand}"/>
+        <Button Content="Apply" Classes="accent" Command="{Binding ApplySaveCommand}"/>
+    </StackPanel>
+
+    <Grid ColumnDefinitions="380,*" ColumnSpacing="16">
+
+        <!-- Trainer identity -->
+        <Border Grid.Column="0" Classes="card" VerticalAlignment="Stretch">
+            <DockPanel DataContext="{Binding Trainer}" x:DataType="vm:TrainerEditorViewModel">
+                <TextBlock DockPanel.Dock="Top" Text="Trainer" FontSize="{StaticResource FontTitle}" FontWeight="Bold"
+                           Margin="0,0,0,12"/>
+                <ScrollViewer>
+                    <StackPanel Spacing="12">
+                        <StackPanel>
+                            <TextBlock Classes="fieldLabel" Text="Trainer Name"/>
+                            <TextBox Text="{Binding OtName, Mode=TwoWay}" MaxLength="{Binding MaxOtLength}"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Classes="fieldLabel" Text="Gender"/>
+                            <ComboBox HorizontalAlignment="Stretch" SelectedIndex="{Binding GenderIndex, Mode=TwoWay}">
+                                <ComboBoxItem Content="♂ Male"/>
+                                <ComboBoxItem Content="♀ Female"/>
+                            </ComboBox>
+                        </StackPanel>
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Classes="fieldLabel" Text="TID"/>
+                                <NumericUpDown Value="{Binding Tid, Mode=TwoWay}" Minimum="0"
+                                               Maximum="{Binding MaxTid}" FormatString="0" Increment="1"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Classes="fieldLabel" Text="SID"/>
+                                <NumericUpDown Value="{Binding Sid, Mode=TwoWay}" Minimum="0"
+                                               Maximum="{Binding MaxSid}" FormatString="0" Increment="1"/>
+                            </StackPanel>
+                        </Grid>
+                        <StackPanel>
+                            <TextBlock Classes="fieldLabel" Text="Money"/>
+                            <NumericUpDown Value="{Binding Money, Mode=TwoWay}" Minimum="0"
+                                           Maximum="9999999" FormatString="0" Increment="1000"/>
+                        </StackPanel>
+                        <StackPanel IsVisible="{Binding IsScarletViolet}">
+                            <TextBlock Classes="fieldLabel" Text="League Points"/>
+                            <NumericUpDown Value="{Binding LeaguePoints, Mode=TwoWay}" Minimum="0"
+                                           Maximum="9999999" FormatString="0" Increment="1000"/>
+                        </StackPanel>
+                        <StackPanel IsVisible="{Binding IsScarletViolet}">
+                            <TextBlock Classes="fieldLabel" Text="Blueberry Points (BP)"/>
+                            <NumericUpDown Value="{Binding BlueberryPoints, Mode=TwoWay}" Minimum="0"
+                                           Maximum="9999999" FormatString="0" Increment="100"/>
+                        </StackPanel>
+                        <StackPanel>
+                            <TextBlock Classes="fieldLabel" Text="Play Time  (h : m : s)"/>
+                            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="6">
+                                <NumericUpDown Grid.Column="0" Value="{Binding Hours, Mode=TwoWay}" Minimum="0" Maximum="9999" FormatString="0" Increment="1"/>
+                                <NumericUpDown Grid.Column="1" Value="{Binding Minutes, Mode=TwoWay}" Minimum="0" Maximum="59" FormatString="0" Increment="1"/>
+                                <NumericUpDown Grid.Column="2" Value="{Binding Seconds, Mode=TwoWay}" Minimum="0" Maximum="59" FormatString="0" Increment="1"/>
+                            </Grid>
+                        </StackPanel>
+                        <StackPanel IsVisible="{Binding IsScarletViolet}" Spacing="6" Margin="0,6,0,0">
+                            <Separator/>
+                            <TextBlock Classes="sectionTitle" Text="PROGRESSION SHORTCUTS"/>
+                            <Button Content="Unlock all TM recipes" FontSize="{StaticResource FontBody}" Padding="8,3"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                    Command="{Binding UnlockAllTmRecipesCommand}"/>
+                            <Button Content="Unlock Blueberry coaches" FontSize="{StaticResource FontBody}" Padding="8,3"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                    Command="{Binding UnlockAllCoachesCommand}"/>
+                            <Button Content="Collect all Ogre Clan stakes" FontSize="{StaticResource FontBody}" Padding="8,3"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                    Command="{Binding CollectAllStakesCommand}"/>
+                            <Button Content="Activate Snacksworth legendaries" FontSize="{StaticResource FontBody}" Padding="8,3"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                    Command="{Binding ActivateSnacksworthLegendariesCommand}"/>
+                            <TextBlock Text="{Binding UnlockResult}" FontSize="{StaticResource FontMicro}" Classes="secondary"
+                                       TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+
+        <!-- Bag and the trainer's look share the right column -->
+        <Border Grid.Column="1" Classes="card">
+            <TabControl Padding="0,4,0,0">
+            <TabItem Header="Bag">
+            <DockPanel DataContext="{Binding Bag}" x:DataType="vm:BagViewModel" Margin="2,8,2,2">
+                <TextBlock DockPanel.Dock="Top" Classes="fieldLabel" IsVisible="{Binding !HasPouches}"
+                           Text="This save format does not expose an editable inventory."/>
+
+                <!-- Item picker for the selected slot -->
+                <Border DockPanel.Dock="Bottom" CornerRadius="10" Padding="12" Margin="0,10,0,0"
+                        IsVisible="{Binding HasPouches}"
+                        Background="{DynamicResource SurfaceMutedBrush}">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="{Binding PouchSummary}" FontSize="{StaticResource FontBody}" Classes="secondary"/>
+                        <Grid ColumnDefinitions="Auto,116,Auto,Auto,Auto" ColumnSpacing="6">
+                            <TextBlock Grid.Column="0" Text="Give all @" FontSize="{StaticResource FontBody}" Classes="secondary"
+                                       VerticalAlignment="Center"/>
+                            <!-- Wide enough that the spinner buttons don't crush the text field -->
+                            <NumericUpDown Grid.Column="1" MinWidth="112"
+                                           Value="{Binding GiveAllCount, Mode=TwoWay}"
+                                           Minimum="1" Maximum="{Binding MaxCount}" FormatString="0"
+                                           Increment="1" FontSize="{StaticResource FontBody}"
+                                           HorizontalContentAlignment="Right"/>
+                            <Button Grid.Column="2" Content="Give all" FontSize="{StaticResource FontBody}" Padding="8,3"
+                                    Command="{Binding GiveAllItemsCommand}"/>
+                            <Button Grid.Column="3" Content="Sort A–Z" FontSize="{StaticResource FontBody}" Padding="8,3"
+                                    Command="{Binding SortByNameCommand}"/>
+                            <Button Grid.Column="4" Content="Empty pouch" FontSize="{StaticResource FontBody}" Padding="8,3"
+                                    Command="{Binding ClearPouchCommand}"/>
+                        </Grid>
+                        <Separator/>
+                        <TextBlock Classes="fieldLabel" Text="Change selected slot to"/>
+                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                            <ComboBox Grid.Column="0" HorizontalAlignment="Stretch"
+                                      ItemsSource="{Binding ItemPickerChoices}"
+                                      SelectedValue="{Binding PickerValue, Mode=TwoWay}"
+                                      SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
+                                      DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                            <Button Grid.Column="1" Content="Set" Command="{Binding SetSelectedItemCommand}"/>
+                            <Button Grid.Column="2" Content="Clear" Command="{Binding ClearSelectedItemCommand}"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Grid ColumnDefinitions="170,*" ColumnSpacing="12" IsVisible="{Binding HasPouches}">
+                    <ListBox Grid.Column="0" ItemsSource="{Binding PouchNames}"
+                             SelectedIndex="{Binding SelectedPouchIndex, Mode=TwoWay}"/>
+                    <ListBox Grid.Column="1" ItemsSource="{Binding Rows}"
+                             SelectedItem="{Binding SelectedRow, Mode=TwoWay}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:BagItemRowViewModel">
+                                <Grid ColumnDefinitions="26,*,136" ColumnSpacing="8">
+                                    <Image Grid.Column="0" Source="{Binding Sprite}" Width="24" Height="24"
+                                           RenderOptions.BitmapInterpolationMode="HighQuality"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding ItemName}" FontSize="{StaticResource FontBody}"
+                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    <NumericUpDown Grid.Column="2" Value="{Binding Count, Mode=TwoWay}"
+                                                   Minimum="0" Maximum="{Binding MaxCount}" FormatString="0"
+                                                   Increment="1" FontSize="{StaticResource FontBody}" HorizontalContentAlignment="Right"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </DockPanel>
+            </TabItem>
+
+            <!-- ── Trainer look: throw style, outfit, appearance, club perks ── -->
+            <TabItem Header="Appearance &amp; Style">
+            <DockPanel DataContext="{Binding Style}" x:DataType="vm:TrainerStyleViewModel"
+                       Margin="2,8,2,2">
+                <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}"
+                           FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                           Text="Only Scarlet/Violet and Legends Z-A store the player's outfit and appearance in an editable form."/>
+
+                <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,12"
+                            IsVisible="{Binding IsSupported}">
+                    <TextBlock Text="{Binding Summary}" FontSize="{StaticResource FontBody}" Classes="secondary"/>
+
+                    <Grid ColumnDefinitions="Auto,200,Auto" ColumnSpacing="12"
+                          IsVisible="{Binding HasThrowStyle}">
+                        <TextBlock Grid.Column="0" Text="Ball throw style" FontSize="{StaticResource FontBody}"
+                                   VerticalAlignment="Center"/>
+                        <ComboBox Grid.Column="1" HorizontalAlignment="Stretch"
+                                  ItemsSource="{Binding ThrowStyleChoices}"
+                                  SelectedIndex="{Binding ThrowStyleIndex, Mode=TwoWay}"/>
+                        <Button Grid.Column="2" Content="Unlock all styles" FontSize="{StaticResource FontBody}"
+                                Command="{Binding UnlockThrowStylesCommand}"
+                                ToolTip.Tip="Sets the three club-room style flags and marks the support board entries bought."/>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Unlock all fashion" FontSize="{StaticResource FontBody}"
+                                Command="{Binding UnlockFashionCommand}"
+                                ToolTip.Tip="Adds every clothing item for this trainer's gender to the wardrobe."/>
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding Status}" FontSize="{StaticResource FontBody}"
+                               Foreground="{DynamicResource LegalFgBrush}" TextWrapping="Wrap"
+                               IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                </StackPanel>
+
+                <ScrollViewer IsVisible="{Binding IsSupported}">
+                    <StackPanel Spacing="16">
+
+                        <StackPanel Spacing="6">
+                            <TextBlock Classes="sectionTitle" Text="WORN OUTFIT" Margin="0"/>
+                            <TextBlock FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                                       Text="Each slot holds an opaque 64-bit item id. No name table for these exists anywhere in PKHeX, so they read as hex — zero means nothing equipped."/>
+                            <ItemsControl ItemsSource="{Binding Outfit}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:StyleFieldViewModel">
+                                        <Grid ColumnDefinitions="110,*,Auto" ColumnSpacing="8" Margin="0,0,0,4">
+                                            <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="{StaticResource FontBody}"
+                                                       VerticalAlignment="Center"/>
+                                            <TextBox Grid.Column="1" Text="{Binding HexText, Mode=TwoWay}"
+                                                     FontSize="{StaticResource FontBody}" FontFamily="{Binding FieldFont}"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding Error}" FontSize="{StaticResource FontMicro}"
+                                                       Foreground="{DynamicResource IllegalFgBrush}"
+                                                       VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <StackPanel Spacing="6">
+                            <TextBlock Classes="sectionTitle" Text="FACIAL APPEARANCE" Margin="0"/>
+                            <TextBlock FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                                       Text="These are option indexes from the character creator, counting from zero. Nudge one up or down to move through the choices."/>
+                            <ItemsControl ItemsSource="{Binding Appearance}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:StyleFieldViewModel">
+                                        <Grid ColumnDefinitions="110,*,Auto" ColumnSpacing="8" Margin="0,0,0,4">
+                                            <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="{StaticResource FontBody}"
+                                                       VerticalAlignment="Center"/>
+                                            <TextBox Grid.Column="1" Text="{Binding HexText, Mode=TwoWay}"
+                                                     FontSize="{StaticResource FontBody}" FontFamily="{Binding FieldFont}"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding Error}" FontSize="{StaticResource FontMicro}"
+                                                       Foreground="{DynamicResource IllegalFgBrush}"
+                                                       VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+            </TabItem>
+
+            <!-- ── Gym / Titan / Team Star clears ── -->
+            <TabItem Header="Gyms">
+            <DockPanel DataContext="{Binding Trainer}" x:DataType="vm:TrainerEditorViewModel"
+                       Margin="2,8,2,2">
+                <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !HasBadges}"
+                           FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                           Text="This save format does not record gym clears in an editable form."/>
+                <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,12"
+                            IsVisible="{Binding HasBadges}">
+                    <TextBlock Text="{Binding BadgeSummary}" FontSize="{StaticResource FontBody}" FontWeight="SemiBold"/>
+                    <TextBlock FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                               Text="Scarlet and Violet store the order each was cleared in rather than a plain badge flag, so the number beside each row is its position in your run. Ticking one assigns the next free position."/>
+                </StackPanel>
+                <ScrollViewer IsVisible="{Binding HasBadges}">
+                    <ItemsControl ItemsSource="{Binding Badges}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:BadgeRowViewModel">
+                                <Grid ColumnDefinitions="80,*,44" ColumnSpacing="8" Margin="0,2">
+                                    <TextBlock Grid.Column="0" Text="{Binding Group}" FontSize="{StaticResource FontMicro}"
+                                               Classes="secondary" VerticalAlignment="Center"/>
+                                    <CheckBox Grid.Column="1" Content="{Binding Label}" FontSize="{StaticResource FontBody}"
+                                              IsChecked="{Binding Cleared, Mode=TwoWay}"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding OrderText}" FontSize="{StaticResource FontBody}"
+                                               Classes="secondary" VerticalAlignment="Center"
+                                               TextAlignment="Right"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+            </TabItem>
+
+            <!-- ── Blueberry Academy: club perks and quest tallies ── -->
+            <TabItem Header="Blueberry Perks">
+            <DockPanel DataContext="{Binding Blueberry}" x:DataType="vm:BlueberryViewModel"
+                       Margin="2,8,2,2">
+                <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}"
+                           FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                           Text="The Blueberry Academy club room only exists in Scarlet and Violet with the Indigo Disk DLC."/>
+                <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,12"
+                            IsVisible="{Binding IsSupported}">
+                    <TextBlock Text="{Binding Summary}" FontSize="{StaticResource FontBody}" FontWeight="SemiBold"/>
+                    <Grid ColumnDefinitions="Auto,120,Auto,120" ColumnSpacing="8">
+                        <TextBlock Grid.Column="0" Text="BBQs solo" FontSize="{StaticResource FontBody}"
+                                   Classes="secondary" VerticalAlignment="Center"/>
+                        <NumericUpDown Grid.Column="1" MinWidth="112" FontSize="{StaticResource FontBody}"
+                                       Value="{Binding QuestsSolo, Mode=TwoWay}"
+                                       Minimum="0" Maximum="9999999" FormatString="0"
+                                       Increment="1" HorizontalContentAlignment="Right"/>
+                        <TextBlock Grid.Column="2" Text="in a group" FontSize="{StaticResource FontBody}"
+                                   Classes="secondary" VerticalAlignment="Center" Margin="8,0,0,0"/>
+                        <NumericUpDown Grid.Column="3" MinWidth="112" FontSize="{StaticResource FontBody}"
+                                       Value="{Binding QuestsGroup, Mode=TwoWay}"
+                                       Minimum="0" Maximum="9999999" FormatString="0"
+                                       Increment="1" HorizontalContentAlignment="Right"/>
+                    </Grid>
+                    <TextBlock FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                               Text="Everything the clubs can sell you, bought with Blueberry Points. The three baseball-club rows are what make the extra ball-throwing styles selectable; art and music club rows unlock room décor and albums."/>
+                    <Button Content="Buy all club perks" FontSize="{StaticResource FontBody}" HorizontalAlignment="Left"
+                            Command="{Binding BuyAllPerksCommand}"/>
+                    <TextBlock Text="{Binding Status}" FontSize="{StaticResource FontBody}"
+                               Foreground="{DynamicResource LegalFgBrush}" TextWrapping="Wrap"
+                               IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                </StackPanel>
+                <ScrollViewer IsVisible="{Binding IsSupported}">
+                    <ItemsControl ItemsSource="{Binding Purchases}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:StyleToggleViewModel">
+                                <CheckBox Content="{Binding Label}" FontSize="{StaticResource FontBody}" Margin="0,1"
+                                          IsChecked="{Binding Value, Mode=TwoWay}"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+            </TabItem>
+
+            <!-- ── Lifetime trainer stat records ── -->
+            <TabItem Header="Records">
+            <DockPanel DataContext="{Binding Records}" x:DataType="vm:TrainerRecordsViewModel"
+                       Margin="2,8,2,2">
+                <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}"
+                           FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                           Text="This save format does not keep lifetime stat records. Gen 6, Gen 7, BDSP and Sword/Shield do; Scarlet and Violet scattered the equivalents across individual save blocks instead — see Save Blocks."/>
+                <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,12"
+                            IsVisible="{Binding IsSupported}">
+                    <TextBlock Text="{Binding Summary}" FontSize="{StaticResource FontBody}" FontWeight="SemiBold"/>
+                    <TextBlock FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                               Text="Each record has its own ceiling and the game clamps to it, so a value that refuses to grow has hit its max."/>
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                        <TextBox Grid.Column="0" Text="{Binding SearchText, Mode=TwoWay}"
+                                 FontSize="{StaticResource FontBody}" PlaceholderText="Search records…"/>
+                        <CheckBox Grid.Column="1" Content="With a value" FontSize="{StaticResource FontBody}"
+                                  IsChecked="{Binding NonZeroOnly, Mode=TwoWay}"
+                                  VerticalAlignment="Center"/>
+                        <Button Grid.Column="2" Content="Clear all" FontSize="{StaticResource FontBody}"
+                                Command="{Binding ClearAllCommand}"/>
+                    </Grid>
+                </StackPanel>
+                <ScrollViewer IsVisible="{Binding IsSupported}">
+                    <ItemsControl ItemsSource="{Binding Rows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:RecordRowViewModel">
+                                <Grid ColumnDefinitions="*,150,86" ColumnSpacing="8" Margin="0,2">
+                                    <StackPanel Grid.Column="0" Spacing="0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Label}" FontSize="{StaticResource FontBody}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding IdText}" FontSize="{StaticResource FontMicro}" Classes="secondary"/>
+                                    </StackPanel>
+                                    <NumericUpDown Grid.Column="1" MinWidth="140" FontSize="{StaticResource FontBody}"
+                                                   Value="{Binding Value, Mode=TwoWay}"
+                                                   Minimum="0" Maximum="999999999" FormatString="0"
+                                                   Increment="1" HorizontalContentAlignment="Right"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding MaxText}" FontSize="{StaticResource FontMicro}"
+                                               Classes="secondary" VerticalAlignment="Center"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+            </TabItem>
+            </TabControl>
+        </Border>
+    </Grid>
+    </DockPanel>
+
+</UserControl>

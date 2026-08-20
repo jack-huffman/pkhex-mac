@@ -635,7 +635,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OnChooseSearchFolderClicked(object? sender, RoutedEventArgs e) => _ = ChooseSearchFolderAsync();
+    public void OnChooseSearchFolderClicked(object? sender, RoutedEventArgs e) => _ = ChooseSearchFolderAsync();
 
     private async Task ChooseSearchFolderAsync()
     {
@@ -650,7 +650,7 @@ public partial class MainWindow : Window
             search.FolderPath = dir;
     }
 
-    private void OnCopyReportClicked(object? sender, RoutedEventArgs e)
+    public void OnCopyReportClicked(object? sender, RoutedEventArgs e)
     {
         if (VM.Tools is { } tools && Clipboard is not null)
             _ = Clipboard.SetTextAsync(tools.BuildReportText());
@@ -662,8 +662,6 @@ public partial class MainWindow : Window
     public void OnAddPokemonClicked(object? sender, EventArgs e) => VM.SetView("add");
     public void OnGiftsClicked(object? sender, EventArgs e) => VM.SetView("gifts");
 
-    private void OnSaveApplyClicked(object? sender, RoutedEventArgs e) => VM.ApplySave();
-    private void OnSaveRevertClicked(object? sender, RoutedEventArgs e) => VM.ResetSave();
     private void OnAddPreviewClicked(object? sender, RoutedEventArgs e) => VM.AddPreviewToBox();
 
     // =====================================================================

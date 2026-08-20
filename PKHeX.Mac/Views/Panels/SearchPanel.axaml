@@ -1,0 +1,132 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PKHeX.Mac.ViewModels"
+             xmlns:core="using:PKHeX.Core"
+             xmlns:ctrl="using:PKHeX.Mac.Controls"
+             x:Class="PKHeX.Mac.Views.Panels.SearchPanel"
+             x:DataType="vm:MainWindowViewModel">
+
+    <Border Classes="card" IsVisible="{Binding IsSearchView}" Margin="18,14,18,14">
+        <DockPanel DataContext="{Binding Search}" x:DataType="vm:SearchViewModel">
+            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
+                <TextBlock DockPanel.Dock="Left" Text="Search" FontSize="{StaticResource FontTitle}" FontWeight="Bold"
+                           VerticalAlignment="Center"/>
+                <TextBlock DockPanel.Dock="Right" Text="{Binding Summary}" FontSize="{StaticResource FontBody}"
+                           Classes="secondary" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+            </DockPanel>
+
+            <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,12">
+                <Grid ColumnDefinitions="240,*,Auto" ColumnSpacing="12">
+                    <ComboBox Grid.Column="0" HorizontalAlignment="Stretch"
+                              ItemsSource="{Binding SourceChoices}"
+                              SelectedIndex="{Binding SourceIndex, Mode=TwoWay}"/>
+                    <TextBox Grid.Column="1" Text="{Binding FolderPath, Mode=TwoWay}"
+                             IsVisible="{Binding IsFolderSource}"
+                             PlaceholderText="Folder containing .pk files (searched recursively)"/>
+                    <Button Grid.Column="2" Content="Choose folder…" FontSize="{StaticResource FontBody}"
+                            IsVisible="{Binding IsFolderSource}"
+                            Click="OnChooseSearchFolderClicked"/>
+                </Grid>
+
+                <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="12" RowDefinitions="Auto,Auto" RowSpacing="8">
+                    <TextBox Grid.Row="0" Grid.Column="0" Text="{Binding Text, Mode=TwoWay}"
+                             PlaceholderText="Species, nickname or OT"/>
+                    <ComboBox Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch"
+                              ItemsSource="{Binding SpeciesChoices}"
+                              SelectedValue="{Binding SpeciesValue, Mode=TwoWay}"
+                              SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
+                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                    <ComboBox Grid.Row="0" Grid.Column="2" HorizontalAlignment="Stretch"
+                              ItemsSource="{Binding NatureChoices}"
+                              SelectedValue="{Binding NatureValue, Mode=TwoWay}"
+                              SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
+                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                    <ComboBox Grid.Row="0" Grid.Column="3" HorizontalAlignment="Stretch"
+                              ItemsSource="{Binding MoveChoices}"
+                              SelectedValue="{Binding MoveValue, Mode=TwoWay}"
+                              SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
+                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+
+                    <ComboBox Grid.Row="1" Grid.Column="0" HorizontalAlignment="Stretch"
+                              ItemsSource="{Binding BallChoices}"
+                              SelectedValue="{Binding BallValue, Mode=TwoWay}"
+                              SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
+                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                    <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="6">
+                        <TextBlock Grid.Column="0" Text="Lv" FontSize="{StaticResource FontBody}" Classes="secondary" VerticalAlignment="Center"/>
+                        <NumericUpDown Grid.Column="1" Value="{Binding MinLevel, Mode=TwoWay}" Minimum="1" Maximum="100"
+                                       FormatString="0" Increment="1" FontSize="{StaticResource FontBody}" ShowButtonSpinner="False"/>
+                        <TextBlock Grid.Column="2" Text="to" FontSize="{StaticResource FontBody}" Classes="secondary" VerticalAlignment="Center"/>
+                        <NumericUpDown Grid.Column="3" Value="{Binding MaxLevel, Mode=TwoWay}" Minimum="1" Maximum="100"
+                                       FormatString="0" Increment="1" FontSize="{StaticResource FontBody}" ShowButtonSpinner="False"/>
+                    </Grid>
+                    <Grid Grid.Row="1" Grid.Column="2" ColumnDefinitions="Auto,*" ColumnSpacing="6">
+                        <TextBlock Grid.Column="0" Text="Min IV total" FontSize="{StaticResource FontBody}" Classes="secondary" VerticalAlignment="Center"/>
+                        <NumericUpDown Grid.Column="1" Value="{Binding MinIvTotal, Mode=TwoWay}" Minimum="0" Maximum="186"
+                                       FormatString="0" Increment="6" FontSize="{StaticResource FontBody}" ShowButtonSpinner="False"/>
+                    </Grid>
+                    <StackPanel Grid.Row="1" Grid.Column="3" Orientation="Horizontal" Spacing="6">
+                        <ComboBox HorizontalAlignment="Stretch" Width="86" FontSize="{StaticResource FontBody}"
+                                  ItemsSource="{Binding TriStateChoices}"
+                                  SelectedIndex="{Binding ShinyIndex, Mode=TwoWay}"
+                                  ToolTip.Tip="Shiny"/>
+                        <ComboBox HorizontalAlignment="Stretch" Width="86" FontSize="{StaticResource FontBody}"
+                                  ItemsSource="{Binding TriStateChoices}"
+                                  SelectedIndex="{Binding LegalIndex, Mode=TwoWay}"
+                                  ToolTip.Tip="Legal"/>
+                        <ComboBox HorizontalAlignment="Stretch" Width="76" FontSize="{StaticResource FontBody}"
+                                  ItemsSource="{Binding TriStateChoices}"
+                                  SelectedIndex="{Binding EggIndex, Mode=TwoWay}"
+                                  ToolTip.Tip="Egg"/>
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="Search" Classes="accent" Command="{Binding SearchCommand}"/>
+                    <Button Content="Reset filters" FontSize="{StaticResource FontBody}" Command="{Binding ResetCommand}"/>
+                    <TextBlock Text="Shiny · Legal · Egg filters are the three dropdowns above right."
+                               FontSize="{StaticResource FontMicro}" Classes="secondary" VerticalAlignment="Center"/>
+                </StackPanel>
+            </StackPanel>
+
+            <ListBox Classes="plain" ItemsSource="{Binding Results}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SearchResultViewModel">
+                        <Grid ColumnDefinitions="46,150,*,190,60,110" ColumnSpacing="12">
+                            <Image Grid.Column="0" Source="{Binding Sprite}" Width="42" Height="36"
+                                   RenderOptions.BitmapInterpolationMode="None"/>
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Species}" FontSize="{StaticResource FontBody}" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding Nickname}" FontSize="{StaticResource FontMicro}" Classes="secondary"/>
+                            </StackPanel>
+                            <TextBlock Grid.Column="2" Text="{Binding Detail}" FontSize="{StaticResource FontBody}"
+                                       Classes="secondary" VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Grid.Column="3" Text="{Binding Location}" FontSize="{StaticResource FontBody}"
+                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                       ToolTip.Tip="{Binding FullPath}"/>
+                            <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="4"
+                                        VerticalAlignment="Center">
+                                <TextBlock Text="★" FontSize="{StaticResource FontBody}" Foreground="Gold"
+                                           IsVisible="{Binding IsShiny}"/>
+                                <TextBlock Text="✓" FontSize="{StaticResource FontBody}" IsVisible="{Binding IsLegal}"
+                                           Foreground="{DynamicResource LegalFgBrush}"/>
+                                <TextBlock Text="✕" FontSize="{StaticResource FontBody}" IsVisible="{Binding !IsLegal}"
+                                           Foreground="{DynamicResource IllegalFgBrush}"/>
+                            </StackPanel>
+                            <Button Grid.Column="5" Content="Reveal" FontSize="{StaticResource FontBody}" Padding="8,2"
+                                    IsVisible="{Binding !IsFromFile}"
+                                    Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).GoToSearchResultCommand}"
+                                    CommandParameter="{Binding}"/>
+                            <Button Grid.Column="5" Content="Add to box" FontSize="{StaticResource FontBody}" Padding="8,2"
+                                    IsVisible="{Binding IsFromFile}"
+                                    Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ImportSearchResultCommand}"
+                                    CommandParameter="{Binding}"/>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </DockPanel>
+    </Border>
+
+</UserControl>

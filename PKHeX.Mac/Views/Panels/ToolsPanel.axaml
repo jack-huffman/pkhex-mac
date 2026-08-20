@@ -1,0 +1,714 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:PKHeX.Mac.ViewModels"
+             xmlns:core="using:PKHeX.Core"
+             xmlns:ctrl="using:PKHeX.Mac.Controls"
+             x:Class="PKHeX.Mac.Views.Panels.ToolsPanel"
+             x:DataType="vm:MainWindowViewModel">
+
+    <Border Classes="card" IsVisible="{Binding IsToolsView}" Margin="18,14,18,14">
+        <TabControl DataContext="{Binding Tools}" x:DataType="vm:ToolsViewModel" Padding="0,10,0,0">
+
+            <TabItem Header="Batch Edit">
+                <DockPanel Margin="2,8,2,2">
+                    <StackPanel DockPanel.Dock="Top" Spacing="8">
+                        <TextBlock Text="Apply property changes to many Pokémon at once."
+                                   FontSize="{StaticResource FontBody}" Classes="secondary"/>
+                        <Grid ColumnDefinitions="200,Auto,*" ColumnSpacing="12">
+                            <ComboBox Grid.Column="0" HorizontalAlignment="Stretch"
+                                      ItemsSource="{Binding ScopeChoices}"
+                                      SelectedIndex="{Binding ScopeIndex, Mode=TwoWay}"/>
+                            <Button Grid.Column="1" Content="Run" Classes="accent"
+                                    Command="{Binding RunBatchCommand}"/>
+                        </Grid>
+                    </StackPanel>
+
+                    <TextBlock DockPanel.Dock="Bottom" Text="{Binding BatchResult}" FontSize="{StaticResource FontBody}"
+                               TextWrapping="Wrap" Margin="0,10,0,0"/>
+
+                    <Grid ColumnDefinitions="*,320" ColumnSpacing="12" Margin="0,10,0,0">
+                        <TextBox Grid.Column="0" Text="{Binding Instructions, Mode=TwoWay}"
+                                 AcceptsReturn="True" TextWrapping="NoWrap"
+                                 FontFamily="Menlo, monospace" FontSize="{StaticResource FontBody}"
+                                 VerticalContentAlignment="Top"
+                                 PlaceholderText=".Nature=Adamant"/>
+                        <Border Grid.Column="1" CornerRadius="10" Padding="12"
+                                Background="{DynamicResource SurfaceMutedBrush}">
+                            <TextBlock Text="{Binding BatchHelp}" FontSize="{StaticResource FontBody}"
+                                       FontFamily="Menlo, monospace" Classes="secondary"
+                                       TextWrapping="Wrap"/>
+                        </Border>
+                    </Grid>
+                </DockPanel>
+            </TabItem>
+
+            <TabItem Header="Team Analysis">
+            <DockPanel DataContext="{Binding Team}" x:DataType="vm:TeamAnalysisViewModel"
+                       Margin="2,8,2,2">
+                <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,12">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                        <Button Grid.Column="0" Content="Refresh" FontSize="{StaticResource FontBody}"
+                                Command="{Binding RefreshCommand}"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Summary}" FontSize="{StaticResource FontBody}"
+                                   FontWeight="SemiBold" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis"/>
+                    </Grid>
+                    <TextBlock Text="{Binding EraNote}" FontSize="{StaticResource FontMicro}" Classes="secondary"
+                               TextWrapping="Wrap"/>
+                    <TextBlock FontSize="{StaticResource FontMicro}" Classes="secondary" TextWrapping="Wrap"
+                               Text="Immunity and damage-reducing abilities are applied. Held items, terrain and move-specific exceptions are not."/>
+                </StackPanel>
+
+                <ScrollViewer>
+                    <StackPanel Spacing="16">
+
+                        <!-- What to fix first -->
+                        <StackPanel Spacing="6" IsVisible="{Binding HasFindings}">
+                            <TextBlock Classes="sectionTitle" Text="WHAT TO FIX FIRST" Margin="0"/>
+                            <ItemsControl ItemsSource="{Binding Findings}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" FontSize="{StaticResource FontBody}" TextWrapping="Wrap"
+                                                   Margin="0,1"
+                                                   Foreground="{DynamicResource IllegalFgBrush}"/>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <!-- The team -->
+                        <StackPanel Spacing="6" IsVisible="{Binding HasMembers}">
+                            <TextBlock Classes="sectionTitle" Text="THE TEAM" Margin="0"/>
+                            <ItemsControl ItemsSource="{Binding Members}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <!-- Two across: the split tile needs the width, so a
+                                             full party reads as three rows -->
+                                        <UniformGrid Columns="2"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:TeamMemberViewModel">
+                                        <Border Classes="card" Padding="12" Margin="0,0,8,8">
+                                            <Grid RowDefinitions="Auto,*" ColumnDefinitions="*,*"
+                                                  ColumnSpacing="16" RowSpacing="8">
+
+                                                <!-- Header: identity across the full card width -->
+                                                <Grid Grid.Row="0" Grid.ColumnSpan="2"
+                                                      ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                                    <Panel Grid.Column="0" Width="72" Height="72"
+                                                           VerticalAlignment="Top">
+                                                        <Image Source="{Binding Artwork}" Stretch="Uniform"
+                                                               RenderOptions.BitmapInterpolationMode="HighQuality"/>
+                                                    </Panel>
+                                                    <StackPanel Grid.Column="1" Spacing="4"
+                                                                VerticalAlignment="Center">
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <TextBlock Text="{Binding SpeciesName}" FontSize="{StaticResource FontHeading}"
+                                                                       FontWeight="Bold"/>
+                                                            <TextBlock Text="{Binding LevelText}" FontSize="{StaticResource FontMicro}"
+                                                                       Classes="secondary"
+                                                                       VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <Image Source="{Binding Type1Icon}" Width="20" Height="20"
+                                                                   IsVisible="{Binding HasType1Icon}"
+                                                                   ToolTip.Tip="{Binding Type1Name}"/>
+                                                            <Image Source="{Binding Type2Icon}" Width="20" Height="20"
+                                                                   IsVisible="{Binding HasType2Icon}"
+                                                                   ToolTip.Tip="{Binding Type2Name}"/>
+                                                        </StackPanel>
+                                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                                            <TextBlock Text="{Binding AbilityName}" FontSize="{StaticResource FontMicro}"
+                                                                       Classes="secondary"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                            <TextBlock Text="★" FontSize="{StaticResource FontMicro}"
+                                                                       IsVisible="{Binding AbilityMatters}"
+                                                                       Foreground="{DynamicResource LegalFgBrush}"
+                                                                       VerticalAlignment="Center"
+                                                                       ToolTip.Tip="This ability changes incoming damage and is included below."/>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                </Grid>
+
+                                                <!-- Body left: matchups by multiplier -->
+                                                <StackPanel Grid.Row="1" Grid.Column="0" Spacing="6">
+                                                    <StackPanel Spacing="2" IsVisible="{Binding HasResistances}">
+                                                        <TextBlock Text="RESISTANCES" FontSize="{StaticResource FontMicro}"
+                                                                   FontWeight="SemiBold" Classes="secondary"/>
+                                                        <ItemsControl ItemsSource="{Binding Resistances}">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:MatchupGroupViewModel">
+                                                                    <StackPanel Orientation="Horizontal" Spacing="6"
+                                                                                Margin="0,0,0,2"
+                                                                                ToolTip.Tip="{Binding Tooltip}">
+                                                                        <Border Width="22" Height="22"
+                                                                                CornerRadius="11"
+                                                                                Background="{DynamicResource SurfaceMutedBrush}">
+                                                                            <TextBlock Text="{Binding Label}" FontSize="{StaticResource FontMicro}"
+                                                                                       FontWeight="SemiBold"
+                                                                                       Foreground="{Binding LabelBrush}"
+                                                                                       HorizontalAlignment="Center"
+                                                                                       VerticalAlignment="Center"/>
+                                                                        </Border>
+                                                                        <ItemsControl ItemsSource="{Binding Types}">
+                                                                            <ItemsControl.ItemsPanel>
+                                                                                <ItemsPanelTemplate>
+                                                                                    <WrapPanel Orientation="Horizontal"/>
+                                                                                </ItemsPanelTemplate>
+                                                                            </ItemsControl.ItemsPanel>
+                                                                            <ItemsControl.ItemTemplate>
+                                                                                <DataTemplate x:DataType="vm:TypeBadgeViewModel">
+                                                                                    <Panel Margin="0,1,2,1"
+                                                                                           ToolTip.Tip="{Binding TypeName}">
+                                                                                        <Image Source="{Binding Icon}"
+                                                                                               Width="20" Height="20"
+                                                                                               IsVisible="{Binding HasIcon}"/>
+                                                                                        <Border Width="20" Height="20"
+                                                                                                CornerRadius="10"
+                                                                                                Background="{Binding Brush}"
+                                                                                                IsVisible="{Binding !HasIcon}"/>
+                                                                                    </Panel>
+                                                                                </DataTemplate>
+                                                                            </ItemsControl.ItemTemplate>
+                                                                        </ItemsControl>
+                                                                    </StackPanel>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </StackPanel>
+
+                                                    <StackPanel Spacing="2" IsVisible="{Binding HasWeaknesses}">
+                                                        <TextBlock Text="WEAKNESSES" FontSize="{StaticResource FontMicro}"
+                                                                   FontWeight="SemiBold" Classes="secondary"/>
+                                                        <ItemsControl ItemsSource="{Binding Weaknesses}">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:MatchupGroupViewModel">
+                                                                    <StackPanel Orientation="Horizontal" Spacing="6"
+                                                                                Margin="0,0,0,2"
+                                                                                ToolTip.Tip="{Binding Tooltip}">
+                                                                        <Border Width="22" Height="22"
+                                                                                CornerRadius="11"
+                                                                                Background="{DynamicResource SurfaceMutedBrush}">
+                                                                            <TextBlock Text="{Binding Label}" FontSize="{StaticResource FontMicro}"
+                                                                                       FontWeight="SemiBold"
+                                                                                       Foreground="{Binding LabelBrush}"
+                                                                                       HorizontalAlignment="Center"
+                                                                                       VerticalAlignment="Center"/>
+                                                                        </Border>
+                                                                        <ItemsControl ItemsSource="{Binding Types}">
+                                                                            <ItemsControl.ItemsPanel>
+                                                                                <ItemsPanelTemplate>
+                                                                                    <WrapPanel Orientation="Horizontal"/>
+                                                                                </ItemsPanelTemplate>
+                                                                            </ItemsControl.ItemsPanel>
+                                                                            <ItemsControl.ItemTemplate>
+                                                                                <DataTemplate x:DataType="vm:TypeBadgeViewModel">
+                                                                                    <Panel Margin="0,1,2,1"
+                                                                                           ToolTip.Tip="{Binding TypeName}">
+                                                                                        <Image Source="{Binding Icon}"
+                                                                                               Width="20" Height="20"
+                                                                                               IsVisible="{Binding HasIcon}"/>
+                                                                                        <Border Width="20" Height="20"
+                                                                                                CornerRadius="10"
+                                                                                                Background="{Binding Brush}"
+                                                                                                IsVisible="{Binding !HasIcon}"/>
+                                                                                    </Panel>
+                                                                                </DataTemplate>
+                                                                            </ItemsControl.ItemTemplate>
+                                                                        </ItemsControl>
+                                                                    </StackPanel>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </StackPanel>
+                                                </StackPanel>
+
+                                                <!-- Right: moves, laid out as on the Moves tab -->
+                                                <DockPanel Grid.Row="1" Grid.Column="1"
+                                                           IsVisible="{Binding HasMoves}">
+                                                    <TextBlock DockPanel.Dock="Top" Text="MOVES" FontSize="{StaticResource FontMicro}"
+                                                               FontWeight="SemiBold" Classes="secondary"
+                                                               Margin="0,0,0,4"/>
+                                                    <!-- One column of equal-height cells, so the rows
+                                                         stretch to fill the tile rather than bunching
+                                                         at the top -->
+                                                    <ItemsControl ItemsSource="{Binding Moves}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <UniformGrid Columns="1"/>
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate x:DataType="vm:MoveChoice">
+                                                                <Grid ColumnDefinitions="*,24,24,30,32"
+                                                                      ColumnSpacing="6" Margin="0,0,0,4">
+                                                                    <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                                               FontSize="{StaticResource FontBody}" MinWidth="60"
+                                                                               VerticalAlignment="Center"
+                                                                               TextTrimming="CharacterEllipsis"/>
+                                                                    <Panel Grid.Column="1">
+                                                                        <Image Source="{Binding TypeIcon}"
+                                                                               Width="20" Height="20"
+                                                                               IsVisible="{Binding HasTypeIcon}"
+                                                                               ToolTip.Tip="{Binding TypeName}"/>
+                                                                        <!-- Stellar has no symbol; fall back to the chip -->
+                                                                        <Border Classes="chip" Padding="5,2" MinHeight="17"
+                                                                                Background="{Binding TypeBrush}"
+                                                                                IsVisible="{Binding !HasTypeIcon}">
+                                                                            <TextBlock Text="{Binding TypeName}" FontSize="{StaticResource FontMicro}"
+                                                                                       FontWeight="SemiBold" Foreground="White"/>
+                                                                        </Border>
+                                                                    </Panel>
+                                                                    <ctrl:MoveCategoryIcon Grid.Column="2"
+                                                                            Category="{Binding CategoryKind}"
+                                                                            Width="20" Height="20"
+                                                                            HorizontalAlignment="Center"
+                                                                            VerticalAlignment="Center"/>
+                                                                    <TextBlock Grid.Column="3" Text="{Binding PowerText}"
+                                                                               FontSize="{StaticResource FontMicro}" Classes="secondary"
+                                                                               VerticalAlignment="Center"
+                                                                               TextAlignment="Center"
+                                                                               ToolTip.Tip="Base power"/>
+                                                                    <TextBlock Grid.Column="4" Text="{Binding AccuracyText}"
+                                                                               FontSize="{StaticResource FontMicro}" Classes="secondary"
+                                                                               VerticalAlignment="Center"
+                                                                               TextAlignment="Center"
+                                                                               ToolTip.Tip="Accuracy"/>
+                                                                </Grid>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </DockPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
+                        <!-- Defensive grid: members down, attacking types across.
+                             Every strip is an ItemsControl over a fixed 40px cell so the
+                             header, body and totals stay aligned without a real Grid. -->
+                        <StackPanel Spacing="6" IsVisible="{Binding HasMembers}">
+                            <TextBlock Classes="sectionTitle" Text="TAKING HITS" Margin="0"/>
+                            <TextBlock FontSize="{StaticResource FontMicro}" Classes="secondary" TextWrapping="Wrap"
+                                       Text="Incoming damage per member. Blank means normal damage; a red type name means two or more are weak to it and nothing resists it."/>
+                            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                          VerticalScrollBarVisibility="Disabled">
+                                <StackPanel Spacing="0">
+
+                                    <!-- Header -->
+                                    <Grid ColumnDefinitions="176,Auto" Margin="0,0,0,4">
+                                        <ItemsControl Grid.Column="1" ItemsSource="{Binding Columns}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:MatrixColumnViewModel">
+                                                    <Border Width="{StaticResource MatrixCellWidth}"
+                                                            Padding="0,2"
+                                                            ToolTip.Tip="{Binding Tooltip}">
+                                                        <StackPanel Spacing="2">
+                                                            <Image Source="{Binding TypeIcon}"
+                                                                   Width="20" Height="20"
+                                                                   IsVisible="{Binding HasIcon}"
+                                                                   HorizontalAlignment="Center"/>
+                                                            <Ellipse Width="4" Height="4"
+                                                                     HorizontalAlignment="Center"
+                                                                     Fill="{Binding HeaderBrush}"
+                                                                     IsVisible="{Binding IsSharedWeakness}"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Grid>
+
+                                    <!-- One row per member -->
+                                    <ItemsControl ItemsSource="{Binding Members}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:TeamMemberViewModel">
+                                                <Grid ColumnDefinitions="176,Auto" Margin="0,0,0,2">
+                                                    <StackPanel Grid.Column="0" Orientation="Horizontal"
+                                                                Spacing="6" VerticalAlignment="Center">
+                                                        <Image Source="{Binding Sprite}" Width="34" Height="28"
+                                                               RenderOptions.BitmapInterpolationMode="None"/>
+                                                        <TextBlock Text="{Binding SpeciesName}" FontSize="{StaticResource FontBody}"
+                                                                   VerticalAlignment="Center"
+                                                                   TextTrimming="CharacterEllipsis"/>
+                                                    </StackPanel>
+                                                    <ItemsControl Grid.Column="1" ItemsSource="{Binding Cells}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <StackPanel Orientation="Horizontal"/>
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate x:DataType="vm:MatrixCellViewModel">
+                                                                <Panel Width="{StaticResource MatrixCellWidth}"
+                                                                       Height="28">
+                                                                    <Border Margin="0,0,1,0" CornerRadius="4"
+                                                                            Background="{Binding Background}"
+                                                                            ToolTip.Tip="{Binding Tooltip}">
+                                                                        <TextBlock Text="{Binding Text}" FontSize="{StaticResource FontBody}"
+                                                                                   FontWeight="SemiBold"
+                                                                                   Foreground="{Binding Foreground}"
+                                                                                   HorizontalAlignment="Center"
+                                                                                   VerticalAlignment="Center"/>
+                                                                    </Border>
+                                                                </Panel>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <Separator Margin="0,4"/>
+
+                                    <!-- Totals -->
+                                    <Grid ColumnDefinitions="176,Auto">
+                                        <TextBlock Grid.Column="0" Text="weak" FontSize="{StaticResource FontMicro}"
+                                                   Classes="secondary" VerticalAlignment="Center"/>
+                                        <ItemsControl Grid.Column="1" ItemsSource="{Binding Columns}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:MatrixColumnViewModel">
+                                                    <TextBlock Width="{StaticResource MatrixCellWidth}"
+                                                               Text="{Binding WeakText}"
+                                                               FontSize="{StaticResource FontBody}" FontWeight="SemiBold"
+                                                               Foreground="{Binding WeakBrush}"
+                                                               TextAlignment="Center"/>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="176,Auto" Margin="0,2,0,0">
+                                        <TextBlock Grid.Column="0" Text="resist or immune" FontSize="{StaticResource FontMicro}"
+                                                   Classes="secondary" VerticalAlignment="Center"/>
+                                        <ItemsControl Grid.Column="1" ItemsSource="{Binding Columns}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Orientation="Horizontal"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:MatrixColumnViewModel">
+                                                    <TextBlock Width="{StaticResource MatrixCellWidth}"
+                                                               Text="{Binding ResistText}"
+                                                               FontSize="{StaticResource FontBody}" FontWeight="SemiBold"
+                                                               Foreground="{Binding ResistBrush}"
+                                                               TextAlignment="Center"/>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Grid>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </StackPanel>
+
+                        <!-- Offensive coverage -->
+                        <StackPanel Spacing="6" IsVisible="{Binding CoverageAvailable}">
+                            <TextBlock Classes="sectionTitle" Text="DEALING DAMAGE — GAPS FIRST" Margin="0"/>
+                            <TextBlock FontSize="{StaticResource FontMicro}" Classes="secondary" TextWrapping="Wrap"
+                                       Text="The best multiplier any damaging move reaches against each type, and the hardest-hitting move that reaches it. Hover a row to see the alternatives."/>
+                            <ItemsControl ItemsSource="{Binding Coverage}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:CoverageRowViewModel">
+                                        <Grid ColumnDefinitions="24,80,70,*,110" ColumnSpacing="8"
+                                              Margin="0,0,0,4"
+                                              ToolTip.Tip="{Binding Tooltip}">
+                                            <Image Grid.Column="0" Source="{Binding TypeIcon}"
+                                                   Width="18" Height="18"
+                                                   IsVisible="{Binding HasIcon}"/>
+                                            <TextBlock Grid.Column="1" Text="{Binding TypeName}" FontSize="{StaticResource FontBody}"
+                                                       VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding BestText}" FontSize="{StaticResource FontBody}"
+                                                       FontWeight="SemiBold" VerticalAlignment="Center"
+                                                       Foreground="{Binding VerdictBrush}"/>
+                                            <TextBlock Grid.Column="3" Text="{Binding Source}" FontSize="{StaticResource FontMicro}"
+                                                       Classes="secondary" VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="4" Text="{Binding Verdict}" FontSize="{StaticResource FontMicro}"
+                                                       TextAlignment="Right" VerticalAlignment="Center"
+                                                       Foreground="{Binding VerdictBrush}"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </DockPanel>
+            </TabItem>
+
+            <TabItem Header="Breeding">
+            <DockPanel DataContext="{Binding Breeding}" x:DataType="vm:BreedingViewModel"
+                       Margin="2,8,2,2">
+                <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,12">
+                    <Grid ColumnDefinitions="320,Auto,*" ColumnSpacing="12">
+                        <AutoCompleteBox Grid.Column="0" HorizontalAlignment="Stretch"
+                                         ItemsSource="{Binding SpeciesOptions}"
+                                         SelectedItem="{Binding SelectedSpecies, Mode=TwoWay}"
+                                         FilterMode="Contains" MinimumPrefixLength="1"
+                                         MaxDropDownHeight="320"
+                                         PlaceholderText="Which Pokémon are you breeding?">
+                            <AutoCompleteBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:SpeciesChoice">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Image Source="{Binding Sprite}" Width="34" Height="28"
+                                               RenderOptions.BitmapInterpolationMode="None"/>
+                                        <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontBody}"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </AutoCompleteBox.ItemTemplate>
+                        </AutoCompleteBox>
+                        <Button Grid.Column="1" Content="Clear" FontSize="{StaticResource FontBody}"
+                                Command="{Binding ClearCommand}"/>
+                        <TextBlock Grid.Column="2" Text="{Binding InheritanceNote}" FontSize="{StaticResource FontMicro}"
+                                   Classes="secondary" VerticalAlignment="Center"
+                                   TextWrapping="Wrap"/>
+                    </Grid>
+
+                    <Border Classes="card" Padding="12" IsVisible="{Binding HasSpecies}">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                            <Image Grid.Column="0" Source="{Binding Sprite}" Width="62" Height="52"
+                                   VerticalAlignment="Top"
+                                   RenderOptions.BitmapInterpolationMode="None"/>
+                            <StackPanel Grid.Column="1" Spacing="4">
+                                <TextBlock Text="{Binding Summary}" FontSize="{StaticResource FontBody}" FontWeight="SemiBold"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding GenderText}" FontSize="{StaticResource FontBody}" Classes="secondary"/>
+                                <TextBlock Text="{Binding HatchText}" FontSize="{StaticResource FontBody}" Classes="secondary"
+                                           IsVisible="{Binding HatchText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                <TextBlock Text="{Binding BlockedReason}" FontSize="{StaticResource FontBody}"
+                                           TextWrapping="Wrap"
+                                           Foreground="{DynamicResource IllegalFgBrush}"
+                                           IsVisible="{Binding IsBlocked}"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <TextBlock FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                               IsVisible="{Binding !HasSpecies}"
+                               Text="Pick a species to see its egg groups, the egg moves it can be bred with in this game, and which partners can actually pass each one. Egg move lists differ a lot between games, so this always uses the open save's own data."/>
+                </StackPanel>
+
+                <Grid IsVisible="{Binding HasEggMoves}" ColumnDefinitions="320,*" ColumnSpacing="16">
+                    <DockPanel Grid.Column="0">
+                        <TextBlock DockPanel.Dock="Top" Classes="sectionTitle" Text="EGG MOVES"
+                                   Margin="0,0,0,6"/>
+                        <ListBox Classes="plain" ItemsSource="{Binding EggMoves}"
+                                 SelectedItem="{Binding SelectedEggMove, Mode=TwoWay}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:EggMoveViewModel">
+                                    <Grid ColumnDefinitions="22,22,*" ColumnSpacing="6" Margin="0,2">
+                                        <Image Grid.Column="0" Source="{Binding TypeIcon}"
+                                               Width="18" Height="18"
+                                               IsVisible="{Binding HasTypeIcon}"
+                                               ToolTip.Tip="{Binding TypeName}"/>
+                                        <ctrl:MoveCategoryIcon Grid.Column="1"
+                                                               Category="{Binding CategoryKind}"
+                                                               Width="18" Height="18"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"/>
+                                        <StackPanel Grid.Column="2" Spacing="0" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontBody}"/>
+                                            <TextBlock Text="{Binding Detail}" FontSize="{StaticResource FontMicro}"
+                                                       Classes="secondary"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+
+                    <DockPanel Grid.Column="1">
+                        <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,6">
+                            <TextBlock Classes="sectionTitle" Text="WHO CAN PASS IT" Margin="0"/>
+                            <TextBlock Text="{Binding PartnerSummary}" FontSize="{StaticResource FontBody}"
+                                       Classes="secondary" TextWrapping="Wrap"/>
+                        </StackPanel>
+                        <ListBox Classes="plain" ItemsSource="{Binding Partners}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:PartnerViewModel">
+                                    <Grid ColumnDefinitions="40,*,Auto" ColumnSpacing="8" Margin="0,2">
+                                        <Image Grid.Column="0" Source="{Binding Sprite}"
+                                               Width="34" Height="28"
+                                               RenderOptions.BitmapInterpolationMode="None"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Name}" FontSize="{StaticResource FontBody}"
+                                                   VerticalAlignment="Center"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding How}" FontSize="{StaticResource FontMicro}"
+                                                   Classes="secondary" VerticalAlignment="Center"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+                </Grid>
+            </DockPanel>
+            </TabItem>
+
+            <TabItem Header="Integrity">
+            <DockPanel DataContext="{Binding Integrity}" x:DataType="vm:IntegrityAuditViewModel"
+                       Margin="2,8,2,2">
+                <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,12">
+                    <TextBlock FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                               Text="Compares every stored Pokémon against every other one. PKHeX checks legality one Pokémon at a time, so it cannot see two of them sharing an identifier that is meant to be unique — this can."/>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Run audit" Classes="accent" FontSize="{StaticResource FontBody}"
+                                IsEnabled="{Binding !IsRunning}"
+                                Command="{Binding RunCommand}"/>
+                        <Button Content="Stop" FontSize="{StaticResource FontBody}"
+                                IsVisible="{Binding IsRunning}"
+                                Command="{Binding CancelCommand}"/>
+                        <CheckBox Content="Include informational" FontSize="{StaticResource FontBody}"
+                                  IsChecked="{Binding IncludeInformational, Mode=TwoWay}"
+                                  VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Summary}" FontSize="{StaticResource FontBody}" FontWeight="SemiBold"
+                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <ScrollViewer>
+                    <ItemsControl ItemsSource="{Binding Findings}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:AuditFindingViewModel">
+                                <Border Classes="card" Padding="16" Margin="0,0,0,10">
+                                    <StackPanel Spacing="8">
+                                        <StackPanel Orientation="Horizontal" Spacing="12">
+                                            <Border CornerRadius="4" Padding="6,2"
+                                                    Background="{DynamicResource SurfaceMutedBrush}"
+                                                    VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Severity}" FontSize="{StaticResource FontMicro}"
+                                                           FontWeight="Bold"
+                                                           Foreground="{Binding SeverityBrush}"/>
+                                            </Border>
+                                            <TextBlock Text="{Binding Title}" FontSize="{StaticResource FontHeading}"
+                                                       FontWeight="Bold" VerticalAlignment="Center"
+                                                       TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding Detail}" FontSize="{StaticResource FontBody}"
+                                                   Classes="secondary" TextWrapping="Wrap"/>
+
+                                        <ItemsControl ItemsSource="{Binding Entries}" Margin="0,3,0,0">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel Orientation="Horizontal"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:AuditEntryViewModel">
+                                                    <Border CornerRadius="8" Padding="8,6" Margin="0,0,6,6"
+                                                            Background="{DynamicResource SurfaceMutedBrush}">
+                                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                                            <Image Grid.Column="0" Source="{Binding Sprite}"
+                                                                   Width="38" Height="32"
+                                                                   RenderOptions.BitmapInterpolationMode="None"/>
+                                                            <StackPanel Grid.Column="1" Spacing="0"
+                                                                        VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding Species}" FontSize="{StaticResource FontBody}"
+                                                                           FontWeight="SemiBold"/>
+                                                                <TextBlock Text="{Binding Location}" FontSize="{StaticResource FontMicro}"
+                                                                           Classes="secondary"/>
+                                                                <TextBlock Text="{Binding Detail}" FontSize="{StaticResource FontMicro}"
+                                                                           Classes="secondary"
+                                                                           FontFamily="Menlo, monospace"/>
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+
+                                        <TextBlock Text="{Binding Overflow}" FontSize="{StaticResource FontMicro}"
+                                                   Classes="secondary"
+                                                   IsVisible="{Binding HasOverflow}"/>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+            </TabItem>
+
+            <TabItem Header="Box Report">
+                <DockPanel Margin="2,8,2,2">
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12"
+                          Margin="0,0,0,10">
+                        <TextBox Grid.Column="0" Text="{Binding ReportSearch, Mode=TwoWay}"
+                                 PlaceholderText="Search species, nickname, OT, nature, ability…"/>
+                        <CheckBox Grid.Column="1" IsChecked="{Binding IllegalOnly, Mode=TwoWay}"
+                                  Content="Issues only" VerticalAlignment="Center"/>
+                        <Button Grid.Column="2" Content="Copy as TSV" FontSize="{StaticResource FontBody}"
+                                Click="OnCopyReportClicked"/>
+                    </Grid>
+                    <TextBlock DockPanel.Dock="Bottom" Text="{Binding ReportSummary}" FontSize="{StaticResource FontBody}"
+                               Classes="secondary" Margin="0,8,0,0"/>
+
+                    <!-- Header row -->
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="44,110,120,120,46,90,140,120,64,58"
+                          ColumnSpacing="8" Margin="6,0,6,6">
+                        <TextBlock Grid.Column="1" Text="Species" FontSize="{StaticResource FontMicro}" Classes="secondary"/>
+                        <TextBlock Grid.Column="2" Text="Nickname" FontSize="{StaticResource FontMicro}" Classes="secondary"/>
+                        <TextBlock Grid.Column="3" Text="Box · slot" FontSize="{StaticResource FontMicro}" Classes="secondary"/>
+                        <TextBlock Grid.Column="4" Text="Lv" FontSize="{StaticResource FontMicro}" Classes="secondary"/>
+                        <TextBlock Grid.Column="5" Text="Nature" FontSize="{StaticResource FontMicro}" Classes="secondary"/>
+                        <TextBlock Grid.Column="6" Text="Ability" FontSize="{StaticResource FontMicro}" Classes="secondary"/>
+                        <TextBlock Grid.Column="7" Text="IVs" FontSize="{StaticResource FontMicro}" Classes="secondary"/>
+                        <TextBlock Grid.Column="8" Text="Shiny" FontSize="{StaticResource FontMicro}" Classes="secondary"/>
+                        <TextBlock Grid.Column="9" Text="Legal" FontSize="{StaticResource FontMicro}" Classes="secondary"/>
+                    </Grid>
+
+                    <ListBox ItemsSource="{Binding ReportRows}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ReportRowViewModel">
+                                <Grid ColumnDefinitions="44,110,120,120,46,90,140,120,64,58"
+                                      ColumnSpacing="8">
+                                    <Image Grid.Column="0" Source="{Binding Sprite}" Width="40" Height="34"
+                                           RenderOptions.BitmapInterpolationMode="None"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding Species}" FontSize="{StaticResource FontBody}"
+                                               FontWeight="SemiBold" VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="2" Text="{Binding Nickname}" FontSize="{StaticResource FontBody}"
+                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="3" FontSize="{StaticResource FontBody}" Classes="secondary"
+                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
+                                        <Run Text="{Binding BoxName}"/><Run Text=" · "/><Run Text="{Binding SlotText}"/>
+                                    </TextBlock>
+                                    <TextBlock Grid.Column="4" Text="{Binding Level}" FontSize="{StaticResource FontBody}"
+                                               VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="5" Text="{Binding Nature}" FontSize="{StaticResource FontBody}"
+                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="6" Text="{Binding Ability}" FontSize="{StaticResource FontBody}"
+                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Column="7" Text="{Binding Ivs}" FontSize="{StaticResource FontBody}"
+                                               FontFamily="Menlo, monospace" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="8" Text="★" FontSize="{StaticResource FontBody}" Foreground="Gold"
+                                               VerticalAlignment="Center" IsVisible="{Binding IsShiny}"/>
+                                    <TextBlock Grid.Column="9" Text="✓" FontSize="{StaticResource FontBody}"
+                                               Foreground="{DynamicResource LegalFgBrush}"
+                                               VerticalAlignment="Center" IsVisible="{Binding IsLegal}"/>
+                                    <TextBlock Grid.Column="9" Text="✕" FontSize="{StaticResource FontBody}"
+                                               Foreground="{DynamicResource IllegalFgBrush}"
+                                               VerticalAlignment="Center" IsVisible="{Binding !IsLegal}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </TabItem>
+        </TabControl>
+    </Border>
+
+</UserControl>
