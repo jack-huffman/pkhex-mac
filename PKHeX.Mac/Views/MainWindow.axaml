@@ -3092,11 +3092,14 @@
                                                     <TextBlock Grid.Column="2" Text="PP" FontSize="9" Classes="secondary"
                                                                TextAlignment="Center"/>
                                                 </Grid>
-                                                <Grid ColumnDefinitions="*,50,40" ColumnSpacing="8">
-                                                    <ComboBox Grid.Column="0" HorizontalAlignment="Stretch" ItemsSource="{Binding MoveChoices}"
-                                                              SelectedValue="{Binding Move1, Mode=TwoWay}"
-                                                              SelectedValueBinding="{Binding Value, x:DataType=vm:MoveChoice}">
-                                                        <ComboBox.ItemTemplate>
+                                                <Grid ColumnDefinitions="*,22,22,50,40" ColumnSpacing="8">
+                                                    <AutoCompleteBox Grid.Column="0" HorizontalAlignment="Stretch"
+                                                                     ItemsSource="{Binding MoveChoices}"
+                                                                     SelectedItem="{Binding SelectedMove1, Mode=TwoWay}"
+                                                                     FilterMode="Contains" MinimumPrefixLength="1"
+                                                                     MaxDropDownHeight="320"
+                                                                     Watermark="Type a move name…">
+                                                        <AutoCompleteBox.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:MoveChoice">
                                                                 <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
                                                                     <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12"
@@ -3125,18 +3128,31 @@
                                                                                TextAlignment="Center" ToolTip.Tip="Accuracy"/>
                                                                 </Grid>
                                                             </DataTemplate>
-                                                        </ComboBox.ItemTemplate>
-                                                    </ComboBox>
-                                                    <TextBox Grid.Column="1" Classes="statNum" Text="{Binding PpUps1, Mode=TwoWay}"
+                                                        </AutoCompleteBox.ItemTemplate>
+                                                    </AutoCompleteBox>
+                                                    <!-- Type and category of the chosen move, since a text field
+                                                         cannot show them the way the dropdown row does -->
+                                                    <Image Grid.Column="1" Source="{Binding SelectedMove1.TypeIcon}"
+                                                           Width="20" Height="20" VerticalAlignment="Center"
+                                                           ToolTip.Tip="{Binding SelectedMove1.TypeName}"/>
+                                                    <ctrl:MoveCategoryIcon Grid.Column="2"
+                                                                           Category="{Binding SelectedMove1.CategoryKind}"
+                                                                           Width="20" Height="20"
+                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                           ToolTip.Tip="{Binding SelectedMove1.StatLine}"/>
+                                                    <TextBox Grid.Column="3" Classes="statNum" Text="{Binding PpUps1, Mode=TwoWay}"
                                                              ToolTip.Tip="PP Ups applied (0-3)"/>
-                                                    <TextBlock Grid.Column="2" Text="{Binding Pp1}" FontSize="10"
+                                                    <TextBlock Grid.Column="4" Text="{Binding Pp1}" FontSize="10"
                                                                Classes="secondary" VerticalAlignment="Center" TextAlignment="Center"/>
                                                 </Grid>
-                                                <Grid ColumnDefinitions="*,50,40" ColumnSpacing="8">
-                                                    <ComboBox Grid.Column="0" HorizontalAlignment="Stretch" ItemsSource="{Binding MoveChoices}"
-                                                              SelectedValue="{Binding Move2, Mode=TwoWay}"
-                                                              SelectedValueBinding="{Binding Value, x:DataType=vm:MoveChoice}">
-                                                        <ComboBox.ItemTemplate>
+                                                <Grid ColumnDefinitions="*,22,22,50,40" ColumnSpacing="8">
+                                                    <AutoCompleteBox Grid.Column="0" HorizontalAlignment="Stretch"
+                                                                     ItemsSource="{Binding MoveChoices}"
+                                                                     SelectedItem="{Binding SelectedMove2, Mode=TwoWay}"
+                                                                     FilterMode="Contains" MinimumPrefixLength="1"
+                                                                     MaxDropDownHeight="320"
+                                                                     Watermark="Type a move name…">
+                                                        <AutoCompleteBox.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:MoveChoice">
                                                                 <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
                                                                     <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12"
@@ -3165,18 +3181,31 @@
                                                                                TextAlignment="Center" ToolTip.Tip="Accuracy"/>
                                                                 </Grid>
                                                             </DataTemplate>
-                                                        </ComboBox.ItemTemplate>
-                                                    </ComboBox>
-                                                    <TextBox Grid.Column="1" Classes="statNum" Text="{Binding PpUps2, Mode=TwoWay}"
+                                                        </AutoCompleteBox.ItemTemplate>
+                                                    </AutoCompleteBox>
+                                                    <!-- Type and category of the chosen move, since a text field
+                                                         cannot show them the way the dropdown row does -->
+                                                    <Image Grid.Column="1" Source="{Binding SelectedMove2.TypeIcon}"
+                                                           Width="20" Height="20" VerticalAlignment="Center"
+                                                           ToolTip.Tip="{Binding SelectedMove2.TypeName}"/>
+                                                    <ctrl:MoveCategoryIcon Grid.Column="2"
+                                                                           Category="{Binding SelectedMove2.CategoryKind}"
+                                                                           Width="20" Height="20"
+                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                           ToolTip.Tip="{Binding SelectedMove2.StatLine}"/>
+                                                    <TextBox Grid.Column="3" Classes="statNum" Text="{Binding PpUps2, Mode=TwoWay}"
                                                              ToolTip.Tip="PP Ups applied (0-3)"/>
-                                                    <TextBlock Grid.Column="2" Text="{Binding Pp2}" FontSize="10"
+                                                    <TextBlock Grid.Column="4" Text="{Binding Pp2}" FontSize="10"
                                                                Classes="secondary" VerticalAlignment="Center" TextAlignment="Center"/>
                                                 </Grid>
-                                                <Grid ColumnDefinitions="*,50,40" ColumnSpacing="8">
-                                                    <ComboBox Grid.Column="0" HorizontalAlignment="Stretch" ItemsSource="{Binding MoveChoices}"
-                                                              SelectedValue="{Binding Move3, Mode=TwoWay}"
-                                                              SelectedValueBinding="{Binding Value, x:DataType=vm:MoveChoice}">
-                                                        <ComboBox.ItemTemplate>
+                                                <Grid ColumnDefinitions="*,22,22,50,40" ColumnSpacing="8">
+                                                    <AutoCompleteBox Grid.Column="0" HorizontalAlignment="Stretch"
+                                                                     ItemsSource="{Binding MoveChoices}"
+                                                                     SelectedItem="{Binding SelectedMove3, Mode=TwoWay}"
+                                                                     FilterMode="Contains" MinimumPrefixLength="1"
+                                                                     MaxDropDownHeight="320"
+                                                                     Watermark="Type a move name…">
+                                                        <AutoCompleteBox.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:MoveChoice">
                                                                 <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
                                                                     <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12"
@@ -3205,18 +3234,31 @@
                                                                                TextAlignment="Center" ToolTip.Tip="Accuracy"/>
                                                                 </Grid>
                                                             </DataTemplate>
-                                                        </ComboBox.ItemTemplate>
-                                                    </ComboBox>
-                                                    <TextBox Grid.Column="1" Classes="statNum" Text="{Binding PpUps3, Mode=TwoWay}"
+                                                        </AutoCompleteBox.ItemTemplate>
+                                                    </AutoCompleteBox>
+                                                    <!-- Type and category of the chosen move, since a text field
+                                                         cannot show them the way the dropdown row does -->
+                                                    <Image Grid.Column="1" Source="{Binding SelectedMove3.TypeIcon}"
+                                                           Width="20" Height="20" VerticalAlignment="Center"
+                                                           ToolTip.Tip="{Binding SelectedMove3.TypeName}"/>
+                                                    <ctrl:MoveCategoryIcon Grid.Column="2"
+                                                                           Category="{Binding SelectedMove3.CategoryKind}"
+                                                                           Width="20" Height="20"
+                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                           ToolTip.Tip="{Binding SelectedMove3.StatLine}"/>
+                                                    <TextBox Grid.Column="3" Classes="statNum" Text="{Binding PpUps3, Mode=TwoWay}"
                                                              ToolTip.Tip="PP Ups applied (0-3)"/>
-                                                    <TextBlock Grid.Column="2" Text="{Binding Pp3}" FontSize="10"
+                                                    <TextBlock Grid.Column="4" Text="{Binding Pp3}" FontSize="10"
                                                                Classes="secondary" VerticalAlignment="Center" TextAlignment="Center"/>
                                                 </Grid>
-                                                <Grid ColumnDefinitions="*,50,40" ColumnSpacing="8">
-                                                    <ComboBox Grid.Column="0" HorizontalAlignment="Stretch" ItemsSource="{Binding MoveChoices}"
-                                                              SelectedValue="{Binding Move4, Mode=TwoWay}"
-                                                              SelectedValueBinding="{Binding Value, x:DataType=vm:MoveChoice}">
-                                                        <ComboBox.ItemTemplate>
+                                                <Grid ColumnDefinitions="*,22,22,50,40" ColumnSpacing="8">
+                                                    <AutoCompleteBox Grid.Column="0" HorizontalAlignment="Stretch"
+                                                                     ItemsSource="{Binding MoveChoices}"
+                                                                     SelectedItem="{Binding SelectedMove4, Mode=TwoWay}"
+                                                                     FilterMode="Contains" MinimumPrefixLength="1"
+                                                                     MaxDropDownHeight="320"
+                                                                     Watermark="Type a move name…">
+                                                        <AutoCompleteBox.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:MoveChoice">
                                                                 <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
                                                                     <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12"
@@ -3245,21 +3287,34 @@
                                                                                TextAlignment="Center" ToolTip.Tip="Accuracy"/>
                                                                 </Grid>
                                                             </DataTemplate>
-                                                        </ComboBox.ItemTemplate>
-                                                    </ComboBox>
-                                                    <TextBox Grid.Column="1" Classes="statNum" Text="{Binding PpUps4, Mode=TwoWay}"
+                                                        </AutoCompleteBox.ItemTemplate>
+                                                    </AutoCompleteBox>
+                                                    <!-- Type and category of the chosen move, since a text field
+                                                         cannot show them the way the dropdown row does -->
+                                                    <Image Grid.Column="1" Source="{Binding SelectedMove4.TypeIcon}"
+                                                           Width="20" Height="20" VerticalAlignment="Center"
+                                                           ToolTip.Tip="{Binding SelectedMove4.TypeName}"/>
+                                                    <ctrl:MoveCategoryIcon Grid.Column="2"
+                                                                           Category="{Binding SelectedMove4.CategoryKind}"
+                                                                           Width="20" Height="20"
+                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                           ToolTip.Tip="{Binding SelectedMove4.StatLine}"/>
+                                                    <TextBox Grid.Column="3" Classes="statNum" Text="{Binding PpUps4, Mode=TwoWay}"
                                                              ToolTip.Tip="PP Ups applied (0-3)"/>
-                                                    <TextBlock Grid.Column="2" Text="{Binding Pp4}" FontSize="10"
+                                                    <TextBlock Grid.Column="4" Text="{Binding Pp4}" FontSize="10"
                                                                Classes="secondary" VerticalAlignment="Center" TextAlignment="Center"/>
                                                 </Grid>
 
                                                 <StackPanel IsVisible="{Binding HasRelearnMoves}">
                                                     <TextBlock Classes="sectionTitle" Text="RELEARN MOVES" Margin="2,10,0,6"/>
                                                     <StackPanel Spacing="8">
-                                                        <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding MoveChoices}"
-                                                              SelectedValue="{Binding Relearn1, Mode=TwoWay}"
-                                                              SelectedValueBinding="{Binding Value, x:DataType=vm:MoveChoice}">
-                                                        <ComboBox.ItemTemplate>
+                                                        <AutoCompleteBox HorizontalAlignment="Stretch"
+                                                                         ItemsSource="{Binding MoveChoices}"
+                                                                         SelectedItem="{Binding SelectedRelearn1, Mode=TwoWay}"
+                                                                         FilterMode="Contains" MinimumPrefixLength="1"
+                                                                         MaxDropDownHeight="320"
+                                                                         Watermark="Type a move name…">
+                                                        <AutoCompleteBox.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:MoveChoice">
                                                                 <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
                                                                     <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12"
@@ -3288,12 +3343,15 @@
                                                                                TextAlignment="Center" ToolTip.Tip="Accuracy"/>
                                                                 </Grid>
                                                             </DataTemplate>
-                                                        </ComboBox.ItemTemplate>
-                                                    </ComboBox>
-                                                        <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding MoveChoices}"
-                                                              SelectedValue="{Binding Relearn2, Mode=TwoWay}"
-                                                              SelectedValueBinding="{Binding Value, x:DataType=vm:MoveChoice}">
-                                                        <ComboBox.ItemTemplate>
+                                                        </AutoCompleteBox.ItemTemplate>
+                                                        </AutoCompleteBox>
+                                                        <AutoCompleteBox HorizontalAlignment="Stretch"
+                                                                         ItemsSource="{Binding MoveChoices}"
+                                                                         SelectedItem="{Binding SelectedRelearn2, Mode=TwoWay}"
+                                                                         FilterMode="Contains" MinimumPrefixLength="1"
+                                                                         MaxDropDownHeight="320"
+                                                                         Watermark="Type a move name…">
+                                                        <AutoCompleteBox.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:MoveChoice">
                                                                 <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
                                                                     <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12"
@@ -3322,12 +3380,15 @@
                                                                                TextAlignment="Center" ToolTip.Tip="Accuracy"/>
                                                                 </Grid>
                                                             </DataTemplate>
-                                                        </ComboBox.ItemTemplate>
-                                                    </ComboBox>
-                                                        <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding MoveChoices}"
-                                                              SelectedValue="{Binding Relearn3, Mode=TwoWay}"
-                                                              SelectedValueBinding="{Binding Value, x:DataType=vm:MoveChoice}">
-                                                        <ComboBox.ItemTemplate>
+                                                        </AutoCompleteBox.ItemTemplate>
+                                                        </AutoCompleteBox>
+                                                        <AutoCompleteBox HorizontalAlignment="Stretch"
+                                                                         ItemsSource="{Binding MoveChoices}"
+                                                                         SelectedItem="{Binding SelectedRelearn3, Mode=TwoWay}"
+                                                                         FilterMode="Contains" MinimumPrefixLength="1"
+                                                                         MaxDropDownHeight="320"
+                                                                         Watermark="Type a move name…">
+                                                        <AutoCompleteBox.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:MoveChoice">
                                                                 <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
                                                                     <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12"
@@ -3356,12 +3417,15 @@
                                                                                TextAlignment="Center" ToolTip.Tip="Accuracy"/>
                                                                 </Grid>
                                                             </DataTemplate>
-                                                        </ComboBox.ItemTemplate>
-                                                    </ComboBox>
-                                                        <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding MoveChoices}"
-                                                              SelectedValue="{Binding Relearn4, Mode=TwoWay}"
-                                                              SelectedValueBinding="{Binding Value, x:DataType=vm:MoveChoice}">
-                                                        <ComboBox.ItemTemplate>
+                                                        </AutoCompleteBox.ItemTemplate>
+                                                        </AutoCompleteBox>
+                                                        <AutoCompleteBox HorizontalAlignment="Stretch"
+                                                                         ItemsSource="{Binding MoveChoices}"
+                                                                         SelectedItem="{Binding SelectedRelearn4, Mode=TwoWay}"
+                                                                         FilterMode="Contains" MinimumPrefixLength="1"
+                                                                         MaxDropDownHeight="320"
+                                                                         Watermark="Type a move name…">
+                                                        <AutoCompleteBox.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:MoveChoice">
                                                                 <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
                                                                     <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12"
@@ -3390,8 +3454,8 @@
                                                                                TextAlignment="Center" ToolTip.Tip="Accuracy"/>
                                                                 </Grid>
                                                             </DataTemplate>
-                                                        </ComboBox.ItemTemplate>
-                                                    </ComboBox>
+                                                        </AutoCompleteBox.ItemTemplate>
+                                                        </AutoCompleteBox>
                                                     </StackPanel>
                                                 </StackPanel>
 

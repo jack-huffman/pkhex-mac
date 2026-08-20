@@ -61,6 +61,9 @@ public sealed class MoveChoice
     public bool IsRealMove { get; }
     public bool HasCategory { get; }
 
+    /// <summary>What the type-ahead pickers match on and display.</summary>
+    public override string ToString() => Name;
+
     /// <summary>"55 power · 100% acc · 15 PP" — the summary shown beside an assigned move.</summary>
     public string StatLine => !IsRealMove
         ? string.Empty

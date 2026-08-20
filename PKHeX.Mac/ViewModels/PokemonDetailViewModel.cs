@@ -52,6 +52,9 @@ public partial class PokemonDetailViewModel : ObservableObject
         BallChoices = BallChoice.Build(sources.Balls);
         NatureChoices = NatureChoice.Build(_strings.natures);
         MoveChoices = MoveChoice.Build(sources.Moves, sav.Context, _strings);
+        // The type-ahead pickers bind to objects rather than ids, and reuse the same
+        // instance for a given move so round-tripping a value cannot loop.
+        _moveLookup = MoveChoices.GroupBy(m => m.Value).ToDictionary(g => g.Key, g => g.First());
         VersionChoices = sources.Games;
         LanguageChoices = sources.Languages;
         History.SetLanguageChoices(sources.Languages);
@@ -172,6 +175,43 @@ public partial class PokemonDetailViewModel : ObservableObject
     [ObservableProperty] private int _relearn2;
     [ObservableProperty] private int _relearn3;
     [ObservableProperty] private int _relearn4;
+
+    // ---- Type-ahead selections, kept in step with the id properties above ----
+
+    private Dictionary<int, MoveChoice> _moveLookup = [];
+
+    [ObservableProperty] private MoveChoice? _selectedMove1;
+    [ObservableProperty] private MoveChoice? _selectedMove2;
+    [ObservableProperty] private MoveChoice? _selectedMove3;
+    [ObservableProperty] private MoveChoice? _selectedMove4;
+    [ObservableProperty] private MoveChoice? _selectedRelearn1;
+    [ObservableProperty] private MoveChoice? _selectedRelearn2;
+    [ObservableProperty] private MoveChoice? _selectedRelearn3;
+    [ObservableProperty] private MoveChoice? _selectedRelearn4;
+
+    private MoveChoice? Lookup(int move) => _moveLookup.GetValueOrDefault(move);
+
+    /// <summary>Mirrors the id properties into the pickers after a load or a suggestion.</summary>
+    private void SyncMovePickers()
+    {
+        SelectedMove1 = Lookup(Move1);
+        SelectedMove2 = Lookup(Move2);
+        SelectedMove3 = Lookup(Move3);
+        SelectedMove4 = Lookup(Move4);
+        SelectedRelearn1 = Lookup(Relearn1);
+        SelectedRelearn2 = Lookup(Relearn2);
+        SelectedRelearn3 = Lookup(Relearn3);
+        SelectedRelearn4 = Lookup(Relearn4);
+    }
+
+    partial void OnSelectedMove1Changed(MoveChoice? value) { if (value is not null) Move1 = value.Value; }
+    partial void OnSelectedMove2Changed(MoveChoice? value) { if (value is not null) Move2 = value.Value; }
+    partial void OnSelectedMove3Changed(MoveChoice? value) { if (value is not null) Move3 = value.Value; }
+    partial void OnSelectedMove4Changed(MoveChoice? value) { if (value is not null) Move4 = value.Value; }
+    partial void OnSelectedRelearn1Changed(MoveChoice? value) { if (value is not null) Relearn1 = value.Value; }
+    partial void OnSelectedRelearn2Changed(MoveChoice? value) { if (value is not null) Relearn2 = value.Value; }
+    partial void OnSelectedRelearn3Changed(MoveChoice? value) { if (value is not null) Relearn3 = value.Value; }
+    partial void OnSelectedRelearn4Changed(MoveChoice? value) { if (value is not null) Relearn4 = value.Value; }
 
     // ---- Met tab ----
     [ObservableProperty] private int _versionValue;
@@ -896,10 +936,10 @@ public partial class PokemonDetailViewModel : ObservableObject
     partial void OnPpUps3Changed(int value) => SetPPUps(2, value);
     partial void OnPpUps4Changed(int value) => SetPPUps(3, value);
 
-    partial void OnMove1Changed(int value) => SetMove(0, value);
-    partial void OnMove2Changed(int value) => SetMove(1, value);
-    partial void OnMove3Changed(int value) => SetMove(2, value);
-    partial void OnMove4Changed(int value) => SetMove(3, value);
+    partial void OnMove1Changed(int value) { SetMove(0, value); SelectedMove1 = Lookup(value); }
+    partial void OnMove2Changed(int value) { SetMove(1, value); SelectedMove2 = Lookup(value); }
+    partial void OnMove3Changed(int value) { SetMove(2, value); SelectedMove3 = Lookup(value); }
+    partial void OnMove4Changed(int value) { SetMove(3, value); SelectedMove4 = Lookup(value); }
 
     private void SetRelearn(int index, int value)
     {
@@ -915,10 +955,10 @@ public partial class PokemonDetailViewModel : ObservableObject
         MarkDirty();
     }
 
-    partial void OnRelearn1Changed(int value) => SetRelearn(0, value);
-    partial void OnRelearn2Changed(int value) => SetRelearn(1, value);
-    partial void OnRelearn3Changed(int value) => SetRelearn(2, value);
-    partial void OnRelearn4Changed(int value) => SetRelearn(3, value);
+    partial void OnRelearn1Changed(int value) { SetRelearn(0, value); SelectedRelearn1 = Lookup(value); }
+    partial void OnRelearn2Changed(int value) { SetRelearn(1, value); SelectedRelearn2 = Lookup(value); }
+    partial void OnRelearn3Changed(int value) { SetRelearn(2, value); SelectedRelearn3 = Lookup(value); }
+    partial void OnRelearn4Changed(int value) { SetRelearn(3, value); SelectedRelearn4 = Lookup(value); }
 
     partial void OnVersionValueChanged(int value)
     {
