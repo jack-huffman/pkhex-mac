@@ -3,25 +3,27 @@
              xmlns:ctrl="using:PKHeX.Mac.Controls"
              x:Class="PKHeX.Mac.Controls.PokeBallIcon"
              x:Name="Root">
-    <!-- Poké Ball: filled upper half, solid band running into the centre button,
-         and an open lower half. The button is a genuine hole — the "F0" prefix
-         selects the even-odd fill rule — so it reads on any surface without
-         needing a background-matching disc. -->
+    <!-- Pure outline Poké Ball: shell ring, a band running from the shell into the
+         centre button on both sides, and a hollow button. Everything is stroked in
+         one colour with nothing filled, so it sits correctly on any background.
+         The band overlaps both rings slightly, which is invisible in a single
+         colour and guarantees no hairline gaps at any render size. -->
     <Viewbox Stretch="Uniform">
         <Canvas Width="100" Height="100">
 
-            <!-- Shell outline; gives the empty lower half its edge -->
-            <Ellipse Canvas.Left="5" Canvas.Top="5" Width="90" Height="90"
-                     Stroke="{Binding #Root.Stroke}" StrokeThickness="8"/>
+            <!-- Shell -->
+            <Ellipse Canvas.Left="8" Canvas.Top="8" Width="84" Height="84"
+                     Stroke="{Binding #Root.Stroke}" StrokeThickness="7"/>
 
-            <!-- Upper half + band, with the button punched out -->
-            <Path Fill="{Binding #Root.Stroke}"
-                  Data="F0 M5,50 A45,45 0 0,1 95,50 L95,58 L5,58 Z
-                           M67,50 A17,17 0 1,0 33,50 A17,17 0 1,0 67,50 Z"/>
+            <!-- Band, shell to button, both sides -->
+            <Rectangle Canvas.Left="8" Canvas.Top="46.5" Width="32" Height="7"
+                       Fill="{Binding #Root.Stroke}"/>
+            <Rectangle Canvas.Left="60" Canvas.Top="46.5" Width="32" Height="7"
+                       Fill="{Binding #Root.Stroke}"/>
 
-            <!-- Button ring, meeting the punched hole exactly -->
-            <Ellipse Canvas.Left="37" Canvas.Top="37" Width="26" Height="26"
-                     Stroke="{Binding #Root.Stroke}" StrokeThickness="8"/>
+            <!-- Button -->
+            <Ellipse Canvas.Left="41.5" Canvas.Top="41.5" Width="17" Height="17"
+                     Stroke="{Binding #Root.Stroke}" StrokeThickness="7"/>
         </Canvas>
     </Viewbox>
 </UserControl>
