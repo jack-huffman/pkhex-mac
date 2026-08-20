@@ -152,15 +152,7 @@ public partial class TeamAnalysisViewModel : ObservableObject
     /// </summary>
     private void BuildMatrix()
     {
-        var types = new List<int>();
-        for (int attacker = 0; attacker < TypeChart.TypeCount; attacker++)
-        {
-            if (_era != ChartEra.Modern && attacker == 17) // no Fairy before Gen 6
-                continue;
-            if (_era == ChartEra.Gen1 && attacker is 8 or 16) // no Steel or Dark in Gen 1
-                continue;
-            types.Add(attacker);
-        }
+        var types = TypeChart.GetTypes(_era);
 
         foreach (var member in Members)
             member.BuildCells(types);
@@ -298,13 +290,33 @@ public sealed class TeamMemberViewModel
         Moves = display;
         AttackingMoves = attacking;
 
-        var worst = new List<string>();
-        for (int t = 0; t < TypeChart.TypeCount; t++)
+        // Group the matchups by multiplier so the tile reads as bands of type badges
+        // rather than a sentence to parse.
+        var byMultiplier = new SortedDictionary<double, List<TypeBadgeViewModel>>();
+        foreach (var attacker in TypeChart.GetTypes(era))
         {
-            if (MultiplierAgainst(t) >= 2)
-                worst.Add(TypeName(t, strings));
+            var multiplier = MultiplierAgainst(attacker);
+            if (multiplier == 1)
+                continue;
+            if (!byMultiplier.TryGetValue(multiplier, out var list))
+                byMultiplier[multiplier] = list = [];
+            list.Add(new TypeBadgeViewModel(attacker, strings));
         }
-        WeakTo = worst.Count == 0 ? "nothing" : string.Join(", ", worst);
+
+        var resist = new List<MatchupGroupViewModel>();
+        var weak = new List<MatchupGroupViewModel>();
+        foreach (var (multiplier, badges) in byMultiplier)
+        {
+            var group = new MatchupGroupViewModel(multiplier, badges);
+            if (multiplier < 1)
+                resist.Add(group);
+            else
+                weak.Add(group);
+        }
+        // Strongest first in both directions: immunities lead, 4x leads.
+        weak.Reverse();
+        Resistances = resist;
+        Weaknesses = weak;
     }
 
     public string SpeciesName { get; }
@@ -326,7 +338,14 @@ public sealed class TeamMemberViewModel
     /// <summary>True when the ability changes incoming damage, so the UI can say so.</summary>
     public bool AbilityMatters { get; }
 
-    public string WeakTo { get; }
+    /// <summary>Incoming multipliers below 1, grouped: immunities first.</summary>
+    public IReadOnlyList<MatchupGroupViewModel> Resistances { get; } = [];
+
+    /// <summary>Incoming multipliers above 1, grouped: 4x first.</summary>
+    public IReadOnlyList<MatchupGroupViewModel> Weaknesses { get; } = [];
+
+    public bool HasResistances => Resistances.Count > 0;
+    public bool HasWeaknesses => Weaknesses.Count > 0;
 
     /// <summary>Every move this member knows, for display.</summary>
     public IReadOnlyList<MoveChoice> Moves { get; }
@@ -508,4 +527,63 @@ public sealed class MatrixCellViewModel
     public IBrush Foreground { get; }
     public IBrush Background { get; }
     public string Tooltip { get; }
+}
+
+/// <summary>
+/// One band of matchups sharing a multiplier — the "×¼" chip and the type badges
+/// that sit beside it.
+/// </summary>
+public sealed class MatchupGroupViewModel
+{
+    private static readonly IBrush Resist = new SolidColorBrush(Color.Parse("#6FCF97"));
+    private static readonly IBrush Immune = new SolidColorBrush(Color.Parse("#7FD4C1"));
+    private static readonly IBrush Weak = new SolidColorBrush(Color.Parse("#E5776D"));
+    private static readonly IBrush Quad = new SolidColorBrush(Color.Parse("#FF6B5B"));
+
+    public MatchupGroupViewModel(double multiplier, IReadOnlyList<TypeBadgeViewModel> types)
+    {
+        Multiplier = multiplier;
+        Types = types;
+        Label = multiplier switch
+        {
+            0 => "×0",
+            0.25 => "×¼",
+            0.5 => "×½",
+            2 => "×2",
+            4 => "×4",
+            _ => "×" + multiplier.ToString("0.##", CultureInfo.InvariantCulture),
+        };
+        LabelBrush = multiplier switch
+        {
+            0 => Immune,
+            < 1 => Resist,
+            >= 4 => Quad,
+            _ => Weak,
+        };
+        Tooltip = $"{Label} damage from {string.Join(", ", types.Select(t => t.TypeName))}";
+    }
+
+    public double Multiplier { get; }
+    public string Label { get; }
+    public IBrush LabelBrush { get; }
+    public IReadOnlyList<TypeBadgeViewModel> Types { get; }
+    public string Tooltip { get; }
+}
+
+/// <summary>A single type badge: the circular symbol, with a colour-chip fallback.</summary>
+public sealed class TypeBadgeViewModel
+{
+    public TypeBadgeViewModel(int typeId, GameStrings strings)
+    {
+        TypeId = typeId;
+        TypeName = (uint)typeId < strings.types.Length ? strings.types[typeId] : $"#{typeId}";
+        Icon = TypeIconService.Get(typeId);
+        Brush = TypePalette.GetBrush(typeId);
+    }
+
+    public int TypeId { get; }
+    public string TypeName { get; }
+    public IImage? Icon { get; }
+    public IBrush? Brush { get; }
+    public bool HasIcon => Icon is not null;
 }

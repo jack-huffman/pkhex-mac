@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using PKHeX.Core;
 
 namespace PKHeX.Mac.Services;
@@ -77,6 +78,24 @@ public static class TypeChart
         <= 5 => ChartEra.Gen2To5,
         _ => ChartEra.Modern,
     };
+
+    /// <summary>
+    /// The attacking types that exist in an era, in canonical order. Fairy arrived in
+    /// Gen 6; Dark and Steel in Gen 2.
+    /// </summary>
+    public static IReadOnlyList<int> GetTypes(ChartEra era)
+    {
+        var result = new List<int>(TypeCount);
+        for (int type = 0; type < TypeCount; type++)
+        {
+            if (era != ChartEra.Modern && type == Fairy)
+                continue;
+            if (era == ChartEra.Gen1 && type is Steel or Dark)
+                continue;
+            result.Add(type);
+        }
+        return result;
+    }
 
     /// <summary>Multiplier for one attacking type against one defending type.</summary>
     public static double Get(int attacker, int defender, ChartEra era)

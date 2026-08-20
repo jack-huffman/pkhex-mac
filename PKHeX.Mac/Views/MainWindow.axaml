@@ -1286,79 +1286,186 @@
                                             <ItemsControl ItemsSource="{Binding Members}">
                                                 <ItemsControl.ItemsPanel>
                                                     <ItemsPanelTemplate>
-                                                        <!-- Three across, so a full party reads as two rows -->
-                                                        <UniformGrid Columns="3"/>
+                                                        <!-- Two across: the split tile needs the width, so a
+                                                             full party reads as three rows -->
+                                                        <UniformGrid Columns="2"/>
                                                     </ItemsPanelTemplate>
                                                 </ItemsControl.ItemsPanel>
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate x:DataType="vm:TeamMemberViewModel">
                                                         <Border Classes="card" Padding="12" Margin="0,0,8,8">
-                                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
-                                                                <!-- Fixed box with Uniform stretch letterboxes the
-                                                                     render instead of letting it overflow the card -->
-                                                                <Panel Grid.Column="0" Width="84" Height="84"
-                                                                       VerticalAlignment="Top">
-                                                                    <Image Source="{Binding Artwork}" Stretch="Uniform"
-                                                                           RenderOptions.BitmapInterpolationMode="HighQuality"/>
-                                                                </Panel>
-                                                                <StackPanel Grid.Column="1" Spacing="3">
-                                                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                                                        <TextBlock Text="{Binding SpeciesName}" FontSize="13"
-                                                                                   FontWeight="Bold"/>
-                                                                        <TextBlock Text="{Binding LevelText}" FontSize="10"
-                                                                                   Classes="secondary" VerticalAlignment="Center"/>
-                                                                    </StackPanel>
-                                                                    <StackPanel Orientation="Horizontal" Spacing="5">
-                                                                        <Image Source="{Binding Type1Icon}" Width="18" Height="18"
-                                                                               IsVisible="{Binding HasType1Icon}"
-                                                                               ToolTip.Tip="{Binding Type1Name}"/>
-                                                                        <Image Source="{Binding Type2Icon}" Width="18" Height="18"
-                                                                               IsVisible="{Binding HasType2Icon}"
-                                                                               ToolTip.Tip="{Binding Type2Name}"/>
-                                                                    </StackPanel>
-                                                                    <StackPanel Orientation="Horizontal" Spacing="5">
-                                                                        <TextBlock Text="{Binding AbilityName}" FontSize="10"
-                                                                                   Classes="secondary"
-                                                                                   TextTrimming="CharacterEllipsis"/>
-                                                                        <TextBlock Text="★" FontSize="9"
-                                                                                   IsVisible="{Binding AbilityMatters}"
-                                                                                   Foreground="{DynamicResource LegalFgBrush}"
-                                                                                   ToolTip.Tip="This ability changes incoming damage and is included in the analysis."
-                                                                                   VerticalAlignment="Center"/>
-                                                                    </StackPanel>
-                                                                    <TextBlock Text="{Binding WeakTo, StringFormat='weak to {0}'}"
-                                                                               FontSize="9" Classes="secondary"
-                                                                               TextWrapping="Wrap"/>
+                                                            <Grid ColumnDefinitions="*,*" ColumnSpacing="14">
 
-                                                                    <!-- Known moves, with type symbol and damage category -->
-                                                                    <ItemsControl ItemsSource="{Binding Moves}"
-                                                                                  IsVisible="{Binding HasMoves}"
-                                                                                  Margin="0,3,0,0">
+                                                                <!-- Left: identity, then matchups by multiplier -->
+                                                                <StackPanel Grid.Column="0" Spacing="7">
+                                                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                                                        <Panel Grid.Column="0" Width="72" Height="72"
+                                                                               VerticalAlignment="Top">
+                                                                            <Image Source="{Binding Artwork}" Stretch="Uniform"
+                                                                                   RenderOptions.BitmapInterpolationMode="HighQuality"/>
+                                                                        </Panel>
+                                                                        <StackPanel Grid.Column="1" Spacing="3"
+                                                                                    VerticalAlignment="Center">
+                                                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                                <TextBlock Text="{Binding SpeciesName}" FontSize="14"
+                                                                                           FontWeight="Bold"/>
+                                                                                <TextBlock Text="{Binding LevelText}" FontSize="10"
+                                                                                           Classes="secondary"
+                                                                                           VerticalAlignment="Center"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                                                <Image Source="{Binding Type1Icon}" Width="20" Height="20"
+                                                                                       IsVisible="{Binding HasType1Icon}"
+                                                                                       ToolTip.Tip="{Binding Type1Name}"/>
+                                                                                <Image Source="{Binding Type2Icon}" Width="20" Height="20"
+                                                                                       IsVisible="{Binding HasType2Icon}"
+                                                                                       ToolTip.Tip="{Binding Type2Name}"/>
+                                                                            </StackPanel>
+                                                                            <StackPanel Orientation="Horizontal" Spacing="5">
+                                                                                <TextBlock Text="{Binding AbilityName}" FontSize="10"
+                                                                                           Classes="secondary"
+                                                                                           TextTrimming="CharacterEllipsis"/>
+                                                                                <TextBlock Text="★" FontSize="9"
+                                                                                           IsVisible="{Binding AbilityMatters}"
+                                                                                           Foreground="{DynamicResource LegalFgBrush}"
+                                                                                           VerticalAlignment="Center"
+                                                                                           ToolTip.Tip="This ability changes incoming damage and is included below."/>
+                                                                            </StackPanel>
+                                                                        </StackPanel>
+                                                                    </Grid>
+
+                                                                    <StackPanel Spacing="3" IsVisible="{Binding HasResistances}">
+                                                                        <TextBlock Text="Resistances" FontSize="11"
+                                                                                   FontWeight="SemiBold"/>
+                                                                        <ItemsControl ItemsSource="{Binding Resistances}">
+                                                                            <ItemsControl.ItemTemplate>
+                                                                                <DataTemplate x:DataType="vm:MatchupGroupViewModel">
+                                                                                    <StackPanel Orientation="Horizontal" Spacing="6"
+                                                                                                Margin="0,0,0,3"
+                                                                                                ToolTip.Tip="{Binding Tooltip}">
+                                                                                        <Border Width="30" Height="30"
+                                                                                                CornerRadius="15"
+                                                                                                Background="{DynamicResource SurfaceMutedBrush}">
+                                                                                            <TextBlock Text="{Binding Label}" FontSize="10"
+                                                                                                       FontWeight="SemiBold"
+                                                                                                       Foreground="{Binding LabelBrush}"
+                                                                                                       HorizontalAlignment="Center"
+                                                                                                       VerticalAlignment="Center"/>
+                                                                                        </Border>
+                                                                                        <ItemsControl ItemsSource="{Binding Types}">
+                                                                                            <ItemsControl.ItemsPanel>
+                                                                                                <ItemsPanelTemplate>
+                                                                                                    <WrapPanel Orientation="Horizontal"/>
+                                                                                                </ItemsPanelTemplate>
+                                                                                            </ItemsControl.ItemsPanel>
+                                                                                            <ItemsControl.ItemTemplate>
+                                                                                                <DataTemplate x:DataType="vm:TypeBadgeViewModel">
+                                                                                                    <Panel Margin="0,1,3,1"
+                                                                                                           ToolTip.Tip="{Binding TypeName}">
+                                                                                                        <Image Source="{Binding Icon}"
+                                                                                                               Width="26" Height="26"
+                                                                                                               IsVisible="{Binding HasIcon}"/>
+                                                                                                        <Border Width="26" Height="26"
+                                                                                                                CornerRadius="13"
+                                                                                                                Background="{Binding Brush}"
+                                                                                                                IsVisible="{Binding !HasIcon}"/>
+                                                                                                    </Panel>
+                                                                                                </DataTemplate>
+                                                                                            </ItemsControl.ItemTemplate>
+                                                                                        </ItemsControl>
+                                                                                    </StackPanel>
+                                                                                </DataTemplate>
+                                                                            </ItemsControl.ItemTemplate>
+                                                                        </ItemsControl>
+                                                                    </StackPanel>
+
+                                                                    <StackPanel Spacing="3" IsVisible="{Binding HasWeaknesses}">
+                                                                        <TextBlock Text="Weaknesses" FontSize="11"
+                                                                                   FontWeight="SemiBold"/>
+                                                                        <ItemsControl ItemsSource="{Binding Weaknesses}">
+                                                                            <ItemsControl.ItemTemplate>
+                                                                                <DataTemplate x:DataType="vm:MatchupGroupViewModel">
+                                                                                    <StackPanel Orientation="Horizontal" Spacing="6"
+                                                                                                Margin="0,0,0,3"
+                                                                                                ToolTip.Tip="{Binding Tooltip}">
+                                                                                        <Border Width="30" Height="30"
+                                                                                                CornerRadius="15"
+                                                                                                Background="{DynamicResource SurfaceMutedBrush}">
+                                                                                            <TextBlock Text="{Binding Label}" FontSize="10"
+                                                                                                       FontWeight="SemiBold"
+                                                                                                       Foreground="{Binding LabelBrush}"
+                                                                                                       HorizontalAlignment="Center"
+                                                                                                       VerticalAlignment="Center"/>
+                                                                                        </Border>
+                                                                                        <ItemsControl ItemsSource="{Binding Types}">
+                                                                                            <ItemsControl.ItemsPanel>
+                                                                                                <ItemsPanelTemplate>
+                                                                                                    <WrapPanel Orientation="Horizontal"/>
+                                                                                                </ItemsPanelTemplate>
+                                                                                            </ItemsControl.ItemsPanel>
+                                                                                            <ItemsControl.ItemTemplate>
+                                                                                                <DataTemplate x:DataType="vm:TypeBadgeViewModel">
+                                                                                                    <Panel Margin="0,1,3,1"
+                                                                                                           ToolTip.Tip="{Binding TypeName}">
+                                                                                                        <Image Source="{Binding Icon}"
+                                                                                                               Width="26" Height="26"
+                                                                                                               IsVisible="{Binding HasIcon}"/>
+                                                                                                        <Border Width="26" Height="26"
+                                                                                                                CornerRadius="13"
+                                                                                                                Background="{Binding Brush}"
+                                                                                                                IsVisible="{Binding !HasIcon}"/>
+                                                                                                    </Panel>
+                                                                                                </DataTemplate>
+                                                                                            </ItemsControl.ItemTemplate>
+                                                                                        </ItemsControl>
+                                                                                    </StackPanel>
+                                                                                </DataTemplate>
+                                                                            </ItemsControl.ItemTemplate>
+                                                                        </ItemsControl>
+                                                                    </StackPanel>
+                                                                </StackPanel>
+
+                                                                <!-- Right: moves, laid out as on the Moves tab -->
+                                                                <StackPanel Grid.Column="1" Spacing="4"
+                                                                            IsVisible="{Binding HasMoves}">
+                                                                    <TextBlock Text="Moves" FontSize="11" FontWeight="SemiBold"/>
+                                                                    <ItemsControl ItemsSource="{Binding Moves}">
                                                                         <ItemsControl.ItemTemplate>
                                                                             <DataTemplate x:DataType="vm:MoveChoice">
-                                                                                <Grid ColumnDefinitions="18,18,*"
-                                                                                      ColumnSpacing="5" Margin="0,0,0,4">
-                                                                                    <Image Grid.Column="0"
-                                                                                           Source="{Binding TypeIcon}"
-                                                                                           Width="16" Height="16"
-                                                                                           IsVisible="{Binding HasTypeIcon}"
-                                                                                           VerticalAlignment="Center"
-                                                                                           ToolTip.Tip="{Binding TypeName}"/>
-                                                                                    <ctrl:MoveCategoryIcon Grid.Column="1"
+                                                                                <Grid ColumnDefinitions="*,24,24,30,32"
+                                                                                      ColumnSpacing="6" Margin="0,0,0,4">
+                                                                                    <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                                                                               FontSize="11" MinWidth="60"
+                                                                                               VerticalAlignment="Center"
+                                                                                               TextTrimming="CharacterEllipsis"/>
+                                                                                    <Panel Grid.Column="1">
+                                                                                        <Image Source="{Binding TypeIcon}"
+                                                                                               Width="20" Height="20"
+                                                                                               IsVisible="{Binding HasTypeIcon}"
+                                                                                               ToolTip.Tip="{Binding TypeName}"/>
+                                                                                        <!-- Stellar has no symbol; fall back to the chip -->
+                                                                                        <Border Classes="chip" Padding="5,2" MinHeight="17"
+                                                                                                Background="{Binding TypeBrush}"
+                                                                                                IsVisible="{Binding !HasTypeIcon}">
+                                                                                            <TextBlock Text="{Binding TypeName}" FontSize="9"
+                                                                                                       FontWeight="SemiBold" Foreground="White"/>
+                                                                                        </Border>
+                                                                                    </Panel>
+                                                                                    <ctrl:MoveCategoryIcon Grid.Column="2"
                                                                                             Category="{Binding CategoryKind}"
-                                                                                            Width="16" Height="16"
+                                                                                            Width="20" Height="20"
                                                                                             HorizontalAlignment="Center"
                                                                                             VerticalAlignment="Center"/>
-                                                                                    <StackPanel Grid.Column="2" Spacing="0"
-                                                                                                VerticalAlignment="Center">
-                                                                                        <TextBlock Text="{Binding Name}"
-                                                                                                   FontSize="10"
-                                                                                                   TextTrimming="CharacterEllipsis"/>
-                                                                                        <TextBlock Text="{Binding StatLine}"
-                                                                                                   FontSize="9"
-                                                                                                   Classes="secondary"
-                                                                                                   TextTrimming="CharacterEllipsis"/>
-                                                                                    </StackPanel>
+                                                                                    <TextBlock Grid.Column="3" Text="{Binding PowerText}"
+                                                                                               FontSize="10" Classes="secondary"
+                                                                                               VerticalAlignment="Center"
+                                                                                               TextAlignment="Center"
+                                                                                               ToolTip.Tip="Base power"/>
+                                                                                    <TextBlock Grid.Column="4" Text="{Binding AccuracyText}"
+                                                                                               FontSize="10" Classes="secondary"
+                                                                                               VerticalAlignment="Center"
+                                                                                               TextAlignment="Center"
+                                                                                               ToolTip.Tip="Accuracy"/>
                                                                                 </Grid>
                                                                             </DataTemplate>
                                                                         </ItemsControl.ItemTemplate>
