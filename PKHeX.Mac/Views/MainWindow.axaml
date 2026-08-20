@@ -669,12 +669,15 @@
                                         Background="{DynamicResource SurfaceMutedBrush}">
                                     <StackPanel Spacing="6">
                                         <TextBlock Text="{Binding PouchSummary}" FontSize="11" Classes="secondary"/>
-                                        <Grid ColumnDefinitions="Auto,72,Auto,Auto,Auto" ColumnSpacing="6">
+                                        <Grid ColumnDefinitions="Auto,116,Auto,Auto,Auto" ColumnSpacing="6">
                                             <TextBlock Grid.Column="0" Text="Give all @" FontSize="11" Classes="secondary"
                                                        VerticalAlignment="Center"/>
-                                            <NumericUpDown Grid.Column="1" Value="{Binding GiveAllCount, Mode=TwoWay}"
+                                            <!-- Wide enough that the spinner buttons don't crush the text field -->
+                                            <NumericUpDown Grid.Column="1" MinWidth="112"
+                                                           Value="{Binding GiveAllCount, Mode=TwoWay}"
                                                            Minimum="1" Maximum="{Binding MaxCount}" FormatString="0"
-                                                           Increment="1" FontSize="11"/>
+                                                           Increment="1" FontSize="11"
+                                                           HorizontalContentAlignment="Right"/>
                                             <Button Grid.Column="2" Content="Give all" FontSize="11" Padding="8,3"
                                                     Command="{Binding GiveAllItemsCommand}"/>
                                             <Button Grid.Column="3" Content="Sort A–Z" FontSize="11" Padding="8,3"
