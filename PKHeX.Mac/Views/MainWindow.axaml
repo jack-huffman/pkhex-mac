@@ -132,16 +132,16 @@
                             <TextBlock Classes="sectionTitle" Text="SAVE" Margin="6,4,0,4"/>
                             <Button Classes="nav" Classes.selected="{Binding IsSaveView}"
                                     Command="{Binding SetViewCommand}" CommandParameter="save"
-                                    Content="👤  Trainer &amp; Bag"/>
+                                    Content="Trainer &amp; Bag"/>
                             <Button Classes="nav" Classes.selected="{Binding IsDexView}"
                                     Command="{Binding SetViewCommand}" CommandParameter="dex"
-                                    Content="📖  Pokédex"/>
+                                    Content="Pokédex"/>
                             <Button Classes="nav" Classes.selected="{Binding IsToolsView}"
                                     Command="{Binding SetViewCommand}" CommandParameter="tools"
-                                    Content="🛠  Tools"/>
+                                    Content="Tools"/>
                             <Button Classes="nav" Classes.selected="{Binding IsFlagsView}"
                                     Command="{Binding SetViewCommand}" CommandParameter="flags"
-                                    Content="🚩  Flags &amp; Blocks"/>
+                                    Content="Flags &amp; Blocks"/>
 
                         </StackPanel>
 
@@ -583,7 +583,7 @@
                                     <!-- '!' does not null-check an object binding; use the converter -->
                                     <StackPanel VerticalAlignment="Center" Spacing="8"
                                                 IsVisible="{Binding SelectedRow, Converter={x:Static ObjectConverters.IsNull}}">
-                                        <TextBlock Text="📖" FontSize="30" HorizontalAlignment="Center" Opacity="0.3"/>
+                                        <TextBlock Text="◓" FontSize="30" HorizontalAlignment="Center" Opacity="0.3"/>
                                         <TextBlock Text="Select a species to see everything the dex records for it"
                                                    FontSize="12" Classes="secondary" HorizontalAlignment="Center"
                                                    TextAlignment="Center" TextWrapping="Wrap"/>
@@ -992,10 +992,10 @@
                                     <TextBlock Text="This slot is empty — fill it from a database, or drop a .pk file onto it."
                                                FontSize="11" Classes="secondary" HorizontalAlignment="Center"
                                                TextAlignment="Center" TextWrapping="Wrap"/>
-                                    <Button Content="✚   Add Pokémon from Database" Classes="accent"
+                                    <Button Content="Add Pokémon from Database" Classes="accent"
                                             HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                                             Command="{Binding SetViewCommand}" CommandParameter="add"/>
-                                    <Button Content="🎁   Mystery Gift Database"
+                                    <Button Content="Mystery Gift Database"
                                             HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                                             Command="{Binding SetViewCommand}" CommandParameter="gifts"/>
                                 </StackPanel>
