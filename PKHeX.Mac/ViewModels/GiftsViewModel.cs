@@ -272,7 +272,9 @@ public partial class GiftTileViewModel : ObservableObject
         IsAddable = isAddable;
         LevelText = gift.IsEgg ? "Egg" : $"Lv. {gift.Level}";
         OriginText = $"Gen {Generation} · {GameName}";
-        Sprite = SpriteService.GetSprite(gift.Species, gift.Form, gift.Gender, 0, gift.IsShiny, gift.Context);
+        Sprite = gift.IsEgg
+            ? SpriteService.GetEggSprite(slot: true)
+            : SpriteService.GetSprite(gift.Species, gift.Form, gift.Gender, 0, gift.IsShiny, gift.Context);
         ShinyOverlay = gift.IsShiny ? SpriteService.GetOverlay("rare_icon") : null;
         Description = string.IsNullOrWhiteSpace(CardTitle) ? speciesName : $"{speciesName} — {CardTitle}";
         ToolTipText = $"{Description}\n{LevelText} · {OriginText}"

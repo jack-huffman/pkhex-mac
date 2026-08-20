@@ -31,13 +31,34 @@ public static class SpriteService
         (ushort)Species.Frillish, (ushort)Species.Jellicent, (ushort)Species.Pyroar,
     ];
 
-    public static Bitmap? GetPokemonSprite(PKM pk) =>
-        pk.Species == 0 ? null : GetSprite(pk.Species, pk.Form, pk.Gender, pk is IFormArgument fa ? fa.FormArgument : 0, pk.IsShiny, pk.Context);
+    public static Bitmap? GetPokemonSprite(PKM pk)
+    {
+        if (pk.Species == 0)
+            return null;
+        // An egg shows as an egg, whatever is inside it.
+        if (pk.IsEgg)
+            return GetEggSprite(slot: true);
+        return GetSprite(pk.Species, pk.Form, pk.Gender, pk is IFormArgument fa ? fa.FormArgument : 0, pk.IsShiny, pk.Context);
+    }
+
+    /// <summary>
+    /// The egg image. Prefers the 128px Pokémon HOME icon over PKHeX's 68x56 one;
+    /// the slot variant is scaled down so it sits like every other box sprite.
+    /// </summary>
+    public static Bitmap? GetEggSprite(bool slot)
+    {
+        var home = Load("egg-home.png");
+        if (home is null)
+            return Load(slot ? "big/b_egg.png" : "artwork/a_egg.png");
+        return slot ? ScaleToSlot(home, "egg:slot") : home;
+    }
 
     public static Bitmap? GetPokemonArtwork(PKM pk)
     {
         if (pk.Species == 0)
             return null;
+        if (pk.IsEgg)
+            return GetEggSprite(slot: false);
         // Prefer the 512x512 HOME renders when present on disk. Alternate forms
         // resolve through the PokeAPI name->id map (forms.json); named base forms
         // (Maushold "Family of Three") also resolve there, so try the form lookup
