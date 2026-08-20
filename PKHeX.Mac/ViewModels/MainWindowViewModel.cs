@@ -36,9 +36,11 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private BagViewModel? _bag;
     [ObservableProperty] private AddPokemonViewModel? _addDb;
     [ObservableProperty] private GiftsViewModel? _giftDb;
+    [ObservableProperty] private PokedexViewModel? _dex;
 
     public bool IsBoxesView => CurrentView == "boxes";
     public bool IsSaveView => CurrentView == "save";
+    public bool IsDexView => CurrentView == "dex";
     public bool IsAddView => CurrentView == "add";
     public bool IsGiftsView => CurrentView == "gifts";
     public bool IsDatabaseView => IsAddView || IsGiftsView;
@@ -61,12 +63,13 @@ public partial class MainWindowViewModel : ViewModelBase
 
     /// <summary>Collapses the inspector column for the full-width Save view.</summary>
     public Avalonia.Controls.GridLength InspectorWidth =>
-        IsSaveView ? new Avalonia.Controls.GridLength(0) : new Avalonia.Controls.GridLength(438);
+        IsSaveView || IsDexView ? new Avalonia.Controls.GridLength(0) : new Avalonia.Controls.GridLength(438);
 
     partial void OnCurrentViewChanged(string value)
     {
         OnPropertyChanged(nameof(IsBoxesView));
         OnPropertyChanged(nameof(IsSaveView));
+        OnPropertyChanged(nameof(IsDexView));
         OnPropertyChanged(nameof(IsAddView));
         OnPropertyChanged(nameof(IsGiftsView));
         OnPropertyChanged(nameof(IsDatabaseView));
@@ -90,6 +93,12 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             StatusText = "Select an empty slot in a box first — that's where the Pokémon will go.";
             return;
+        }
+        if (view == "dex" && Dex is null && _sav is not null)
+        {
+            StatusText = "Loading the Pokédex…";
+            Dex = new PokedexViewModel(_sav, _strings, () =>
+                StatusText = "Pokédex updated. Remember to export the save (⌘S).");
         }
         if (view == "gifts" && GiftDb is null && _sav is not null)
         {
