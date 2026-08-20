@@ -1148,8 +1148,19 @@
                                                     <TextBlock Classes="fieldLabel" Text="Ball"/>
                                                     <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding BallChoices}"
                                                               SelectedValue="{Binding BallValue, Mode=TwoWay}"
-                                                              SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
-                                                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                                                              SelectedValueBinding="{Binding Value, x:DataType=vm:BallChoice}">
+                                                        <ComboBox.ItemTemplate>
+                                                            <DataTemplate x:DataType="vm:BallChoice">
+                                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                                    <Image Source="{Binding Sprite}" Width="20" Height="20"
+                                                                           VerticalAlignment="Center"
+                                                                           RenderOptions.BitmapInterpolationMode="HighQuality"/>
+                                                                    <TextBlock Text="{Binding Name}" FontSize="13"
+                                                                               VerticalAlignment="Center"/>
+                                                                </StackPanel>
+                                                            </DataTemplate>
+                                                        </ComboBox.ItemTemplate>
+                                                    </ComboBox>
                                                 </StackPanel>
                                                 <StackPanel>
                                                     <TextBlock Classes="fieldLabel" Text="Language"/>
