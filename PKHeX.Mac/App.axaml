@@ -189,12 +189,6 @@
             <Setter Property="Content" Value="▼"/>
         </Style>
 
-        <!-- Multi-selected storage slots -->
-        <Style Selector="Border.slot.multi">
-            <Setter Property="BorderBrush" Value="{DynamicResource MeterEvBrush}"/>
-            <Setter Property="Background" Value="{DynamicResource SlotHoverBrush}"/>
-        </Style>
-
         <!-- Sidebar navigation buttons -->
         <Style Selector="Button.nav">
             <Setter Property="Background" Value="Transparent"/>

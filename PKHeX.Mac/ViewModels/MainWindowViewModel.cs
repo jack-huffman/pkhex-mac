@@ -652,157 +652,16 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     // =====================================================================
-    // Multi-selection
-    // =====================================================================
-
-    private readonly List<SlotViewModel> _multiSelection = [];
-    private int _selectionAnchor = -1;
-
-    [ObservableProperty] private int _multiSelectCount;
-    [ObservableProperty] private bool _hasMultiSelection;
-
-    /// <summary>
-    /// Extends the selection from the anchor slot to <paramref name="slot"/> (shift-click).
-    /// </summary>
-    public void SelectRangeTo(SlotViewModel slot)
-    {
-        if (slot.IsParty || _selectionAnchor < 0)
-        {
-            ToggleInSelection(slot);
-            return;
-        }
-        ClearMultiSelection();
-        var (from, to) = _selectionAnchor <= slot.Slot ? (_selectionAnchor, slot.Slot) : (slot.Slot, _selectionAnchor);
-        for (int i = from; i <= to && i < BoxSlots.Count; i++)
-        {
-            BoxSlots[i].IsMultiSelected = true;
-            _multiSelection.Add(BoxSlots[i]);
-        }
-        RefreshMultiSelectionState();
-    }
-
-    /// <summary>Adds or removes a single slot from the selection (⌘-click).</summary>
-    public void ToggleInSelection(SlotViewModel slot)
-    {
-        if (slot.IsParty)
-            return;
-        if (slot.IsMultiSelected)
-        {
-            slot.IsMultiSelected = false;
-            _multiSelection.Remove(slot);
-        }
-        else
-        {
-            slot.IsMultiSelected = true;
-            _multiSelection.Add(slot);
-            _selectionAnchor = slot.Slot;
-        }
-        RefreshMultiSelectionState();
-    }
-
-    public void SetSelectionAnchor(SlotViewModel slot)
-    {
-        if (!slot.IsParty)
-            _selectionAnchor = slot.Slot;
-    }
-
-    [RelayCommand]
-    public void ClearMultiSelection()
-    {
-        foreach (var s in _multiSelection)
-            s.IsMultiSelected = false;
-        _multiSelection.Clear();
-        RefreshMultiSelectionState();
-    }
-
-    private void RefreshMultiSelectionState()
-    {
-        MultiSelectCount = _multiSelection.Count;
-        HasMultiSelection = MultiSelectCount > 0;
-    }
-
-    /// <summary>The occupied slots currently multi-selected, ordered by slot index.</summary>
-    private List<SlotViewModel> SelectedOccupied() =>
-        _multiSelection.Where(s => !s.IsEmpty).OrderBy(s => s.Slot).ToList();
-
-    [RelayCommand]
-    public void DeleteSelected()
-    {
-        if (_sav is null || _multiSelection.Count == 0)
-            return;
-        var n = 0;
-        foreach (var slot in SelectedOccupied())
-        {
-            _sav.SetBoxSlotAtIndex(_sav.BlankPKM, CurrentBox, slot.Slot);
-            n++;
-        }
-        ClearMultiSelection();
-        RefreshSlotViews();
-        Detail.Load(null);
-        StatusText = $"Deleted {n} Pokémon from {CurrentBoxName}.";
-    }
-
-    /// <summary>Moves every selected Pokémon into the first free slots of another box.</summary>
-    public void MoveSelectionToBox(int targetBox)
-    {
-        if (_sav is null || !_sav.HasBox || (uint)targetBox >= _sav.BoxCount || targetBox == CurrentBox)
-            return;
-        var moved = 0;
-        foreach (var slot in SelectedOccupied())
-        {
-            var pk = _sav.GetBoxSlotAtIndex(CurrentBox, slot.Slot);
-            if (pk.Species == 0)
-                continue;
-            var empty = -1;
-            for (int i = 0; i < _sav.BoxSlotCount; i++)
-            {
-                if (_sav.GetBoxSlotAtIndex(targetBox, i).Species == 0)
-                {
-                    empty = i;
-                    break;
-                }
-            }
-            if (empty < 0)
-                break; // target full
-            var clone = pk.Clone();
-            clone.RefreshChecksum();
-            _sav.SetBoxSlotAtIndex(clone, targetBox, empty);
-            _sav.SetBoxSlotAtIndex(_sav.BlankPKM, CurrentBox, slot.Slot);
-            moved++;
-        }
-        ClearMultiSelection();
-        RefreshSlotViews();
-        var boxName = (uint)targetBox < BoxNames.Count ? BoxNames[targetBox] : $"Box {targetBox + 1}";
-        StatusText = moved == 0 ? $"{boxName} is full." : $"Moved {moved} Pokémon to {boxName}.";
-    }
-
-    [RelayCommand]
-    public void SelectWholeBox()
-    {
-        ClearMultiSelection();
-        foreach (var slot in BoxSlots.Where(s => !s.IsEmpty))
-        {
-            slot.IsMultiSelected = true;
-            _multiSelection.Add(slot);
-        }
-        RefreshMultiSelectionState();
-    }
-
-    // =====================================================================
     // Folder import / export
     // =====================================================================
 
-    /// <summary>Writes every Pokémon in the current box (or the selection) to a folder.</summary>
-    public int DumpToFolder(string folder, bool selectionOnly)
+    /// <summary>Writes every Pokémon in the current box to a folder.</summary>
+    public int DumpToFolder(string folder)
     {
         if (_sav is null || !_sav.HasBox)
             return 0;
         var written = 0;
-        var slots = selectionOnly && _multiSelection.Count > 0
-            ? SelectedOccupied().Select(s => s.Slot)
-            : Enumerable.Range(0, _sav.BoxSlotCount);
-
-        foreach (var index in slots)
+        for (int index = 0; index < _sav.BoxSlotCount; index++)
         {
             var pk = _sav.GetBoxSlotAtIndex(CurrentBox, index);
             if (pk.Species == 0)

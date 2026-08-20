@@ -133,21 +133,6 @@ public partial class MainWindow : Window
         var point = e.GetCurrentPoint(this);
         if (point.Properties.IsLeftButtonPressed)
         {
-            // Shift extends a range, Cmd toggles one slot; a plain click resets.
-            var mods = e.KeyModifiers;
-            if (mods.HasFlag(KeyModifiers.Shift))
-            {
-                VM.SelectRangeTo(slot);
-                return;
-            }
-            if (mods.HasFlag(KeyModifiers.Meta))
-            {
-                VM.ToggleInSelection(slot);
-                return;
-            }
-
-            VM.ClearMultiSelection();
-            VM.SetSelectionAnchor(slot);
             VM.SelectSlot(slot);
             if (!slot.IsEmpty)
             {
@@ -453,11 +438,10 @@ public partial class MainWindow : Window
         _dragOverBoxIndex = VM.BoxNames.IndexOf(name);
     }
 
-    public void OnDumpBoxClicked(object? sender, EventArgs e) => _ = DumpBoxAsync(selectionOnly: false);
-    public void OnDumpSelectionClicked(object? sender, RoutedEventArgs e) => _ = DumpBoxAsync(selectionOnly: true);
+    public void OnDumpBoxClicked(object? sender, EventArgs e) => _ = DumpBoxAsync();
     public void OnLoadFolderClicked(object? sender, EventArgs e) => _ = LoadFolderAsync();
 
-    private async Task DumpBoxAsync(bool selectionOnly)
+    private async Task DumpBoxAsync()
     {
         if (VM.SAV is null)
         {
@@ -466,12 +450,12 @@ public partial class MainWindow : Window
         }
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
-            Title = selectionOnly ? "Export Selected Pokémon To…" : "Export Box To…",
+            Title = "Export Box To…",
             AllowMultiple = false,
         });
         if (folders.Count == 0 || folders[0].TryGetLocalPath() is not { } dir)
             return;
-        var written = VM.DumpToFolder(dir, selectionOnly);
+        var written = VM.DumpToFolder(dir);
         if (written == 0)
             await ShowError("Nothing Exported", "There were no Pokémon to write.");
     }

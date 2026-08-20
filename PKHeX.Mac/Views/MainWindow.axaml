@@ -58,7 +58,6 @@
         <DataTemplate x:Key="SlotTemplate" x:DataType="vm:SlotViewModel">
             <Border Classes="slot" Classes.selected="{Binding IsSelected}"
                     Classes.dragover="{Binding IsDragOver}"
-                    Classes.multi="{Binding IsMultiSelected}"
                     Width="94" Height="82"
                     PointerPressed="OnSlotPressed"
                     PointerMoved="OnSlotPointerMoved"
@@ -269,24 +268,6 @@
                                     </Border>
                                 </StackPanel>
 
-                                <!-- Multi-selection actions -->
-                                <Border Classes="card" Padding="10" IsVisible="{Binding HasMultiSelection}">
-                                    <DockPanel>
-                                        <TextBlock DockPanel.Dock="Left" VerticalAlignment="Center" FontSize="12">
-                                            <Run Text="{Binding MultiSelectCount}"/><Run Text=" selected"/>
-                                        </TextBlock>
-                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8"
-                                                    HorizontalAlignment="Right">
-                                            <Button Content="Export selected…" FontSize="11" Padding="8,3"
-                                                    Click="OnDumpSelectionClicked"/>
-                                            <Button Content="Delete" FontSize="11" Padding="8,3"
-                                                    Command="{Binding DeleteSelectedCommand}"/>
-                                            <Button Content="Clear selection" FontSize="11" Padding="8,3"
-                                                    Command="{Binding ClearMultiSelectionCommand}"/>
-                                        </StackPanel>
-                                    </DockPanel>
-                                </Border>
-
                                 <!-- Box card -->
                                 <Border Classes="card" Padding="12">
                                     <StackPanel Spacing="8">
@@ -298,10 +279,6 @@
                                                        HorizontalAlignment="Center" VerticalAlignment="Center"/>
                                             <Button Grid.Column="2" Content="›" FontSize="15" Padding="10,2"
                                                     Command="{Binding NextBoxCommand}"/>
-                                            <Button Grid.Column="1" Content="Select all" FontSize="10" Padding="8,2"
-                                                    HorizontalAlignment="Right"
-                                                    ToolTip.Tip="Select every Pokémon in this box (⇧-click or ⌘-click slots to adjust)"
-                                                    Command="{Binding SelectWholeBoxCommand}"/>
                                         </Grid>
                                         <ItemsControl ItemsSource="{Binding BoxSlots}" HorizontalAlignment="Center"
                                                       ItemTemplate="{StaticResource SlotTemplate}">
