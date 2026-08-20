@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
@@ -495,6 +496,22 @@ public partial class MainWindow : Window
                 skipped > 0
                     ? $"None of the {skipped} file(s) could be read as Pokémon for this save."
                     : "That folder contains no Pokémon files.");
+    }
+
+    /// <summary>
+    /// Expands a Pokédex row when its body is clicked. Clicks that land on the row's
+    /// own controls (the caret, Caught, Shiny) are left to those controls.
+    /// </summary>
+    private void OnDexRowPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (sender is not Control { DataContext: DexRowViewModel row } || !row.SupportsDetail)
+            return;
+        for (var v = e.Source as Avalonia.Visual; v is not null && v != sender; v = v.GetVisualParent())
+        {
+            if (v is CheckBox or ToggleButton)
+                return;
+        }
+        row.IsExpanded = !row.IsExpanded;
     }
 
     private void OnCopyReportClicked(object? sender, RoutedEventArgs e)

@@ -476,7 +476,7 @@
                                        Text="This save format does not expose an editable Pokédex."
                                        Classes="fieldLabel"/>
 
-                            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto"
+                            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto"
                                   ColumnSpacing="10" Margin="0,0,0,12" IsVisible="{Binding IsSupported}">
                                 <TextBox Grid.Column="0" Text="{Binding SearchText, Mode=TwoWay}"
                                          Watermark="Search by name or number…"/>
@@ -492,6 +492,8 @@
                                         Command="{Binding CompleteDexCommand}"/>
                                 <Button Grid.Column="5" Content="Clear all" FontSize="12"
                                         Command="{Binding ClearDexCommand}"/>
+                                <Button Grid.Column="6" Content="Collapse all" FontSize="12"
+                                        Command="{Binding CollapseAllCommand}"/>
                             </Grid>
 
                             <!-- ListBox virtualizes, so all ~1000 entries stay responsive -->
@@ -499,8 +501,10 @@
                                 <ListBox.ItemTemplate>
                                     <DataTemplate x:DataType="vm:DexRowViewModel">
                                         <StackPanel>
-                                            <!-- Collapsed summary; the arrow toggles the detail panel -->
-                                            <Grid ColumnDefinitions="24,62,44,*,70,80,90" ColumnSpacing="10">
+                                            <!-- Clicking anywhere on the row (except its checkboxes) expands it -->
+                                            <Grid ColumnDefinitions="24,62,44,*,70,80,90" ColumnSpacing="10"
+                                                  Background="Transparent" Cursor="Hand"
+                                                  PointerPressed="OnDexRowPressed">
                                                 <ToggleButton Grid.Column="0" Classes="disclose"
                                                               IsChecked="{Binding IsExpanded, Mode=TwoWay}"
                                                               IsVisible="{Binding SupportsDetail}"/>

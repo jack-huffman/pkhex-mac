@@ -80,14 +80,12 @@ public partial class PokedexViewModel : ObservableObject
     internal SaveFile Save => _sav;
     internal GameStrings Strings => _strings;
 
-    /// <summary>Only one row's detail is open at a time, like a disclosure list.</summary>
-    internal void CollapseOthers(DexRowViewModel keep)
+    /// <summary>Collapses every open detail panel.</summary>
+    [RelayCommand]
+    public void CollapseAll()
     {
-        foreach (var row in _all)
-        {
-            if (!ReferenceEquals(row, keep) && row.IsExpanded)
-                row.IsExpanded = false;
-        }
+        foreach (var row in _all.Where(r => r.IsExpanded))
+            row.IsExpanded = false;
     }
 
     internal void Write(ushort species, bool value)
@@ -213,7 +211,6 @@ public partial class DexRowViewModel : ObservableObject
     {
         if (!value)
             return;
-        _parent.CollapseOthers(this);
         BuildDetail();
     }
 
