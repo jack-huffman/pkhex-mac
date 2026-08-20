@@ -796,10 +796,11 @@
                     <Border Grid.Column="2" Background="{DynamicResource SidebarBrush}"
                             BorderBrush="{DynamicResource HairlineBrush}" BorderThickness="1,0,0,0">
                     <DockPanel>
-                    <!-- Matches the sidebar's title-bar strip so content lines up -->
-                    <Border DockPanel.Dock="Top" Height="46" Background="Transparent"
+                    <!-- Slim drag handle. The traffic lights sit over the sidebar, so this
+                         column needs no full title-bar strip — just enough to grab. -->
+                    <Border DockPanel.Dock="Top" Height="18" Background="Transparent"
                             PointerPressed="OnHeaderPressed"/>
-                    <Panel Margin="14,14,14,14">
+                    <Panel Margin="14,8,14,14">
                         <!-- Database mode: browser on top, live preview + add below -->
                         <Grid RowDefinitions="*,Auto" RowSpacing="8" IsVisible="{Binding IsDatabaseView}">
                             <Panel Grid.Row="0">
