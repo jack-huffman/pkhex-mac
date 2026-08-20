@@ -243,7 +243,8 @@
                             <!-- Empty state -->
                             <StackPanel IsVisible="{Binding !HasSave}" HorizontalAlignment="Center"
                                         Spacing="10" Margin="0,170,0,0">
-                                <TextBlock Text="◓" FontSize="52" HorizontalAlignment="Center" Opacity="0.35"/>
+                                <ctrl:PokeBallIcon Width="58" Height="58" HorizontalAlignment="Center" Opacity="0.35"
+                                                   Stroke="{DynamicResource TextSecondaryBrush}"/>
                                 <TextBlock Text="PKHeX for Mac" FontSize="26" FontWeight="Bold" HorizontalAlignment="Center"/>
                                 <TextBlock Text="Open a decrypted save file (⌘O) or drop one anywhere in this window"
                                            FontSize="13" Classes="secondary" HorizontalAlignment="Center"/>
@@ -583,7 +584,8 @@
                                     <!-- '!' does not null-check an object binding; use the converter -->
                                     <StackPanel VerticalAlignment="Center" Spacing="8"
                                                 IsVisible="{Binding SelectedRow, Converter={x:Static ObjectConverters.IsNull}}">
-                                        <TextBlock Text="◓" FontSize="30" HorizontalAlignment="Center" Opacity="0.3"/>
+                                        <ctrl:PokeBallIcon Width="36" Height="36" HorizontalAlignment="Center" Opacity="0.4"
+                                                   Stroke="{DynamicResource TextSecondaryBrush}"/>
                                         <TextBlock Text="Select a species to see everything the dex records for it"
                                                    FontSize="12" Classes="secondary" HorizontalAlignment="Center"
                                                    TextAlignment="Center" TextWrapping="Wrap"/>
@@ -979,7 +981,8 @@
 
                         <Border Classes="card" IsVisible="{Binding IsBoxesView}">
                             <StackPanel VerticalAlignment="Center" Spacing="8" IsVisible="{Binding !Detail.HasPokemon}">
-                                <TextBlock Text="◓" FontSize="34" HorizontalAlignment="Center" Opacity="0.25"/>
+                                <ctrl:PokeBallIcon Width="42" Height="42" HorizontalAlignment="Center" Opacity="0.35"
+                                           Stroke="{DynamicResource TextSecondaryBrush}"/>
 
                                 <!-- Nothing selected -->
                                 <TextBlock Text="Select a Pokémon" FontSize="13" Classes="secondary"

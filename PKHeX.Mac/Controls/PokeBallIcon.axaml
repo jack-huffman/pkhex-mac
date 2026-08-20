@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ctrl="using:PKHeX.Mac.Controls"
+             x:Class="PKHeX.Mac.Controls.PokeBallIcon"
+             x:Name="Root">
+    <!-- Outline-style Poké Ball, drawn as vectors so it scales cleanly and takes
+         its colour from the surrounding text. The band stops either side of the
+         centre button so no fill is needed — it reads correctly on any background. -->
+    <Viewbox Stretch="Uniform">
+        <Canvas Width="100" Height="100">
+            <!-- Shell -->
+            <Ellipse Canvas.Left="5" Canvas.Top="5" Width="90" Height="90"
+                     Stroke="{Binding #Root.Stroke}" StrokeThickness="8"/>
+
+            <!-- Band, split around the button -->
+            <Rectangle Canvas.Left="7" Canvas.Top="46" Width="27" Height="8"
+                       Fill="{Binding #Root.Stroke}"/>
+            <Rectangle Canvas.Left="66" Canvas.Top="46" Width="27" Height="8"
+                       Fill="{Binding #Root.Stroke}"/>
+
+            <!-- Button -->
+            <Ellipse Canvas.Left="36" Canvas.Top="36" Width="28" Height="28"
+                     Stroke="{Binding #Root.Stroke}" StrokeThickness="8"/>
+        </Canvas>
+    </Viewbox>
+</UserControl>
