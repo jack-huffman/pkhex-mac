@@ -262,8 +262,7 @@
                                                 <NumericUpDown Grid.Column="1" MinWidth="140"
                                                                Value="{Binding Value, Mode=TwoWay}"
                                                                Minimum="0" Maximum="99999" FormatString="0"
-                                                               Increment="1" FontSize="{StaticResource FontBody}"
-                                                               HorizontalContentAlignment="Right"/>
+                                                               Increment="1"/>
                                             </Grid>
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>

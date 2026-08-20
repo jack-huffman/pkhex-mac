@@ -177,6 +177,17 @@
             <Setter Property="Minimum" Value="0"/>
             <Setter Property="Maximum" Value="100"/>
         </Style>
+        <!-- Numeric fields. The control has a wide intrinsic minimum and the spinner
+             buttons will crush the text portion inside a narrow cell, which has caused
+             two visible layout bugs. A floor here fixes it once for all 39 of them;
+             sites needing more room still set their own larger MinWidth. Numbers are
+             right-aligned so digits line up column to column. -->
+        <Style Selector="NumericUpDown">
+            <Setter Property="MinWidth" Value="100"/>
+            <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
+            <Setter Property="HorizontalContentAlignment" Value="Right"/>
+        </Style>
+
         <Style Selector="TextBox.statNum">
             <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
             <Setter Property="MinHeight" Value="22"/>

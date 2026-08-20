@@ -64,9 +64,7 @@ public static class SpriteService
         // (Maushold "Family of Three") also resolve there, so try the form lookup
         // first and fall back to the species-indexed render.
         var hires = LoadHiResForm(pk.Species, pk.Form, pk.Context, pk.IsShiny)
-            ?? (pk.Form == 0 || DefaultFormSprite.Contains(pk.Species) || CanUseBaseRenderForForm(pk.Species)
-                ? LoadHiRes(pk.Species, pk.IsShiny)
-                : null);
+            ?? (PrefersFormArtwork(pk.Species, pk.Form) ? null : LoadHiRes(pk.Species, pk.IsShiny));
         if (hires is not null)
             return hires;
         return GetSprite(pk.Species, pk.Form, pk.Gender, pk is IFormArgument fa ? fa.FormArgument : 0, pk.IsShiny, pk.Context, artwork: true);
@@ -146,25 +144,22 @@ public static class SpriteService
     }
 
     /// <summary>
-    /// Species whose alternate forms change the Pokémon's actual shape or identity
-    /// (not just a colour accent). PokeAPI has no per-form HOME render for these, so
-    /// falling back to the base-species render would show the wrong creature —
-    /// PKHeX's own form-accurate (low-res) artwork is the better answer there.
-    /// Every other gap (Flabébé/Floette/Florges flowers, Alcremie creams, Vivillon
-    /// patterns, Deerling seasons, Furfrou trims…) is cosmetic, so the crisp
-    /// base render wins.
+    /// Whether a form with no dedicated render should fall back to form-accurate
+    /// low-resolution art rather than the crisp base-species render.
     /// </summary>
-    private static readonly HashSet<ushort> FormIsStructural =
-    [
-        (ushort)Species.Unown, (ushort)Species.Arceus, (ushort)Species.Silvally,
-        (ushort)Species.Genesect, (ushort)Species.Koraidon, (ushort)Species.Miraidon,
-        (ushort)Species.Cherrim, (ushort)Species.Burmy, (ushort)Species.Mothim,
-    ];
-
-    /// <summary>
-    /// True when a form with no dedicated render may borrow the base-species render.
-    /// </summary>
-    public static bool CanUseBaseRenderForForm(ushort species) => !FormIsStructural.Contains(species);
+    /// <remarks>
+    /// This used to prefer the base render for anything the appearance change was
+    /// merely "cosmetic" — flower colours, Vivillon patterns, Alcremie creams, Furfrou
+    /// trims. That reasoning was wrong for a save editor: the flower colour *is* how you
+    /// tell one Flabébé from another, so five identical red renders are less useful than
+    /// five correct smaller ones. Correct beats crisp.
+    ///
+    /// The exception is <see cref="DefaultFormSprite"/> — species whose forms genuinely
+    /// share one appearance, where the base render is not a compromise but the right
+    /// image.
+    /// </remarks>
+    public static bool PrefersFormArtwork(ushort species, byte form) =>
+        form != 0 && !DefaultFormSprite.Contains(species);
 
     private static Bitmap? LoadHiResForm(ushort species, byte form, EntityContext context, bool shiny)
     {
@@ -370,9 +365,7 @@ public static class SpriteService
         // For alternate forms only a correctly-mapped form render is acceptable;
         // base-species art would show the wrong appearance in the box.
         var full = LoadHiResForm(species, form, context, shiny)
-            ?? (form == 0 || DefaultFormSprite.Contains(species) || CanUseBaseRenderForForm(species)
-                ? LoadHiRes(species, shiny)
-                : null);
+            ?? (PrefersFormArtwork(species, form) ? null : LoadHiRes(species, shiny));
         return ScaleToSlot(full, $"hr:{species}:{form}:{shiny}");
     }
 

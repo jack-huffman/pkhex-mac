@@ -1141,19 +1141,19 @@
                                                         <StackPanel Grid.Column="0">
                                                             <TextBlock Classes="fieldLabel" Text="Height"/>
                                                             <NumericUpDown Value="{Binding HeightScalar, Mode=TwoWay}" Minimum="0"
-                                                                           Maximum="255" FormatString="0" Increment="1" FontSize="{StaticResource FontBody}"/>
+                                                                           Maximum="255" FormatString="0" Increment="1"/>
                                                         </StackPanel>
                                                         <StackPanel Grid.Column="1">
                                                             <TextBlock Classes="fieldLabel" Text="Weight"/>
                                                             <NumericUpDown Value="{Binding WeightScalar, Mode=TwoWay}" Minimum="0"
-                                                                           Maximum="255" FormatString="0" Increment="1" FontSize="{StaticResource FontBody}"/>
+                                                                           Maximum="255" FormatString="0" Increment="1"/>
                                                         </StackPanel>
                                                     </Grid>
                                                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" IsVisible="{Binding SupportsScale}">
                                                         <StackPanel Grid.Column="0">
                                                             <TextBlock Classes="fieldLabel" Text="Scale (drives Jumbo / Mini marks)"/>
                                                             <NumericUpDown Value="{Binding Scale, Mode=TwoWay}" Minimum="0"
-                                                                           Maximum="255" FormatString="0" Increment="1" FontSize="{StaticResource FontBody}"/>
+                                                                           Maximum="255" FormatString="0" Increment="1"/>
                                                         </StackPanel>
                                                         <Button Grid.Column="1" Content="Random" FontSize="{StaticResource FontBody}" Padding="8,3"
                                                                 VerticalAlignment="Bottom" Command="{Binding RandomizeScaleCommand}"/>
@@ -1604,27 +1604,27 @@
                                                     <Grid ColumnDefinitions="*,*" ColumnSpacing="8" RowDefinitions="Auto,Auto,Auto" RowSpacing="6">
                                                         <StackPanel Grid.Row="0" Grid.Column="0">
                                                             <TextBlock Classes="fieldLabel" Text="Cool"/>
-                                                            <NumericUpDown Value="{Binding ContestCool, Mode=TwoWay}" Minimum="0" Maximum="255" FormatString="0" Increment="5" FontSize="{StaticResource FontBody}"/>
+                                                            <NumericUpDown Value="{Binding ContestCool, Mode=TwoWay}" Minimum="0" Maximum="255" FormatString="0" Increment="5"/>
                                                         </StackPanel>
                                                         <StackPanel Grid.Row="0" Grid.Column="1">
                                                             <TextBlock Classes="fieldLabel" Text="Beauty"/>
-                                                            <NumericUpDown Value="{Binding ContestBeauty, Mode=TwoWay}" Minimum="0" Maximum="255" FormatString="0" Increment="5" FontSize="{StaticResource FontBody}"/>
+                                                            <NumericUpDown Value="{Binding ContestBeauty, Mode=TwoWay}" Minimum="0" Maximum="255" FormatString="0" Increment="5"/>
                                                         </StackPanel>
                                                         <StackPanel Grid.Row="1" Grid.Column="0">
                                                             <TextBlock Classes="fieldLabel" Text="Cute"/>
-                                                            <NumericUpDown Value="{Binding ContestCute, Mode=TwoWay}" Minimum="0" Maximum="255" FormatString="0" Increment="5" FontSize="{StaticResource FontBody}"/>
+                                                            <NumericUpDown Value="{Binding ContestCute, Mode=TwoWay}" Minimum="0" Maximum="255" FormatString="0" Increment="5"/>
                                                         </StackPanel>
                                                         <StackPanel Grid.Row="1" Grid.Column="1">
                                                             <TextBlock Classes="fieldLabel" Text="Smart"/>
-                                                            <NumericUpDown Value="{Binding ContestSmart, Mode=TwoWay}" Minimum="0" Maximum="255" FormatString="0" Increment="5" FontSize="{StaticResource FontBody}"/>
+                                                            <NumericUpDown Value="{Binding ContestSmart, Mode=TwoWay}" Minimum="0" Maximum="255" FormatString="0" Increment="5"/>
                                                         </StackPanel>
                                                         <StackPanel Grid.Row="2" Grid.Column="0">
                                                             <TextBlock Classes="fieldLabel" Text="Tough"/>
-                                                            <NumericUpDown Value="{Binding ContestTough, Mode=TwoWay}" Minimum="0" Maximum="255" FormatString="0" Increment="5" FontSize="{StaticResource FontBody}"/>
+                                                            <NumericUpDown Value="{Binding ContestTough, Mode=TwoWay}" Minimum="0" Maximum="255" FormatString="0" Increment="5"/>
                                                         </StackPanel>
                                                         <StackPanel Grid.Row="2" Grid.Column="1">
                                                             <TextBlock Classes="fieldLabel" Text="Sheen"/>
-                                                            <NumericUpDown Value="{Binding ContestSheen, Mode=TwoWay}" Minimum="0" Maximum="255" FormatString="0" Increment="5" FontSize="{StaticResource FontBody}"/>
+                                                            <NumericUpDown Value="{Binding ContestSheen, Mode=TwoWay}" Minimum="0" Maximum="255" FormatString="0" Increment="5"/>
                                                         </StackPanel>
                                                     </Grid>
                                                 </StackPanel>
@@ -1688,7 +1688,7 @@
                                                                 <TextBlock Grid.Column="0" FontSize="{StaticResource FontBody}" VerticalAlignment="Center"
                                                                            Text="{Binding DisplayName}"
                                                                            IsVisible="{Binding IsCounter}"/>
-                                                                <NumericUpDown Grid.Column="1" FontSize="{StaticResource FontBody}" ShowButtonSpinner="False"
+                                                                <NumericUpDown Grid.Column="1" ShowButtonSpinner="False"
                                                                                Value="{Binding Count, Mode=TwoWay}" Minimum="0"
                                                                                Maximum="{Binding MaxCount}" FormatString="0"
                                                                                IsVisible="{Binding IsCounter}"/>

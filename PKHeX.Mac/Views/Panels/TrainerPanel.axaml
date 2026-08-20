@@ -114,8 +114,7 @@
                             <NumericUpDown Grid.Column="1" MinWidth="112"
                                            Value="{Binding GiveAllCount, Mode=TwoWay}"
                                            Minimum="1" Maximum="{Binding MaxCount}" FormatString="0"
-                                           Increment="1" FontSize="{StaticResource FontBody}"
-                                           HorizontalContentAlignment="Right"/>
+                                           Increment="1"/>
                             <Button Grid.Column="2" Content="Give all" FontSize="{StaticResource FontBody}" Padding="8,3"
                                     Command="{Binding GiveAllItemsCommand}"/>
                             <Button Grid.Column="3" Content="Sort A–Z" FontSize="{StaticResource FontBody}" Padding="8,3"
@@ -151,7 +150,7 @@
                                                VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                     <NumericUpDown Grid.Column="2" Value="{Binding Count, Mode=TwoWay}"
                                                    Minimum="0" Maximum="{Binding MaxCount}" FormatString="0"
-                                                   Increment="1" FontSize="{StaticResource FontBody}" HorizontalContentAlignment="Right"/>
+                                                   Increment="1"/>
                                 </Grid>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
@@ -290,16 +289,16 @@
                     <Grid ColumnDefinitions="Auto,120,Auto,120" ColumnSpacing="8">
                         <TextBlock Grid.Column="0" Text="BBQs solo" FontSize="{StaticResource FontBody}"
                                    Classes="secondary" VerticalAlignment="Center"/>
-                        <NumericUpDown Grid.Column="1" MinWidth="112" FontSize="{StaticResource FontBody}"
+                        <NumericUpDown Grid.Column="1" MinWidth="112"
                                        Value="{Binding QuestsSolo, Mode=TwoWay}"
                                        Minimum="0" Maximum="9999999" FormatString="0"
-                                       Increment="1" HorizontalContentAlignment="Right"/>
+                                       Increment="1"/>
                         <TextBlock Grid.Column="2" Text="in a group" FontSize="{StaticResource FontBody}"
                                    Classes="secondary" VerticalAlignment="Center" Margin="8,0,0,0"/>
-                        <NumericUpDown Grid.Column="3" MinWidth="112" FontSize="{StaticResource FontBody}"
+                        <NumericUpDown Grid.Column="3" MinWidth="112"
                                        Value="{Binding QuestsGroup, Mode=TwoWay}"
                                        Minimum="0" Maximum="9999999" FormatString="0"
-                                       Increment="1" HorizontalContentAlignment="Right"/>
+                                       Increment="1"/>
                     </Grid>
                     <TextBlock FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
                                Text="Everything the clubs can sell you, bought with Blueberry Points. The three baseball-club rows are what make the extra ball-throwing styles selectable; art and music club rows unlock room décor and albums."/>
@@ -354,10 +353,10 @@
                                                    TextTrimming="CharacterEllipsis"/>
                                         <TextBlock Text="{Binding IdText}" FontSize="{StaticResource FontMicro}" Classes="secondary"/>
                                     </StackPanel>
-                                    <NumericUpDown Grid.Column="1" MinWidth="140" FontSize="{StaticResource FontBody}"
+                                    <NumericUpDown Grid.Column="1" MinWidth="140"
                                                    Value="{Binding Value, Mode=TwoWay}"
                                                    Minimum="0" Maximum="999999999" FormatString="0"
-                                                   Increment="1" HorizontalContentAlignment="Right"/>
+                                                   Increment="1"/>
                                     <TextBlock Grid.Column="2" Text="{Binding MaxText}" FontSize="{StaticResource FontMicro}"
                                                Classes="secondary" VerticalAlignment="Center"/>
                                 </Grid>

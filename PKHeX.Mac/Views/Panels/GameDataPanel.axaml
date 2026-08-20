@@ -76,11 +76,10 @@
                                                                         IsVisible="{Binding HasExperience}">
                                                                 <TextBlock Text="Banked EXP" FontSize="{StaticResource FontBody}"
                                                                            Classes="secondary" VerticalAlignment="Center"/>
-                                                                <NumericUpDown MinWidth="130" FontSize="{StaticResource FontBody}"
+                                                                <NumericUpDown MinWidth="130"
                                                                                Value="{Binding Experience, Mode=TwoWay}"
                                                                                Minimum="0" Maximum="9999999"
-                                                                               FormatString="0" Increment="1"
-                                                                               HorizontalContentAlignment="Right"/>
+                                                                               FormatString="0" Increment="1"/>
                                                             </StackPanel>
                                                         </StackPanel>
                                                     </StackPanel>

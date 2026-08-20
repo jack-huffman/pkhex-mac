@@ -55,15 +55,15 @@
                     <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="6">
                         <TextBlock Grid.Column="0" Text="Lv" FontSize="{StaticResource FontBody}" Classes="secondary" VerticalAlignment="Center"/>
                         <NumericUpDown Grid.Column="1" Value="{Binding MinLevel, Mode=TwoWay}" Minimum="1" Maximum="100"
-                                       FormatString="0" Increment="1" FontSize="{StaticResource FontBody}" ShowButtonSpinner="False"/>
+                                       FormatString="0" Increment="1" ShowButtonSpinner="False"/>
                         <TextBlock Grid.Column="2" Text="to" FontSize="{StaticResource FontBody}" Classes="secondary" VerticalAlignment="Center"/>
                         <NumericUpDown Grid.Column="3" Value="{Binding MaxLevel, Mode=TwoWay}" Minimum="1" Maximum="100"
-                                       FormatString="0" Increment="1" FontSize="{StaticResource FontBody}" ShowButtonSpinner="False"/>
+                                       FormatString="0" Increment="1" ShowButtonSpinner="False"/>
                     </Grid>
                     <Grid Grid.Row="1" Grid.Column="2" ColumnDefinitions="Auto,*" ColumnSpacing="6">
                         <TextBlock Grid.Column="0" Text="Min IV total" FontSize="{StaticResource FontBody}" Classes="secondary" VerticalAlignment="Center"/>
                         <NumericUpDown Grid.Column="1" Value="{Binding MinIvTotal, Mode=TwoWay}" Minimum="0" Maximum="186"
-                                       FormatString="0" Increment="6" FontSize="{StaticResource FontBody}" ShowButtonSpinner="False"/>
+                                       FormatString="0" Increment="6" ShowButtonSpinner="False"/>
                     </Grid>
                     <StackPanel Grid.Row="1" Grid.Column="3" Orientation="Horizontal" Spacing="6">
                         <ComboBox HorizontalAlignment="Stretch" Width="86" FontSize="{StaticResource FontBody}"
