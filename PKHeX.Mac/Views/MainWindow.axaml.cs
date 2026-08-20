@@ -105,6 +105,9 @@ public partial class MainWindow : Window
 
     // ---- Reverting ----
 
+    /// <summary>Leaves a database view without having to click a box slot to escape it.</summary>
+    public void OnCloseDatabaseClicked(object? sender, RoutedEventArgs e) => VM.SetView("boxes");
+
     public void OnRevertAllClicked(object? sender, RoutedEventArgs e) => VM.RequestRevert();
 
     public void OnRevertAllMenuClicked(object? sender, EventArgs e) => VM.RequestRevert();

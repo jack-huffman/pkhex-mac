@@ -40,8 +40,9 @@ public partial class AddPokemonViewModel : ObservableObject
 
     partial void OnSelectedSpeciesChanged(SpeciesChoice? value)
     {
-        if (value is not null)
-            SpeciesValue = value.Value;
+        // Clearing the field must clear the results with it. Species 0 falls through to
+        // OnSpeciesValueChanged, which empties the encounter list and the preview.
+        SpeciesValue = value?.Value ?? 0;
     }
     public ObservableCollection<string> EncounterDescriptions { get; } = [];
 

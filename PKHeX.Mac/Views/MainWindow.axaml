@@ -2500,8 +2500,16 @@
                     <!-- ══════ Add Pokémon view ══════ -->
                     <Border IsVisible="{Binding IsAddView}">
                         <DockPanel DataContext="{Binding AddDb}" x:DataType="vm:AddPokemonViewModel">
-                            <TextBlock DockPanel.Dock="Top" Text="Add Pokémon from Encounter Database"
-                                       FontSize="{StaticResource FontTitle}" FontWeight="Bold" Margin="0,0,0,10"/>
+                            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
+                                <Button DockPanel.Dock="Right" Content="✕" Padding="8,2"
+                                        FontSize="{StaticResource FontBody}"
+                                        Background="Transparent"
+                                        ToolTip.Tip="Close the encounter database"
+                                        Click="OnCloseDatabaseClicked"/>
+                                <TextBlock Text="Add Pokémon from Encounter Database"
+                                           FontSize="{StaticResource FontTitle}" FontWeight="Bold"
+                                           VerticalAlignment="Center"/>
+                            </DockPanel>
                             <StackPanel DockPanel.Dock="Top" Spacing="8">
                                 <StackPanel>
                                     <TextBlock Classes="fieldLabel" Text="Species"/>
@@ -2541,6 +2549,11 @@
                             <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
                                 <TextBlock DockPanel.Dock="Left" Text="Mystery Gift Database"
                                            FontSize="{StaticResource FontTitle}" FontWeight="Bold" VerticalAlignment="Center"/>
+                                <Button DockPanel.Dock="Right" Content="✕" Padding="8,2"
+                                        FontSize="{StaticResource FontBody}"
+                                        Background="Transparent" Margin="8,0,0,0"
+                                        ToolTip.Tip="Close the gift database"
+                                        Click="OnCloseDatabaseClicked"/>
                                 <TextBlock DockPanel.Dock="Right" Text="{Binding ResultSummary}" FontSize="{StaticResource FontBody}"
                                            Classes="secondary" VerticalAlignment="Center" HorizontalAlignment="Right"/>
                             </DockPanel>
