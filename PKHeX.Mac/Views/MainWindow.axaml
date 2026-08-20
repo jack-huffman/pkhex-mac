@@ -1762,6 +1762,90 @@
                             </DockPanel>
                             </TabItem>
 
+                            <TabItem Header="Integrity">
+                            <DockPanel DataContext="{Binding Integrity}" x:DataType="vm:IntegrityAuditViewModel"
+                                       Margin="2,8,2,2">
+                                <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,12">
+                                    <TextBlock FontSize="12" Classes="secondary" TextWrapping="Wrap"
+                                               Text="Compares every stored Pokémon against every other one. PKHeX checks legality one Pokémon at a time, so it cannot see two of them sharing an identifier that is meant to be unique — this can."/>
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Button Content="Run audit" Classes="accent" FontSize="12"
+                                                IsEnabled="{Binding !IsRunning}"
+                                                Command="{Binding RunCommand}"/>
+                                        <Button Content="Stop" FontSize="12"
+                                                IsVisible="{Binding IsRunning}"
+                                                Command="{Binding CancelCommand}"/>
+                                        <CheckBox Content="Include informational" FontSize="12"
+                                                  IsChecked="{Binding IncludeInformational, Mode=TwoWay}"
+                                                  VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Summary}" FontSize="12" FontWeight="SemiBold"
+                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <ScrollViewer>
+                                    <ItemsControl ItemsSource="{Binding Findings}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:AuditFindingViewModel">
+                                                <Border Classes="card" Padding="14" Margin="0,0,0,10">
+                                                    <StackPanel Spacing="7">
+                                                        <StackPanel Orientation="Horizontal" Spacing="10">
+                                                            <Border CornerRadius="4" Padding="6,2"
+                                                                    Background="{DynamicResource SurfaceMutedBrush}"
+                                                                    VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding Severity}" FontSize="9"
+                                                                           FontWeight="Bold"
+                                                                           Foreground="{Binding SeverityBrush}"/>
+                                                            </Border>
+                                                            <TextBlock Text="{Binding Title}" FontSize="14"
+                                                                       FontWeight="Bold" VerticalAlignment="Center"
+                                                                       TextWrapping="Wrap"/>
+                                                        </StackPanel>
+                                                        <TextBlock Text="{Binding Detail}" FontSize="11"
+                                                                   Classes="secondary" TextWrapping="Wrap"/>
+
+                                                        <ItemsControl ItemsSource="{Binding Entries}" Margin="0,3,0,0">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate>
+                                                                    <WrapPanel Orientation="Horizontal"/>
+                                                                </ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:AuditEntryViewModel">
+                                                                    <Border CornerRadius="8" Padding="8,6" Margin="0,0,6,6"
+                                                                            Background="{DynamicResource SurfaceMutedBrush}">
+                                                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                                                            <Image Grid.Column="0" Source="{Binding Sprite}"
+                                                                                   Width="38" Height="32"
+                                                                                   RenderOptions.BitmapInterpolationMode="None"/>
+                                                                            <StackPanel Grid.Column="1" Spacing="0"
+                                                                                        VerticalAlignment="Center">
+                                                                                <TextBlock Text="{Binding Species}" FontSize="12"
+                                                                                           FontWeight="SemiBold"/>
+                                                                                <TextBlock Text="{Binding Location}" FontSize="9"
+                                                                                           Classes="secondary"/>
+                                                                                <TextBlock Text="{Binding Detail}" FontSize="9"
+                                                                                           Classes="secondary"
+                                                                                           FontFamily="Menlo, monospace"/>
+                                                                            </StackPanel>
+                                                                        </Grid>
+                                                                    </Border>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+
+                                                        <TextBlock Text="{Binding Overflow}" FontSize="10"
+                                                                   Classes="secondary"
+                                                                   IsVisible="{Binding HasOverflow}"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </DockPanel>
+                            </TabItem>
+
                             <TabItem Header="Box Report">
                                 <DockPanel Margin="2,8,2,2">
                                     <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10"

@@ -28,6 +28,7 @@ public partial class ToolsViewModel : ObservableObject
         _onChanged = onChanged;
         Team = new TeamAnalysisViewModel(sav, strings);
         Breeding = new BreedingViewModel(sav, strings);
+        Integrity = new IntegrityAuditViewModel(sav, strings);
         BuildReport();
     }
 
@@ -36,6 +37,9 @@ public partial class ToolsViewModel : ObservableObject
 
     /// <summary>Egg groups, egg moves and which partners can pass them.</summary>
     public BreedingViewModel Breeding { get; }
+
+    /// <summary>Cross-entity checks PKHeX's per-Pokémon legality cannot make.</summary>
+    public IntegrityAuditViewModel Integrity { get; }
 
     // =====================================================================
     // Batch editor
