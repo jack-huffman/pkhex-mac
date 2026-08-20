@@ -253,16 +253,20 @@
 
                             <StackPanel IsVisible="{Binding HasSave}" Spacing="14">
                                 <!-- Party -->
-                                <StackPanel IsVisible="{Binding HasParty}">
-                                    <TextBlock Classes="sectionTitle" Text="PARTY"/>
-                                    <ItemsControl ItemsSource="{Binding PartySlots}" HorizontalAlignment="Left"
-                                                  ItemTemplate="{StaticResource SlotTemplate}">
-                                        <ItemsControl.ItemsPanel>
-                                            <ItemsPanelTemplate>
-                                                <StackPanel Orientation="Horizontal"/>
-                                            </ItemsPanelTemplate>
-                                        </ItemsControl.ItemsPanel>
-                                    </ItemsControl>
+                                <!-- Party sits in a card with the same padding and a 6-column grid,
+                                     so its slots line up with the box grid below. -->
+                                <StackPanel IsVisible="{Binding HasParty}" Spacing="6">
+                                    <TextBlock Classes="sectionTitle" Text="PARTY" Margin="4,0,0,0"/>
+                                    <Border Classes="card" Padding="12">
+                                        <ItemsControl ItemsSource="{Binding PartySlots}" HorizontalAlignment="Center"
+                                                      ItemTemplate="{StaticResource SlotTemplate}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <UniformGrid Columns="6"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                        </ItemsControl>
+                                    </Border>
                                 </StackPanel>
 
                                 <!-- Multi-selection actions -->
@@ -476,7 +480,7 @@
                                        Text="This save format does not expose an editable Pokédex."
                                        Classes="fieldLabel"/>
 
-                            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto"
+                            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto"
                                   ColumnSpacing="10" Margin="0,0,0,12" IsVisible="{Binding IsSupported}">
                                 <TextBox Grid.Column="0" Text="{Binding SearchText, Mode=TwoWay}"
                                          Watermark="Search by name or number…"/>
@@ -492,107 +496,227 @@
                                         Command="{Binding CompleteDexCommand}"/>
                                 <Button Grid.Column="5" Content="Clear all" FontSize="12"
                                         Command="{Binding ClearDexCommand}"/>
-                                <Button Grid.Column="6" Content="Collapse all" FontSize="12"
-                                        Command="{Binding CollapseAllCommand}"/>
                             </Grid>
 
-                            <!-- ListBox virtualizes, so all ~1000 entries stay responsive -->
-                            <ListBox Classes="plain" ItemsSource="{Binding Rows}" IsVisible="{Binding IsSupported}">
+                            <Grid ColumnDefinitions="*,420" ColumnSpacing="14" IsVisible="{Binding IsSupported}">
+                            <!-- ListBox virtualizes; rows stay a fixed height so scrolling is stable -->
+                            <ListBox Grid.Column="0" ItemsSource="{Binding Rows}"
+                                     SelectedItem="{Binding SelectedRow, Mode=TwoWay}">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate x:DataType="vm:DexRowViewModel">
-                                        <StackPanel>
-                                            <!-- Clicking anywhere on the row (except its checkboxes) expands it -->
-                                            <Grid ColumnDefinitions="24,62,44,*,70,80,90" ColumnSpacing="10"
-                                                  Background="Transparent" Cursor="Hand"
-                                                  PointerPressed="OnDexRowPressed">
-                                                <ToggleButton Grid.Column="0" Classes="disclose"
-                                                              IsChecked="{Binding IsExpanded, Mode=TwoWay}"
-                                                              IsVisible="{Binding SupportsDetail}"/>
-                                                <TextBlock Grid.Column="1" Text="{Binding NumberText}" FontSize="11"
-                                                           Classes="secondary" VerticalAlignment="Center"
-                                                           FontFamily="Menlo, monospace"/>
-                                                <Image Grid.Column="2" Source="{Binding Sprite}" Width="40" Height="34"
-                                                       RenderOptions.BitmapInterpolationMode="None"/>
-                                                <TextBlock Grid.Column="3" Text="{Binding Name}" FontSize="13"
-                                                           VerticalAlignment="Center"/>
-                                                <TextBlock Grid.Column="4" Text="Seen" FontSize="11" Classes="secondary"
-                                                           VerticalAlignment="Center" IsVisible="{Binding Seen}"/>
-                                                <CheckBox Grid.Column="5" Content="★" FontSize="12"
-                                                          ToolTip.Tip="Shiny registered"
-                                                          IsVisible="{Binding SupportsDetail}"
-                                                          IsChecked="{Binding ShinySeen, Mode=TwoWay}"/>
-                                                <CheckBox Grid.Column="6" Content="Caught" FontSize="12"
-                                                          IsChecked="{Binding Caught, Mode=TwoWay}"/>
-                                            </Grid>
-
-                                            <!-- Everything the game stores for this species -->
-                                            <Border IsVisible="{Binding IsExpanded}" CornerRadius="10" Padding="12"
-                                                    Margin="34,8,0,6"
-                                                    Background="{DynamicResource SurfaceMutedBrush}">
-                                                <StackPanel Spacing="10">
-                                                    <TextBlock Text="{Binding DetailNote}" FontSize="10"
-                                                               Classes="secondary" TextWrapping="Wrap"/>
-
-                                                    <StackPanel Spacing="4">
-                                                        <TextBlock Classes="sectionTitle" Text="FORMS" Margin="0"/>
-                                                        <ItemsControl ItemsSource="{Binding Forms}">
-                                                            <ItemsControl.ItemTemplate>
-                                                                <DataTemplate x:DataType="vm:DexFormRowViewModel">
-                                                                    <Grid ColumnDefinitions="200,90,100" ColumnSpacing="10" Margin="0,1">
-                                                                        <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="12"
-                                                                                   VerticalAlignment="Center"
-                                                                                   TextTrimming="CharacterEllipsis"/>
-                                                                        <CheckBox Grid.Column="1" Content="Seen" FontSize="11"
-                                                                                  IsChecked="{Binding Seen, Mode=TwoWay}"/>
-                                                                        <CheckBox Grid.Column="2" Content="Obtained" FontSize="11"
-                                                                                  IsChecked="{Binding Obtained, Mode=TwoWay}"/>
-                                                                    </Grid>
-                                                                </DataTemplate>
-                                                            </ItemsControl.ItemTemplate>
-                                                        </ItemsControl>
-                                                    </StackPanel>
-
-                                                    <StackPanel Spacing="4">
-                                                        <TextBlock Classes="sectionTitle" Text="GENDERS SEEN" Margin="0"/>
-                                                        <ItemsControl ItemsSource="{Binding Genders}">
-                                                            <ItemsControl.ItemsPanel>
-                                                                <ItemsPanelTemplate>
-                                                                    <StackPanel Orientation="Horizontal" Spacing="16"/>
-                                                                </ItemsPanelTemplate>
-                                                            </ItemsControl.ItemsPanel>
-                                                            <ItemsControl.ItemTemplate>
-                                                                <DataTemplate x:DataType="vm:DexFlagViewModel">
-                                                                    <CheckBox Content="{Binding Label}" FontSize="11"
-                                                                              IsChecked="{Binding Value, Mode=TwoWay}"/>
-                                                                </DataTemplate>
-                                                            </ItemsControl.ItemTemplate>
-                                                        </ItemsControl>
-                                                    </StackPanel>
-
-                                                    <StackPanel Spacing="4" IsVisible="{Binding HasLanguages}">
-                                                        <TextBlock Classes="sectionTitle" Text="LANGUAGES OBTAINED" Margin="0"/>
-                                                        <ItemsControl ItemsSource="{Binding Languages}">
-                                                            <ItemsControl.ItemsPanel>
-                                                                <ItemsPanelTemplate>
-                                                                    <WrapPanel/>
-                                                                </ItemsPanelTemplate>
-                                                            </ItemsControl.ItemsPanel>
-                                                            <ItemsControl.ItemTemplate>
-                                                                <DataTemplate x:DataType="vm:DexFlagViewModel">
-                                                                    <CheckBox Content="{Binding Label}" FontSize="11"
-                                                                              Margin="0,0,16,2"
-                                                                              IsChecked="{Binding Value, Mode=TwoWay}"/>
-                                                                </DataTemplate>
-                                                            </ItemsControl.ItemTemplate>
-                                                        </ItemsControl>
-                                                    </StackPanel>
-                                                </StackPanel>
-                                            </Border>
-                                        </StackPanel>
+                                        <Grid ColumnDefinitions="62,44,*,70,50,80" ColumnSpacing="10">
+                                            <TextBlock Grid.Column="0" Text="{Binding NumberText}" FontSize="11"
+                                                       Classes="secondary" VerticalAlignment="Center"
+                                                       FontFamily="Menlo, monospace"/>
+                                            <Image Grid.Column="1" Source="{Binding Sprite}" Width="40" Height="34"
+                                                   RenderOptions.BitmapInterpolationMode="None"/>
+                                            <TextBlock Grid.Column="2" Text="{Binding Name}" FontSize="13"
+                                                       VerticalAlignment="Center"/>
+                                            <TextBlock Grid.Column="3" Text="Seen" FontSize="11" Classes="secondary"
+                                                       VerticalAlignment="Center" IsVisible="{Binding Seen}"/>
+                                            <CheckBox Grid.Column="4" Content="★" FontSize="12"
+                                                      ToolTip.Tip="Shiny registered"
+                                                      IsVisible="{Binding SupportsDetail}"
+                                                      IsChecked="{Binding ShinySeen, Mode=TwoWay}"/>
+                                            <CheckBox Grid.Column="5" Content="Caught" FontSize="12"
+                                                      IsChecked="{Binding Caught, Mode=TwoWay}"/>
+                                        </Grid>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
                             </ListBox>
+
+                            <!-- Detail pane: fixed position, so selecting never disturbs the list -->
+                            <Border Grid.Column="1" Classes="card" Padding="14" VerticalAlignment="Stretch">
+                                <Panel>
+                                    <StackPanel VerticalAlignment="Center" Spacing="8"
+                                                IsVisible="{Binding !SelectedRow}">
+                                        <TextBlock Text="📖" FontSize="30" HorizontalAlignment="Center" Opacity="0.3"/>
+                                        <TextBlock Text="Select a species to see everything the dex records for it"
+                                                   FontSize="12" Classes="secondary" HorizontalAlignment="Center"
+                                                   TextAlignment="Center" TextWrapping="Wrap"/>
+                                    </StackPanel>
+
+                                    <ScrollViewer IsVisible="{Binding SelectedRow, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                        <StackPanel DataContext="{Binding SelectedRow}" x:DataType="vm:DexRowViewModel"
+                                                    Spacing="12">
+                                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                                <Image Source="{Binding Sprite}" Width="56" Height="48"
+                                                       RenderOptions.BitmapInterpolationMode="None"/>
+                                                <StackPanel VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Name}" FontSize="17" FontWeight="Bold"/>
+                                                    <TextBlock Text="{Binding NumberText}" FontSize="11"
+                                                               Classes="secondary" FontFamily="Menlo, monospace"/>
+                                                </StackPanel>
+                                            </StackPanel>
+
+                                            <TextBlock Text="{Binding DetailNote}" FontSize="10" Classes="secondary"
+                                                       TextWrapping="Wrap"/>
+
+                                            <StackPanel Spacing="4">
+                                                <TextBlock Classes="sectionTitle" Text="FORMS" Margin="0"/>
+                                                <ItemsControl ItemsSource="{Binding Forms}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:DexFormRowViewModel">
+                                                            <Grid ColumnDefinitions="*,74,92" ColumnSpacing="8" Margin="0,1">
+                                                                <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="12"
+                                                                           VerticalAlignment="Center"
+                                                                           TextTrimming="CharacterEllipsis"/>
+                                                                <CheckBox Grid.Column="1" Content="Seen" FontSize="11"
+                                                                          IsChecked="{Binding Seen, Mode=TwoWay}"/>
+                                                                <CheckBox Grid.Column="2" Content="Obtained" FontSize="11"
+                                                                          IsChecked="{Binding Obtained, Mode=TwoWay}"/>
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+
+                                            <StackPanel Spacing="4">
+                                                <TextBlock Classes="sectionTitle" Text="GENDERS SEEN" Margin="0"/>
+                                                <ItemsControl ItemsSource="{Binding Genders}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Orientation="Horizontal" Spacing="14"/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:DexFlagViewModel">
+                                                            <CheckBox Content="{Binding Label}" FontSize="11"
+                                                                      IsChecked="{Binding Value, Mode=TwoWay}"/>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+
+                                            <StackPanel Spacing="4" IsVisible="{Binding HasLanguages}">
+                                                <TextBlock Classes="sectionTitle" Text="LANGUAGES OBTAINED" Margin="0"/>
+                                                <ItemsControl ItemsSource="{Binding Languages}">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <WrapPanel/>
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:DexFlagViewModel">
+                                                            <CheckBox Content="{Binding Label}" FontSize="11"
+                                                                      Margin="0,0,14,2"
+                                                                      IsChecked="{Binding Value, Mode=TwoWay}"/>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </ScrollViewer>
+                                </Panel>
+                            </Border>
+                            </Grid>
                         </DockPanel>
+                    </Border>
+
+                    <!-- ══════ TOOLS view: batch editor + box report ══════ -->
+                    <Border Classes="card" IsVisible="{Binding IsToolsView}" Margin="18,0,18,14">
+                        <TabControl DataContext="{Binding Tools}" x:DataType="vm:ToolsViewModel" Padding="0,10,0,0">
+
+                            <TabItem Header="Batch Edit">
+                                <DockPanel Margin="2,8,2,2">
+                                    <StackPanel DockPanel.Dock="Top" Spacing="8">
+                                        <TextBlock Text="Apply property changes to many Pokémon at once."
+                                                   FontSize="13" Classes="secondary"/>
+                                        <Grid ColumnDefinitions="200,Auto,*" ColumnSpacing="10">
+                                            <ComboBox Grid.Column="0" HorizontalAlignment="Stretch"
+                                                      ItemsSource="{Binding ScopeChoices}"
+                                                      SelectedIndex="{Binding ScopeIndex, Mode=TwoWay}"/>
+                                            <Button Grid.Column="1" Content="Run" Classes="accent"
+                                                    Command="{Binding RunBatchCommand}"/>
+                                        </Grid>
+                                    </StackPanel>
+
+                                    <TextBlock DockPanel.Dock="Bottom" Text="{Binding BatchResult}" FontSize="12"
+                                               TextWrapping="Wrap" Margin="0,10,0,0"/>
+
+                                    <Grid ColumnDefinitions="*,320" ColumnSpacing="12" Margin="0,10,0,0">
+                                        <TextBox Grid.Column="0" Text="{Binding Instructions, Mode=TwoWay}"
+                                                 AcceptsReturn="True" TextWrapping="NoWrap"
+                                                 FontFamily="Menlo, monospace" FontSize="12"
+                                                 VerticalContentAlignment="Top"
+                                                 Watermark=".Nature=Adamant"/>
+                                        <Border Grid.Column="1" CornerRadius="10" Padding="12"
+                                                Background="{DynamicResource SurfaceMutedBrush}">
+                                            <TextBlock Text="{Binding BatchHelp}" FontSize="11"
+                                                       FontFamily="Menlo, monospace" Classes="secondary"
+                                                       TextWrapping="Wrap"/>
+                                        </Border>
+                                    </Grid>
+                                </DockPanel>
+                            </TabItem>
+
+                            <TabItem Header="Box Report">
+                                <DockPanel Margin="2,8,2,2">
+                                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10"
+                                          Margin="0,0,0,10">
+                                        <TextBox Grid.Column="0" Text="{Binding ReportSearch, Mode=TwoWay}"
+                                                 Watermark="Search species, nickname, OT, nature, ability…"/>
+                                        <CheckBox Grid.Column="1" IsChecked="{Binding IllegalOnly, Mode=TwoWay}"
+                                                  Content="Issues only" VerticalAlignment="Center"/>
+                                        <Button Grid.Column="2" Content="Copy as TSV" FontSize="12"
+                                                Click="OnCopyReportClicked"/>
+                                    </Grid>
+                                    <TextBlock DockPanel.Dock="Bottom" Text="{Binding ReportSummary}" FontSize="12"
+                                               Classes="secondary" Margin="0,8,0,0"/>
+
+                                    <!-- Header row -->
+                                    <Grid DockPanel.Dock="Top" ColumnDefinitions="44,110,120,120,46,90,140,120,64,58"
+                                          ColumnSpacing="8" Margin="6,0,6,6">
+                                        <TextBlock Grid.Column="1" Text="Species" FontSize="10" Classes="secondary"/>
+                                        <TextBlock Grid.Column="2" Text="Nickname" FontSize="10" Classes="secondary"/>
+                                        <TextBlock Grid.Column="3" Text="Box · slot" FontSize="10" Classes="secondary"/>
+                                        <TextBlock Grid.Column="4" Text="Lv" FontSize="10" Classes="secondary"/>
+                                        <TextBlock Grid.Column="5" Text="Nature" FontSize="10" Classes="secondary"/>
+                                        <TextBlock Grid.Column="6" Text="Ability" FontSize="10" Classes="secondary"/>
+                                        <TextBlock Grid.Column="7" Text="IVs" FontSize="10" Classes="secondary"/>
+                                        <TextBlock Grid.Column="8" Text="Shiny" FontSize="10" Classes="secondary"/>
+                                        <TextBlock Grid.Column="9" Text="Legal" FontSize="10" Classes="secondary"/>
+                                    </Grid>
+
+                                    <ListBox ItemsSource="{Binding ReportRows}">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:ReportRowViewModel">
+                                                <Grid ColumnDefinitions="44,110,120,120,46,90,140,120,64,58"
+                                                      ColumnSpacing="8">
+                                                    <Image Grid.Column="0" Source="{Binding Sprite}" Width="40" Height="34"
+                                                           RenderOptions.BitmapInterpolationMode="None"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding Species}" FontSize="12"
+                                                               FontWeight="SemiBold" VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Grid.Column="2" Text="{Binding Nickname}" FontSize="12"
+                                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Grid.Column="3" FontSize="11" Classes="secondary"
+                                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
+                                                        <Run Text="{Binding BoxName}"/><Run Text=" · "/><Run Text="{Binding SlotText}"/>
+                                                    </TextBlock>
+                                                    <TextBlock Grid.Column="4" Text="{Binding Level}" FontSize="12"
+                                                               VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="5" Text="{Binding Nature}" FontSize="11"
+                                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Grid.Column="6" Text="{Binding Ability}" FontSize="11"
+                                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Grid.Column="7" Text="{Binding Ivs}" FontSize="11"
+                                                               FontFamily="Menlo, monospace" VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="8" Text="★" FontSize="12" Foreground="Gold"
+                                                               VerticalAlignment="Center" IsVisible="{Binding IsShiny}"/>
+                                                    <TextBlock Grid.Column="9" Text="✓" FontSize="12"
+                                                               Foreground="{DynamicResource LegalFgBrush}"
+                                                               VerticalAlignment="Center" IsVisible="{Binding IsLegal}"/>
+                                                    <TextBlock Grid.Column="9" Text="✕" FontSize="12"
+                                                               Foreground="{DynamicResource IllegalFgBrush}"
+                                                               VerticalAlignment="Center" IsVisible="{Binding !IsLegal}"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </DockPanel>
+                            </TabItem>
+                        </TabControl>
                     </Border>
 
                     <!-- ══════ SAVE view: trainer identity + bag, side by side ══════ -->

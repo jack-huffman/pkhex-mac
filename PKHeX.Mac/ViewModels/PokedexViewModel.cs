@@ -50,6 +50,15 @@ public partial class PokedexViewModel : ObservableObject
     [ObservableProperty] private bool _shinyToo;
     [ObservableProperty] private string _summary = string.Empty;
 
+    /// <summary>
+    /// The row whose details fill the side pane. Detail lives outside the list so
+    /// row heights stay uniform — a virtualized list re-estimates its scroll extent
+    /// when an item changes height, which is what made the viewport jump.
+    /// </summary>
+    [ObservableProperty] private DexRowViewModel? _selectedRow;
+
+    partial void OnSelectedRowChanged(DexRowViewModel? value) => value?.BuildDetail();
+
     partial void OnSearchTextChanged(string value) => ApplyFilter();
     partial void OnMissingOnlyChanged(bool value) => ApplyFilter();
 
@@ -79,14 +88,6 @@ public partial class PokedexViewModel : ObservableObject
 
     internal SaveFile Save => _sav;
     internal GameStrings Strings => _strings;
-
-    /// <summary>Collapses every open detail panel.</summary>
-    [RelayCommand]
-    public void CollapseAll()
-    {
-        foreach (var row in _all.Where(r => r.IsExpanded))
-            row.IsExpanded = false;
-    }
 
     internal void Write(ushort species, bool value)
     {
@@ -182,7 +183,6 @@ public partial class DexRowViewModel : ObservableObject
 
     [ObservableProperty] private bool _seen;
     [ObservableProperty] private bool _caught;
-    [ObservableProperty] private bool _isExpanded;
     [ObservableProperty] private bool _shinySeen;
     [ObservableProperty] private bool _supportsDetail;
     [ObservableProperty] private bool _hasLanguages;
@@ -207,15 +207,8 @@ public partial class DexRowViewModel : ObservableObject
             BuildDetail(); // keep an open panel in sync after bulk edits
     }
 
-    partial void OnIsExpandedChanged(bool value)
-    {
-        if (!value)
-            return;
-        BuildDetail();
-    }
-
-    /// <summary>Populates the expanded panel from the save, on first open and after bulk changes.</summary>
-    private void BuildDetail()
+    /// <summary>Populates the detail pane from the save, on selection and after bulk changes.</summary>
+    internal void BuildDetail()
     {
         Forms.Clear();
         Genders.Clear();

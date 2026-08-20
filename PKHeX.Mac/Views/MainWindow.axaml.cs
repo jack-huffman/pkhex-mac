@@ -498,22 +498,6 @@ public partial class MainWindow : Window
                     : "That folder contains no Pokémon files.");
     }
 
-    /// <summary>
-    /// Expands a Pokédex row when its body is clicked. Clicks that land on the row's
-    /// own controls (the caret, Caught, Shiny) are left to those controls.
-    /// </summary>
-    private void OnDexRowPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (sender is not Control { DataContext: DexRowViewModel row } || !row.SupportsDetail)
-            return;
-        for (var v = e.Source as Avalonia.Visual; v is not null && v != sender; v = v.GetVisualParent())
-        {
-            if (v is CheckBox or ToggleButton)
-                return;
-        }
-        row.IsExpanded = !row.IsExpanded;
-    }
-
     private void OnCopyReportClicked(object? sender, RoutedEventArgs e)
     {
         if (VM.Tools is { } tools && Clipboard is not null)
