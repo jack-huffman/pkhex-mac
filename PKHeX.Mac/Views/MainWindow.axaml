@@ -1460,22 +1460,8 @@
                                                             </DataTemplate>
                                                         </ComboBox.ItemTemplate>
                                                     </ComboBox>
-                                                    <!-- Detail row: what the move does, then its PP controls -->
+                                                    <!-- Only PP Ups is editable here; the picker above carries the stats -->
                                                     <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8" Margin="2,0,2,0">
-                                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6"
-                                                                    VerticalAlignment="Center"
-                                                                    DataContext="{Binding MoveInfo1}" x:DataType="vm:MoveChoice"
-                                                                    IsVisible="{Binding $self.DataContext, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                                            <Border Classes="chip" Padding="7,2" MinHeight="18"
-                                                                    Background="{Binding TypeBrush}">
-                                                                <TextBlock Text="{Binding TypeName}" FontSize="9" FontWeight="SemiBold"
-                                                                           Foreground="White"/>
-                                                            </Border>
-                                                            <ctrl:MoveCategoryIcon Category="{Binding CategoryKind}"
-                                                                                   VerticalAlignment="Center"/>
-                                                            <TextBlock Text="{Binding StatLine}" FontSize="10" Classes="secondary"
-                                                                       VerticalAlignment="Center"/>
-                                                        </StackPanel>
                                                         <TextBlock Grid.Column="1" Text="PP Ups" FontSize="10" Classes="secondary"
                                                                    VerticalAlignment="Center"/>
                                                         <NumericUpDown Grid.Column="2" Value="{Binding PpUps1, Mode=TwoWay}" Minimum="0" Maximum="3"
@@ -1513,22 +1499,8 @@
                                                             </DataTemplate>
                                                         </ComboBox.ItemTemplate>
                                                     </ComboBox>
-                                                    <!-- Detail row: what the move does, then its PP controls -->
+                                                    <!-- Only PP Ups is editable here; the picker above carries the stats -->
                                                     <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8" Margin="2,0,2,0">
-                                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6"
-                                                                    VerticalAlignment="Center"
-                                                                    DataContext="{Binding MoveInfo2}" x:DataType="vm:MoveChoice"
-                                                                    IsVisible="{Binding $self.DataContext, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                                            <Border Classes="chip" Padding="7,2" MinHeight="18"
-                                                                    Background="{Binding TypeBrush}">
-                                                                <TextBlock Text="{Binding TypeName}" FontSize="9" FontWeight="SemiBold"
-                                                                           Foreground="White"/>
-                                                            </Border>
-                                                            <ctrl:MoveCategoryIcon Category="{Binding CategoryKind}"
-                                                                                   VerticalAlignment="Center"/>
-                                                            <TextBlock Text="{Binding StatLine}" FontSize="10" Classes="secondary"
-                                                                       VerticalAlignment="Center"/>
-                                                        </StackPanel>
                                                         <TextBlock Grid.Column="1" Text="PP Ups" FontSize="10" Classes="secondary"
                                                                    VerticalAlignment="Center"/>
                                                         <NumericUpDown Grid.Column="2" Value="{Binding PpUps2, Mode=TwoWay}" Minimum="0" Maximum="3"
@@ -1566,22 +1538,8 @@
                                                             </DataTemplate>
                                                         </ComboBox.ItemTemplate>
                                                     </ComboBox>
-                                                    <!-- Detail row: what the move does, then its PP controls -->
+                                                    <!-- Only PP Ups is editable here; the picker above carries the stats -->
                                                     <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8" Margin="2,0,2,0">
-                                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6"
-                                                                    VerticalAlignment="Center"
-                                                                    DataContext="{Binding MoveInfo3}" x:DataType="vm:MoveChoice"
-                                                                    IsVisible="{Binding $self.DataContext, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                                            <Border Classes="chip" Padding="7,2" MinHeight="18"
-                                                                    Background="{Binding TypeBrush}">
-                                                                <TextBlock Text="{Binding TypeName}" FontSize="9" FontWeight="SemiBold"
-                                                                           Foreground="White"/>
-                                                            </Border>
-                                                            <ctrl:MoveCategoryIcon Category="{Binding CategoryKind}"
-                                                                                   VerticalAlignment="Center"/>
-                                                            <TextBlock Text="{Binding StatLine}" FontSize="10" Classes="secondary"
-                                                                       VerticalAlignment="Center"/>
-                                                        </StackPanel>
                                                         <TextBlock Grid.Column="1" Text="PP Ups" FontSize="10" Classes="secondary"
                                                                    VerticalAlignment="Center"/>
                                                         <NumericUpDown Grid.Column="2" Value="{Binding PpUps3, Mode=TwoWay}" Minimum="0" Maximum="3"
@@ -1619,22 +1577,8 @@
                                                             </DataTemplate>
                                                         </ComboBox.ItemTemplate>
                                                     </ComboBox>
-                                                    <!-- Detail row: what the move does, then its PP controls -->
+                                                    <!-- Only PP Ups is editable here; the picker above carries the stats -->
                                                     <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8" Margin="2,0,2,0">
-                                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6"
-                                                                    VerticalAlignment="Center"
-                                                                    DataContext="{Binding MoveInfo4}" x:DataType="vm:MoveChoice"
-                                                                    IsVisible="{Binding $self.DataContext, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                                            <Border Classes="chip" Padding="7,2" MinHeight="18"
-                                                                    Background="{Binding TypeBrush}">
-                                                                <TextBlock Text="{Binding TypeName}" FontSize="9" FontWeight="SemiBold"
-                                                                           Foreground="White"/>
-                                                            </Border>
-                                                            <ctrl:MoveCategoryIcon Category="{Binding CategoryKind}"
-                                                                                   VerticalAlignment="Center"/>
-                                                            <TextBlock Text="{Binding StatLine}" FontSize="10" Classes="secondary"
-                                                                       VerticalAlignment="Center"/>
-                                                        </StackPanel>
                                                         <TextBlock Grid.Column="1" Text="PP Ups" FontSize="10" Classes="secondary"
                                                                    VerticalAlignment="Center"/>
                                                         <NumericUpDown Grid.Column="2" Value="{Binding PpUps4, Mode=TwoWay}" Minimum="0" Maximum="3"

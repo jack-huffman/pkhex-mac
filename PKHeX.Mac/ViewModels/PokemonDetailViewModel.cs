@@ -164,12 +164,6 @@ public partial class PokemonDetailViewModel : ObservableObject
     [ObservableProperty] private string _pp2 = string.Empty;
     [ObservableProperty] private string _pp3 = string.Empty;
     [ObservableProperty] private string _pp4 = string.Empty;
-
-    // Per-slot battle summary shown under each assigned move.
-    [ObservableProperty] private MoveChoice? _moveInfo1;
-    [ObservableProperty] private MoveChoice? _moveInfo2;
-    [ObservableProperty] private MoveChoice? _moveInfo3;
-    [ObservableProperty] private MoveChoice? _moveInfo4;
     [ObservableProperty] private int _relearn1;
     [ObservableProperty] private int _relearn2;
     [ObservableProperty] private int _relearn3;
@@ -626,10 +620,6 @@ public partial class PokemonDetailViewModel : ObservableObject
 
     private void RefreshPP(PKM p)
     {
-        MoveInfo1 = FindMoveChoice(p.Move1);
-        MoveInfo2 = FindMoveChoice(p.Move2);
-        MoveInfo3 = FindMoveChoice(p.Move3);
-        MoveInfo4 = FindMoveChoice(p.Move4);
         Pp1 = p.Move1 == 0 ? "—" : $"{p.Move1_PP} PP";
         Pp2 = p.Move2 == 0 ? "—" : $"{p.Move2_PP} PP";
         Pp3 = p.Move3 == 0 ? "—" : $"{p.Move3_PP} PP";
@@ -859,9 +849,6 @@ public partial class PokemonDetailViewModel : ObservableObject
         Scale = (byte)Util.Rand.Next(0, 256);
         _ = s3;
     }
-
-    private MoveChoice? FindMoveChoice(ushort move) =>
-        move == 0 ? null : MoveChoices.FirstOrDefault(m => m.Value == move);
 
     private void SetMove(int index, int value)
     {
