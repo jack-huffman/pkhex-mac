@@ -140,6 +140,25 @@
             <Setter Property="Maximum" Value="100"/>
         </Style>
 
+        <!-- Stat editor: compact sliders and inline numeric boxes -->
+        <Style Selector="Slider.stat">
+            <Setter Property="MinHeight" Value="20"/>
+            <Setter Property="Height" Value="20"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="IsSnapToTickEnabled" Value="True"/>
+            <Setter Property="TickFrequency" Value="1"/>
+        </Style>
+        <Style Selector="TextBox.statNum">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="MinHeight" Value="24"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Padding" Value="4,2"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
         <!-- Sidebar navigation buttons -->
         <Style Selector="Button.nav">
             <Setter Property="Background" Value="Transparent"/>

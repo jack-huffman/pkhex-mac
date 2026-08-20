@@ -747,31 +747,82 @@
                                     <TabItem Header="Stats">
                                         <ScrollViewer>
                                             <StackPanel Spacing="6" Margin="2,6,6,2">
-                                                <Grid ColumnDefinitions="56,*,*,42" ColumnSpacing="6">
-                                                    <TextBlock Grid.Column="1" Text="IV" FontSize="10" Classes="secondary" HorizontalAlignment="Center"/>
-                                                    <TextBlock Grid.Column="2" Text="EV" FontSize="10" Classes="secondary" HorizontalAlignment="Center"/>
-                                                    <TextBlock Grid.Column="3" Text="Total" FontSize="10" Classes="secondary" HorizontalAlignment="Center"/>
-                                                </Grid>
+                                                <!-- Nature, with the stat it raises / lowers -->
+                                                <StackPanel Spacing="4">
+                                                    <TextBlock Classes="fieldLabel" Text="Nature"/>
+                                                    <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding NatureChoices}"
+                                                              SelectedValue="{Binding NatureValue, Mode=TwoWay}"
+                                                              SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
+                                                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                                                    <TextBlock Text="{Binding NatureEffectText}" FontSize="11" Classes="secondary"
+                                                               TextWrapping="Wrap"/>
+                                                </StackPanel>
+
+                                                <!-- Shared EV pool -->
+                                                <StackPanel Spacing="4" Margin="0,4,0,0">
+                                                    <DockPanel>
+                                                        <TextBlock DockPanel.Dock="Left" Classes="sectionTitle" Text="EV BUDGET" Margin="0,0,0,0"/>
+                                                        <TextBlock DockPanel.Dock="Right" Text="{Binding EvBudgetText}" FontSize="11"
+                                                                   HorizontalAlignment="Right"
+                                                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                                    </DockPanel>
+                                                    <ProgressBar Classes="meter" Value="{Binding EvBudgetPercent}"
+                                                                 Foreground="{DynamicResource MeterEvBrush}"/>
+                                                    <TextBlock Text="Sliders stop at whatever the 510-point pool has left."
+                                                               FontSize="10" Classes="secondary"
+                                                               IsVisible="{Binding !EvOverLimit}"/>
+                                                    <TextBlock Text="This spread exceeds the game's 510 EV limit and will be flagged as illegal."
+                                                               FontSize="10" TextWrapping="Wrap"
+                                                               Foreground="{DynamicResource IllegalFgBrush}"
+                                                               IsVisible="{Binding EvOverLimit}"/>
+                                                </StackPanel>
+
+                                                <Separator Margin="0,6"/>
+
+                                                <!-- One block per stat: IV slider over EV slider -->
                                                 <ItemsControl ItemsSource="{Binding Stats}">
                                                     <ItemsControl.ItemTemplate>
                                                         <DataTemplate x:DataType="vm:StatEditRowViewModel">
-                                                            <Grid ColumnDefinitions="56,*,*,42" ColumnSpacing="6" Margin="0,4">
-                                                                <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="12"
+                                                            <Grid ColumnDefinitions="66,20,*,44,44" RowDefinitions="Auto,Auto"
+                                                                  ColumnSpacing="6" RowSpacing="3" Margin="0,3,0,7">
+
+                                                                <!-- Stat name + nature arrow -->
+                                                                <StackPanel Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
+                                                                            Orientation="Horizontal" Spacing="3"
+                                                                            VerticalAlignment="Center">
+                                                                    <TextBlock Text="{Binding Label}" FontSize="12"
+                                                                               Foreground="{Binding LabelBrush}"
+                                                                               VerticalAlignment="Center"/>
+                                                                    <TextBlock Text="{Binding NatureBadge}" FontSize="10"
+                                                                               IsVisible="{Binding HasNatureBadge}"
+                                                                               Foreground="{Binding NatureBadgeBrush}"
+                                                                               VerticalAlignment="Center"/>
+                                                                </StackPanel>
+
+                                                                <!-- IV -->
+                                                                <TextBlock Grid.Row="0" Grid.Column="1" Text="IV" FontSize="10"
                                                                            Classes="secondary" VerticalAlignment="Center"/>
-                                                                <StackPanel Grid.Column="1" Spacing="4">
-                                                                    <NumericUpDown Value="{Binding Iv, Mode=TwoWay}" Minimum="0" Maximum="31"
-                                                                                   FormatString="0" Increment="1" FontSize="12"/>
-                                                                    <ProgressBar Classes="meter" Value="{Binding IvPercent}"
-                                                                                 Foreground="{DynamicResource MeterIvBrush}"/>
-                                                                </StackPanel>
-                                                                <StackPanel Grid.Column="2" Spacing="4">
-                                                                    <NumericUpDown Value="{Binding Ev, Mode=TwoWay}" Minimum="0" Maximum="252"
-                                                                                   FormatString="0" Increment="4" FontSize="12"/>
-                                                                    <ProgressBar Classes="meter" Value="{Binding EvPercent}"
-                                                                                 Foreground="{DynamicResource MeterEvBrush}"/>
-                                                                </StackPanel>
-                                                                <TextBlock Grid.Column="3" Text="{Binding Stat}" FontSize="13" FontWeight="SemiBold"
-                                                                           VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                                                <Slider Grid.Row="0" Grid.Column="2" Classes="stat"
+                                                                        Minimum="0" Maximum="{Binding MaxIv}"
+                                                                        Value="{Binding Iv, Mode=TwoWay}"
+                                                                        Foreground="{DynamicResource MeterIvBrush}"/>
+                                                                <TextBox Grid.Row="0" Grid.Column="3" Classes="statNum"
+                                                                         Text="{Binding Iv, Mode=TwoWay}"/>
+
+                                                                <!-- EV -->
+                                                                <TextBlock Grid.Row="1" Grid.Column="1" Text="EV" FontSize="10"
+                                                                           Classes="secondary" VerticalAlignment="Center"/>
+                                                                <Slider Grid.Row="1" Grid.Column="2" Classes="stat"
+                                                                        Minimum="0" Maximum="{Binding EvCeiling}"
+                                                                        Value="{Binding Ev, Mode=TwoWay}"
+                                                                        Foreground="{DynamicResource MeterEvBrush}"/>
+                                                                <TextBox Grid.Row="1" Grid.Column="3" Classes="statNum"
+                                                                         Text="{Binding Ev, Mode=TwoWay}"/>
+
+                                                                <!-- Resulting stat -->
+                                                                <TextBlock Grid.Row="0" Grid.RowSpan="2" Grid.Column="4"
+                                                                           Text="{Binding Stat}" FontSize="15" FontWeight="Bold"
+                                                                           VerticalAlignment="Center" HorizontalAlignment="Right"/>
                                                             </Grid>
                                                         </DataTemplate>
                                                     </ItemsControl.ItemTemplate>

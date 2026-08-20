@@ -177,6 +177,17 @@ public partial class PokemonDetailViewModel : ObservableObject
 
     public ObservableCollection<StatEditRowViewModel> Stats { get; } = [];
 
+    // ---- EV budget / nature summary (Stats tab) ----
+    [ObservableProperty] private int _evTotal;
+    [ObservableProperty] private int _evRemaining;
+    [ObservableProperty] private string _evBudgetText = string.Empty;
+    [ObservableProperty] private double _evBudgetPercent;
+    [ObservableProperty] private bool _evOverLimit;
+    [ObservableProperty] private string _natureEffectText = string.Empty;
+
+    /// <summary>Game-legal ceiling on the sum of all EVs (510 from Gen 3 on).</summary>
+    public int EvTotalLimit => EffortValues.Max510;
+
     public PKM? Pokemon => _pk;
     public int MaxIV => _pk?.MaxIV ?? 31;
     public int MaxEV => _pk?.MaxEV ?? 252;
@@ -388,6 +399,48 @@ public partial class PokemonDetailViewModel : ObservableObject
         _pk.ResetPartyStats();
         foreach (var row in Stats)
             row.Refresh(_pk);
+        RefreshEvBudget();
+        RefreshNatureEffect();
+    }
+
+    /// <summary>Recomputes the shared EV pool and pushes each row's remaining headroom.</summary>
+    private void RefreshEvBudget()
+    {
+        if (_pk is null)
+            return;
+        var limit = EvTotalLimit;
+        EvTotal = _pk.EVTotal;
+        EvRemaining = Math.Max(0, limit - EvTotal);
+        EvOverLimit = EvTotal > limit;
+        EvBudgetPercent = limit == 0 ? 0 : Math.Min(100.0, EvTotal * 100.0 / limit);
+        EvBudgetText = EvOverLimit
+            ? $"{EvTotal} / {limit} EVs — over the limit by {EvTotal - limit}"
+            : $"{EvTotal} / {limit} EVs · {EvRemaining} left to spend";
+        foreach (var row in Stats)
+            row.UpdateBudget(EvRemaining);
+    }
+
+    /// <summary>Tags the rows the current nature raises and lowers.</summary>
+    private void RefreshNatureEffect()
+    {
+        if (_pk is null)
+            return;
+        var nature = _pk.StatAlignment;
+        var (up, dn) = nature.GetNatureModification();
+        // Nature indexes are in the games' internal order (Atk, Def, Spe, SpA, SpD);
+        // our rows are HP, Atk, Def, SpA, SpD, Spe.
+        int[] internalToRow = [1, 2, 5, 3, 4];
+        var upRow = (uint)up < internalToRow.Length ? internalToRow[up] : -1;
+        var dnRow = (uint)dn < internalToRow.Length ? internalToRow[dn] : -1;
+        var neutral = up == dn;
+
+        for (int i = 0; i < Stats.Count; i++)
+            Stats[i].SetNatureEffect(neutral ? 0 : i == upRow ? 1 : i == dnRow ? -1 : 0);
+
+        var natureName = Name(_strings.natures, (int)nature);
+        NatureEffectText = neutral
+            ? $"{natureName} — no stat changes"
+            : $"{natureName} — raises {StatEditRowViewModel.LabelFor(upRow)}, lowers {StatEditRowViewModel.LabelFor(dnRow)}";
     }
 
     private void RunLegality(PKM p)
@@ -971,10 +1024,17 @@ public partial class PokemonDetailViewModel : ObservableObject
     public string? GetShowdownText() => _pk is null || _pk.Species == 0 ? null : new ShowdownSet(_pk).Text;
 }
 
-/// <summary>One editable stat row (IV/EV in, computed stat out).</summary>
+/// <summary>
+/// One editable stat row: IV and EV sliders, the resulting stat, and how the
+/// current nature affects it. EV headroom is shared across all six rows, so the
+/// row clamps itself to whatever the 510 pool has left.
+/// </summary>
 public partial class StatEditRowViewModel : ObservableObject
 {
     private static readonly string[] Labels = ["HP", "Attack", "Defense", "Sp. Atk", "Sp. Def", "Speed"];
+
+    internal static string LabelFor(int index) => (uint)index < Labels.Length ? Labels[index] : "?";
+
     private readonly PokemonDetailViewModel _parent;
     private readonly int _index;
     private bool _loading;
@@ -990,18 +1050,23 @@ public partial class StatEditRowViewModel : ObservableObject
     [ObservableProperty] private int _iv;
     [ObservableProperty] private int _ev;
     [ObservableProperty] private int _stat;
+    [ObservableProperty] private int _maxIv = 31;
+    [ObservableProperty] private int _maxEv = 252;
 
-    private int _maxIv = 31;
-    private int _maxEv = 252;
+    /// <summary>Highest EV this row may take right now, given the shared 510 pool.</summary>
+    [ObservableProperty] private int _evCeiling = 252;
 
-    public double IvPercent => _maxIv > 0 ? Iv * 100.0 / _maxIv : 0;
-    public double EvPercent => _maxEv > 0 ? Ev * 100.0 / _maxEv : 0;
+    // ---- Nature effect: +1 raised, -1 lowered, 0 unaffected ----
+    [ObservableProperty] private string _natureBadge = string.Empty;
+    [ObservableProperty] private bool _hasNatureBadge;
+    [ObservableProperty] private IBrush? _natureBadgeBrush;
+    [ObservableProperty] private IBrush? _labelBrush;
 
     public void Refresh(PKM p)
     {
         _loading = true;
-        _maxIv = p.MaxIV;
-        _maxEv = p.MaxEV;
+        MaxIv = p.MaxIV;
+        MaxEv = p.MaxEV;
         (Iv, Ev, Stat) = _index switch
         {
             0 => (p.IV_HP, p.EV_HP, (int)p.Stat_HPMax),
@@ -1012,16 +1077,34 @@ public partial class StatEditRowViewModel : ObservableObject
             _ => (p.IV_SPE, p.EV_SPE, (int)p.Stat_SPE),
         };
         _loading = false;
-        OnPropertyChanged(nameof(IvPercent));
-        OnPropertyChanged(nameof(EvPercent));
+    }
+
+    /// <summary>Pushes the shared pool's remaining headroom into this row's ceiling.</summary>
+    internal void UpdateBudget(int remaining) => EvCeiling = Math.Min(MaxEv, Ev + remaining);
+
+    internal void SetNatureEffect(int direction)
+    {
+        HasNatureBadge = direction != 0;
+        NatureBadge = direction switch { 1 => "▲", -1 => "▼", _ => string.Empty };
+        NatureBadgeBrush = direction switch
+        {
+            1 => new SolidColorBrush(Color.Parse("#FF6961")),   // raised
+            -1 => new SolidColorBrush(Color.Parse("#6AA9FF")),  // lowered
+            _ => null,
+        };
+        LabelBrush = NatureBadgeBrush;
     }
 
     partial void OnIvChanged(int value)
     {
-        OnPropertyChanged(nameof(IvPercent));
         if (_loading || _parent.Pokemon is not { } p)
             return;
         var v = Math.Clamp(value, 0, p.MaxIV);
+        if (v != value)
+        {
+            Iv = v; // re-enters with the clamped value
+            return;
+        }
         switch (_index)
         {
             case 0: p.IV_HP = v; break;
@@ -1037,10 +1120,15 @@ public partial class StatEditRowViewModel : ObservableObject
 
     partial void OnEvChanged(int value)
     {
-        OnPropertyChanged(nameof(EvPercent));
         if (_loading || _parent.Pokemon is not { } p)
             return;
-        var v = Math.Clamp(value, 0, p.MaxEV);
+        // Never let the six rows sum past the game's 510 ceiling.
+        var v = Math.Clamp(value, 0, Math.Min(p.MaxEV, EvCeiling));
+        if (v != value)
+        {
+            Ev = v;
+            return;
+        }
         switch (_index)
         {
             case 0: p.EV_HP = v; break;
