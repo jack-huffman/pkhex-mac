@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -981,6 +982,121 @@ public partial class PokemonDetailViewModel : ObservableObject
     // =====================================================================
     // Commands
     // =====================================================================
+
+    // =====================================================================
+    // Legality suggestions — ask the engine what would make this legal
+    // =====================================================================
+
+    [ObservableProperty] private string _suggestionResult = string.Empty;
+
+    /// <summary>
+    /// Applies the engine's suggested encounter data, but never at the cost of
+    /// legality: entities met through HOME or a transfer already carry valid
+    /// location data that the suggester does not model, so if the change would
+    /// turn a legal Pokémon illegal it is rolled back.
+    /// Scarlet/Violet also tie Obedience Level to met level, so that follows along.
+    /// </summary>
+    private bool ApplyMetSuggestion(PKM p, out string message)
+    {
+        var suggestion = EncounterSuggestion.GetSuggestedMetInfo(p);
+        if (suggestion is null)
+        {
+            message = "No encounter matches this Pokémon closely enough to suggest met data.";
+            return false;
+        }
+
+        var wasLegal = new LegalityAnalysis(p).Valid;
+        var oldLocation = p.MetLocation;
+        var oldMetLevel = p.MetLevel;
+        var oldCurrentLevel = p.CurrentLevel;
+        var oldObedience = p is IObedienceLevel ob0 ? ob0.ObedienceLevel : (byte)0;
+
+        var level = suggestion.GetSuggestedMetLevel(p);
+        p.MetLocation = suggestion.Location;
+        p.MetLevel = level;
+        if (p.CurrentLevel < level)
+            p.CurrentLevel = level;
+        if (p is IObedienceLevel ob)
+            ob.ObedienceLevel = ob.GetSuggestedObedienceLevel(p, level);
+
+        if (wasLegal && !new LegalityAnalysis(p).Valid)
+        {
+            p.MetLocation = oldLocation;
+            p.MetLevel = oldMetLevel;
+            p.CurrentLevel = oldCurrentLevel;
+            if (p is IObedienceLevel obR)
+                obR.ObedienceLevel = oldObedience;
+            message = "Kept the existing met data — it is already valid for this Pokémon (transferred entities carry special locations the suggester does not model).";
+            return false;
+        }
+
+        var locationName = MetLocationChoices.FirstOrDefault(c => c.Value == suggestion.Location)?.Text
+                           ?? $"#{suggestion.Location}";
+        message = $"Met location set to {locationName}, met level {level}.";
+        return true;
+    }
+
+    /// <summary>Applies the encounter the engine considers most likely: met location, level and origin.</summary>
+    [RelayCommand]
+    public void SuggestMetInfo()
+    {
+        if (_pk is null)
+            return;
+        if (!ApplyMetSuggestion(_pk, out var message))
+        {
+            SuggestionResult = message;
+            return;
+        }
+        Load(_pk);
+        IsDirty = true;
+        SuggestionResult = message;
+    }
+
+    /// <summary>Fills the four moves with a legal moveset for this encounter.</summary>
+    [RelayCommand]
+    public void SuggestMoves()
+    {
+        if (_pk is null)
+            return;
+        _pk.SetMoveset();
+        _pk.HealPP();
+        Load(_pk);
+        IsDirty = true;
+        SuggestionResult = "Applied a legal moveset.";
+    }
+
+    /// <summary>Fills the relearn slots from the encounter's egg/level-up moves.</summary>
+    [RelayCommand]
+    public void SuggestRelearnMoves()
+    {
+        if (_pk is null)
+            return;
+        _pk.SetRelearnMoves(new LegalityAnalysis(_pk));
+        Load(_pk);
+        IsDirty = true;
+        SuggestionResult = "Applied the encounter's relearn moves.";
+    }
+
+    /// <summary>
+    /// Applies the repairs that never harm a legal entity (moveset and relearn
+    /// moves), then reports the resulting legality. Met data is deliberately left
+    /// to its own opt-in button, since suggesting it can invalidate transfers.
+    /// </summary>
+    [RelayCommand]
+    public void SuggestAll()
+    {
+        if (_pk is null)
+            return;
+        _pk.SetMoveset();
+        _pk.SetRelearnMoves(new LegalityAnalysis(_pk));
+        _pk.HealPP();
+        Load(_pk);
+        IsDirty = true;
+        var la = new LegalityAnalysis(_pk);
+        SuggestionResult = la.Valid
+            ? "Fixed the moves — this Pokémon is now legal."
+            : "Fixed the moves, but other issues remain. Try Suggest beside Met Location if the origin looks wrong.";
+    }
 
     [RelayCommand]
     public void MaxIVs()

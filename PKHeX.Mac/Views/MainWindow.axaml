@@ -129,19 +129,7 @@
                             <Button Classes="nav" Classes.selected="{Binding IsSaveView}"
                                     Command="{Binding SetViewCommand}" CommandParameter="save"
                                     Content="👤  Trainer &amp; Bag"/>
-                            <TextBlock Classes="sectionTitle" Text="DATABASES" Margin="6,10,0,4"
-                                       IsVisible="{Binding CanUseDatabases}"/>
-                            <Button Classes="nav" Classes.selected="{Binding IsAddView}"
-                                    IsVisible="{Binding CanUseDatabases}"
-                                    Command="{Binding SetViewCommand}" CommandParameter="add"
-                                    Content="✚  Add Pokémon"/>
-                            <Button Classes="nav" Classes.selected="{Binding IsGiftsView}"
-                                    IsVisible="{Binding CanUseDatabases}"
-                                    Command="{Binding SetViewCommand}" CommandParameter="gifts"
-                                    Content="🎁  Mystery Gifts"/>
-                            <TextBlock Text="{Binding DatabaseHint}" FontSize="10" Classes="secondary"
-                                       TextWrapping="Wrap" Margin="6,6,0,0"
-                                       IsVisible="{Binding !CanUseDatabases}"/>
+
                         </StackPanel>
 
                         <TextBlock Classes="sectionTitle" Text="BOXES" IsVisible="{Binding HasSave}" Margin="6,6,0,0"/>
@@ -554,8 +542,25 @@
                         <Border Classes="card" IsVisible="{Binding IsBoxesView}">
                             <StackPanel VerticalAlignment="Center" Spacing="8" IsVisible="{Binding !Detail.HasPokemon}">
                                 <TextBlock Text="◓" FontSize="34" HorizontalAlignment="Center" Opacity="0.25"/>
+
+                                <!-- Nothing selected -->
                                 <TextBlock Text="Select a Pokémon" FontSize="13" Classes="secondary"
-                                           HorizontalAlignment="Center"/>
+                                           HorizontalAlignment="Center" IsVisible="{Binding !CanUseDatabases}"/>
+
+                                <!-- An empty slot is selected: offer to fill it -->
+                                <StackPanel Spacing="10" IsVisible="{Binding CanUseDatabases}">
+                                    <TextBlock Text="{Binding TargetSlotText}" FontSize="14" FontWeight="SemiBold"
+                                               HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"/>
+                                    <TextBlock Text="This slot is empty — fill it from a database, or drop a .pk file onto it."
+                                               FontSize="11" Classes="secondary" HorizontalAlignment="Center"
+                                               TextAlignment="Center" TextWrapping="Wrap"/>
+                                    <Button Content="✚   Add Pokémon from Database" Classes="accent"
+                                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                            Command="{Binding SetViewCommand}" CommandParameter="add"/>
+                                    <Button Content="🎁   Mystery Gift Database"
+                                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                            Command="{Binding SetViewCommand}" CommandParameter="gifts"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
 
@@ -601,9 +606,17 @@
                                     </StackPanel>
                                     <Border CornerRadius="8" Padding="10,8" Background="{DynamicResource IllegalBgBrush}"
                                             IsVisible="{Binding !IsLegal}">
-                                        <TextBlock Text="{Binding LegalityReport}" FontSize="10" TextWrapping="Wrap"
-                                                   MaxHeight="72" Foreground="{DynamicResource IllegalFgBrush}"/>
+                                        <StackPanel Spacing="8">
+                                            <TextBlock Text="{Binding LegalityReport}" FontSize="10" TextWrapping="Wrap"
+                                                       MaxHeight="72" Foreground="{DynamicResource IllegalFgBrush}"/>
+                                            <Button Content="Fix moves &amp; relearn" FontSize="11" Padding="10,3"
+                                                    HorizontalAlignment="Left"
+                                                    ToolTip.Tip="Apply a legal moveset and the encounter's relearn moves. Met data is left alone — use Suggest on the Met tab for that."
+                                                    Command="{Binding SuggestAllCommand}"/>
+                                        </StackPanel>
                                     </Border>
+                                    <TextBlock Text="{Binding SuggestionResult}" FontSize="10" Classes="secondary"
+                                               TextWrapping="Wrap" IsVisible="{Binding SuggestionResult, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                                 </StackPanel>
 
                                 <!-- Apply -->
@@ -969,6 +982,13 @@
                                     <TabItem Header="Moves">
                                         <ScrollViewer>
                                             <StackPanel Spacing="8" Margin="2,6,6,2">
+                                                <DockPanel>
+                                                    <TextBlock DockPanel.Dock="Left" Classes="sectionTitle" Text="MOVES" Margin="0,0,0,0"/>
+                                                    <Button DockPanel.Dock="Right" Content="Suggest" FontSize="10" Padding="8,1"
+                                                            HorizontalAlignment="Right"
+                                                            ToolTip.Tip="Fill these four slots with a legal moveset"
+                                                            Command="{Binding SuggestMovesCommand}"/>
+                                                </DockPanel>
                                                 <Grid ColumnDefinitions="*,64,52">
                                                     <TextBlock Grid.Column="1" Text="PP Ups" FontSize="10" Classes="secondary" HorizontalAlignment="Center"/>
                                                     <TextBlock Grid.Column="2" Text="PP" FontSize="10" Classes="secondary" HorizontalAlignment="Center"/>
@@ -1015,7 +1035,13 @@
                                                 </Grid>
 
                                                 <StackPanel IsVisible="{Binding HasRelearnMoves}">
-                                                    <TextBlock Classes="sectionTitle" Text="RELEARN MOVES" Margin="2,10,0,6"/>
+                                                    <DockPanel Margin="2,10,0,6">
+                                                        <TextBlock DockPanel.Dock="Left" Classes="sectionTitle" Text="RELEARN MOVES" Margin="0"/>
+                                                        <Button DockPanel.Dock="Right" Content="Suggest" FontSize="10" Padding="8,1"
+                                                                HorizontalAlignment="Right"
+                                                                ToolTip.Tip="Use the relearn moves this encounter provides"
+                                                                Command="{Binding SuggestRelearnMovesCommand}"/>
+                                                    </DockPanel>
                                                     <StackPanel Spacing="8">
                                                         <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding MoveChoices}"
                                                                   SelectedValue="{Binding Relearn1, Mode=TwoWay}"
@@ -1050,7 +1076,13 @@
                                                               DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
                                                 </StackPanel>
                                                 <StackPanel>
-                                                    <TextBlock Classes="fieldLabel" Text="Met Location"/>
+                                                    <DockPanel>
+                                                        <TextBlock DockPanel.Dock="Left" Classes="fieldLabel" Text="Met Location"/>
+                                                        <Button DockPanel.Dock="Right" Content="Suggest" FontSize="10" Padding="8,1"
+                                                                HorizontalAlignment="Right"
+                                                                ToolTip.Tip="Use the met location and level the legality engine expects"
+                                                                Command="{Binding SuggestMetInfoCommand}"/>
+                                                    </DockPanel>
                                                     <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding MetLocationChoices}"
                                                               SelectedValue="{Binding MetLocationValue, Mode=TwoWay}"
                                                               SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
