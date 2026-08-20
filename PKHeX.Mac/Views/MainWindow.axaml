@@ -544,8 +544,44 @@
                                            Text="Seven-star raid records only exist in Scarlet and Violet."/>
                             </Border>
 
-                            <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,12"
+                            <StackPanel DockPanel.Dock="Top" Spacing="10" Margin="0,0,0,12"
                                         IsVisible="{Binding IsSupported}">
+                                <!-- Tier unlocks and tallies: the context for an empty record list -->
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="18">
+                                    <StackPanel Grid.Column="0" Spacing="4">
+                                        <TextBlock Classes="sectionTitle" Text="TIERS UNLOCKED" Margin="0"/>
+                                        <ItemsControl ItemsSource="{Binding Unlocks}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:RaidFlagViewModel">
+                                                    <CheckBox Content="{Binding Label}" FontSize="12"
+                                                              IsChecked="{Binding Value, Mode=TwoWay}" Margin="0,1"/>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Spacing="4">
+                                        <TextBlock Classes="sectionTitle" Text="RAIDS WON" Margin="0"/>
+                                        <ItemsControl ItemsSource="{Binding Counters}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:RaidCounterViewModel">
+                                                    <Grid ColumnDefinitions="*,90" ColumnSpacing="8" Margin="0,1">
+                                                        <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="12"
+                                                                   VerticalAlignment="Center"/>
+                                                        <NumericUpDown Grid.Column="1" Value="{Binding Value, Mode=TwoWay}"
+                                                                       Minimum="0" Maximum="99999" FormatString="0"
+                                                                       Increment="1" FontSize="11"/>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Grid>
+
+                                <Separator/>
+                                <TextBlock Classes="sectionTitle" Text="SEVEN-STAR EVENT RECORDS" Margin="0"/>
+                                <TextBlock Text="{Binding EmptyNote}" FontSize="11" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource IllegalFgBrush}"
+                                           IsVisible="{Binding EmptyNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                                 <TextBlock FontSize="11" Classes="secondary" TextWrapping="Wrap"
                                            Text="Clearing a capture flag lets that event raid be caught again. Defeated marks it as beaten without granting a catch."/>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
@@ -895,6 +931,28 @@
                                                 <NumericUpDown Grid.Column="2" Value="{Binding Seconds, Mode=TwoWay}" Minimum="0" Maximum="59" FormatString="0" Increment="1"/>
                                             </Grid>
                                         </StackPanel>
+                                        <StackPanel IsVisible="{Binding HasBadges}" Spacing="6" Margin="0,6,0,0">
+                                            <Separator/>
+                                            <TextBlock Classes="sectionTitle" Text="GYMS · TITANS · TEAM STAR"/>
+                                            <TextBlock FontSize="10" Classes="secondary" TextWrapping="Wrap"
+                                                       Text="The save records the order each was cleared in; the number shows that position."/>
+                                            <ItemsControl ItemsSource="{Binding Badges}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:BadgeRowViewModel">
+                                                        <Grid ColumnDefinitions="64,*,36" ColumnSpacing="6" Margin="0,1">
+                                                            <TextBlock Grid.Column="0" Text="{Binding Group}" FontSize="9"
+                                                                       Classes="secondary" VerticalAlignment="Center"/>
+                                                            <CheckBox Grid.Column="1" Content="{Binding Label}" FontSize="11"
+                                                                      IsChecked="{Binding Cleared, Mode=TwoWay}"/>
+                                                            <TextBlock Grid.Column="2" Text="{Binding OrderText}" FontSize="10"
+                                                                       Classes="secondary" VerticalAlignment="Center"
+                                                                       TextAlignment="Right"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+
                                         <StackPanel IsVisible="{Binding IsScarletViolet}" Spacing="6" Margin="0,6,0,0">
                                             <Separator/>
                                             <TextBlock Classes="sectionTitle" Text="PROGRESSION SHORTCUTS"/>

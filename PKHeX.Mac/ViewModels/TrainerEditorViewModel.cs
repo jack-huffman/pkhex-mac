@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PKHeX.Core;
+using PKHeX.Mac.Services;
 
 namespace PKHeX.Mac.ViewModels;
 
@@ -33,6 +34,22 @@ public partial class TrainerEditorViewModel : ObservableObject
             IsScarletViolet = true;
             LeaguePoints = sv.LeaguePoints;
             BlueberryPoints = sv.BlueberryPoints;
+            BuildBadges(sav);
+        }
+    }
+
+    /// <summary>Gym, Titan and Team Star clears, grouped for display.</summary>
+    public List<BadgeRowViewModel> Badges { get; } = [];
+    public bool HasBadges => Badges.Count > 0;
+
+    private void BuildBadges(SaveFile sav)
+    {
+        var progress = new Sv9Progress(sav);
+        foreach (var (group, label, block) in Sv9Progress.Badges)
+        {
+            if (!progress.Exists(block))
+                continue;
+            Badges.Add(new BadgeRowViewModel(progress, group, label, block));
         }
     }
 
@@ -124,5 +141,56 @@ public partial class TrainerEditorViewModel : ObservableObject
         _sav.PlayedHours = Hours;
         _sav.PlayedMinutes = Minutes;
         _sav.PlayedSeconds = Seconds;
+    }
+}
+
+/// <summary>
+/// One gym / titan / Team Star clear. The save stores the order it was cleared in,
+/// so ticking one assigns the next free position and clearing it writes zero.
+/// </summary>
+public partial class BadgeRowViewModel : ObservableObject
+{
+    private readonly Sv9Progress _progress;
+    private readonly string _block;
+    private bool _loading;
+
+    public BadgeRowViewModel(Sv9Progress progress, string group, string label, string block)
+    {
+        _progress = progress;
+        _block = block;
+        Group = group;
+        Label = label;
+        _loading = true;
+        Order = progress.GetInt(block);
+        Cleared = Order != 0;
+        _loading = false;
+    }
+
+    public string Group { get; }
+    public string Label { get; }
+
+    [ObservableProperty] private bool _cleared;
+    [ObservableProperty] private int _order;
+
+    public string OrderText => Order == 0 ? "—" : $"#{Order}";
+
+    partial void OnClearedChanged(bool value)
+    {
+        if (_loading)
+            return;
+        if (value)
+        {
+            // Take the next position after whatever is already cleared.
+            var next = 1;
+            foreach (var (_, _, block) in Sv9Progress.Badges)
+                next = System.Math.Max(next, _progress.GetInt(block) + 1);
+            Order = next;
+        }
+        else
+        {
+            Order = 0;
+        }
+        _progress.SetInt(_block, Order);
+        OnPropertyChanged(nameof(OrderText));
     }
 }
