@@ -602,8 +602,9 @@
                             <!-- Detail pane: fixed position, so selecting never disturbs the list -->
                             <Border Grid.Column="1" Classes="card" Padding="14" VerticalAlignment="Stretch">
                                 <Panel>
+                                    <!-- '!' does not null-check an object binding; use the converter -->
                                     <StackPanel VerticalAlignment="Center" Spacing="8"
-                                                IsVisible="{Binding !SelectedRow}">
+                                                IsVisible="{Binding SelectedRow, Converter={x:Static ObjectConverters.IsNull}}">
                                         <TextBlock Text="📖" FontSize="30" HorizontalAlignment="Center" Opacity="0.3"/>
                                         <TextBlock Text="Select a species to see everything the dex records for it"
                                                    FontSize="12" Classes="secondary" HorizontalAlignment="Center"
