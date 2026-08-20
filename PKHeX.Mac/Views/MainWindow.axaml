@@ -1337,33 +1337,127 @@
                                             </ItemsControl>
                                         </StackPanel>
 
-                                        <!-- Defensive profile -->
+                                        <!-- Defensive grid: members down, attacking types across.
+                                             Every strip is an ItemsControl over a fixed 40px cell so the
+                                             header, body and totals stay aligned without a real Grid. -->
                                         <StackPanel Spacing="5" IsVisible="{Binding HasMembers}">
-                                            <TextBlock Classes="sectionTitle" Text="TAKING HITS — WORST FIRST" Margin="0"/>
-                                            <ItemsControl ItemsSource="{Binding Defense}">
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate x:DataType="vm:DefenseRowViewModel">
-                                                        <Grid ColumnDefinitions="24,80,150,*,90" ColumnSpacing="8"
-                                                              Margin="0,0,0,4">
-                                                            <Image Grid.Column="0" Source="{Binding TypeIcon}"
-                                                                   Width="18" Height="18"
-                                                                   IsVisible="{Binding HasIcon}"/>
-                                                            <TextBlock Grid.Column="1" Text="{Binding TypeName}" FontSize="12"
-                                                                       VerticalAlignment="Center"/>
-                                                            <TextBlock Grid.Column="2" Text="{Binding Detail}" FontSize="10"
-                                                                       Classes="secondary" VerticalAlignment="Center"/>
-                                                            <ProgressBar Grid.Column="3" Classes="statbar"
-                                                                         Value="{Binding BarPercent}"
-                                                                         Foreground="{Binding VerdictBrush}"
-                                                                         VerticalAlignment="Center"/>
-                                                            <TextBlock Grid.Column="4" Text="{Binding Verdict}" FontSize="10"
-                                                                       FontWeight="SemiBold" TextAlignment="Right"
-                                                                       Foreground="{Binding VerdictBrush}"
-                                                                       VerticalAlignment="Center"/>
-                                                        </Grid>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
+                                            <TextBlock Classes="sectionTitle" Text="TAKING HITS" Margin="0"/>
+                                            <TextBlock FontSize="10" Classes="secondary" TextWrapping="Wrap"
+                                                       Text="Incoming damage per member. Blank means normal damage; a red type name means two or more are weak to it and nothing resists it."/>
+                                            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                                                          VerticalScrollBarVisibility="Disabled">
+                                                <StackPanel Spacing="0">
+
+                                                    <!-- Header -->
+                                                    <Grid ColumnDefinitions="176,Auto" Margin="0,0,0,4">
+                                                        <ItemsControl Grid.Column="1" ItemsSource="{Binding Columns}">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate>
+                                                                    <StackPanel Orientation="Horizontal"/>
+                                                                </ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:MatrixColumnViewModel">
+                                                                    <Border Width="40" Padding="0,2"
+                                                                            ToolTip.Tip="{Binding Tooltip}">
+                                                                        <StackPanel Spacing="1">
+                                                                            <Image Source="{Binding TypeIcon}"
+                                                                                   Width="20" Height="20"
+                                                                                   IsVisible="{Binding HasIcon}"
+                                                                                   HorizontalAlignment="Center"/>
+                                                                            <Ellipse Width="4" Height="4"
+                                                                                     HorizontalAlignment="Center"
+                                                                                     Fill="{Binding HeaderBrush}"
+                                                                                     IsVisible="{Binding IsSharedWeakness}"/>
+                                                                        </StackPanel>
+                                                                    </Border>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </Grid>
+
+                                                    <!-- One row per member -->
+                                                    <ItemsControl ItemsSource="{Binding Members}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate x:DataType="vm:TeamMemberViewModel">
+                                                                <Grid ColumnDefinitions="176,Auto" Margin="0,0,0,2">
+                                                                    <StackPanel Grid.Column="0" Orientation="Horizontal"
+                                                                                Spacing="6" VerticalAlignment="Center">
+                                                                        <Image Source="{Binding Sprite}" Width="34" Height="28"
+                                                                               RenderOptions.BitmapInterpolationMode="None"/>
+                                                                        <TextBlock Text="{Binding SpeciesName}" FontSize="11"
+                                                                                   VerticalAlignment="Center"
+                                                                                   TextTrimming="CharacterEllipsis"/>
+                                                                    </StackPanel>
+                                                                    <ItemsControl Grid.Column="1" ItemsSource="{Binding Cells}">
+                                                                        <ItemsControl.ItemsPanel>
+                                                                            <ItemsPanelTemplate>
+                                                                                <StackPanel Orientation="Horizontal"/>
+                                                                            </ItemsPanelTemplate>
+                                                                        </ItemsControl.ItemsPanel>
+                                                                        <ItemsControl.ItemTemplate>
+                                                                            <DataTemplate x:DataType="vm:MatrixCellViewModel">
+                                                                                <Border Width="40" Height="28" Margin="0,0,1,0"
+                                                                                        CornerRadius="4"
+                                                                                        Background="{Binding Background}"
+                                                                                        ToolTip.Tip="{Binding Tooltip}">
+                                                                                    <TextBlock Text="{Binding Text}" FontSize="11"
+                                                                                               FontWeight="SemiBold"
+                                                                                               Foreground="{Binding Foreground}"
+                                                                                               HorizontalAlignment="Center"
+                                                                                               VerticalAlignment="Center"/>
+                                                                                </Border>
+                                                                            </DataTemplate>
+                                                                        </ItemsControl.ItemTemplate>
+                                                                    </ItemsControl>
+                                                                </Grid>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+
+                                                    <Separator Margin="0,4"/>
+
+                                                    <!-- Totals -->
+                                                    <Grid ColumnDefinitions="176,Auto">
+                                                        <TextBlock Grid.Column="0" Text="weak" FontSize="10"
+                                                                   Classes="secondary" VerticalAlignment="Center"/>
+                                                        <ItemsControl Grid.Column="1" ItemsSource="{Binding Columns}">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate>
+                                                                    <StackPanel Orientation="Horizontal"/>
+                                                                </ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:MatrixColumnViewModel">
+                                                                    <TextBlock Width="40" Text="{Binding WeakText}"
+                                                                               FontSize="11" FontWeight="SemiBold"
+                                                                               Foreground="{Binding WeakBrush}"
+                                                                               TextAlignment="Center"/>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </Grid>
+                                                    <Grid ColumnDefinitions="176,Auto" Margin="0,2,0,0">
+                                                        <TextBlock Grid.Column="0" Text="resist or immune" FontSize="10"
+                                                                   Classes="secondary" VerticalAlignment="Center"/>
+                                                        <ItemsControl Grid.Column="1" ItemsSource="{Binding Columns}">
+                                                            <ItemsControl.ItemsPanel>
+                                                                <ItemsPanelTemplate>
+                                                                    <StackPanel Orientation="Horizontal"/>
+                                                                </ItemsPanelTemplate>
+                                                            </ItemsControl.ItemsPanel>
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate x:DataType="vm:MatrixColumnViewModel">
+                                                                    <TextBlock Width="40" Text="{Binding ResistText}"
+                                                                               FontSize="11" FontWeight="SemiBold"
+                                                                               Foreground="{Binding ResistBrush}"
+                                                                               TextAlignment="Center"/>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </Grid>
+                                                </StackPanel>
+                                            </ScrollViewer>
                                         </StackPanel>
 
                                         <!-- Offensive coverage -->
