@@ -274,12 +274,17 @@ public sealed class TeamMemberViewModel
         AbilityName = (uint)_ability < strings.abilitylist.Length ? strings.abilitylist[_ability] : string.Empty;
         AbilityMatters = TypeChart.IsRelevantAbility(_ability);
 
-        // Only damaging moves contribute offensive coverage.
+        // One pass builds both the display list and the damaging subset that feeds
+        // offensive coverage. MoveChoice is the same shape the move pickers use, so
+        // the type and category icons match the rest of the app.
+        var display = new List<MoveChoice>(4);
         var attacking = new List<(int Type, string Name)>();
         foreach (var move in new[] { pk.Move1, pk.Move2, pk.Move3, pk.Move4 })
         {
             if (move == 0)
                 continue;
+            display.Add(MoveChoice.For(move, pk.Context, strings));
+
             var facts = MoveDataService.Get(move);
             if (facts.Category is MoveDataService.Category.Status)
                 continue;
@@ -290,6 +295,7 @@ public sealed class TeamMemberViewModel
             var name = move < strings.movelist.Length ? strings.movelist[move] : $"#{move}";
             attacking.Add((type, name));
         }
+        Moves = display;
         AttackingMoves = attacking;
 
         var worst = new List<string>();
@@ -321,7 +327,14 @@ public sealed class TeamMemberViewModel
     public bool AbilityMatters { get; }
 
     public string WeakTo { get; }
+
+    /// <summary>Every move this member knows, for display.</summary>
+    public IReadOnlyList<MoveChoice> Moves { get; }
+
+    /// <summary>The damaging subset, used for offensive coverage.</summary>
     public IReadOnlyList<(int Type, string Name)> AttackingMoves { get; }
+
+    public bool HasMoves => Moves.Count > 0;
 
     /// <summary>This member's row in the grid, one cell per attacking type.</summary>
     public ObservableCollection<MatrixCellViewModel> Cells { get; } = [];
