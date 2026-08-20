@@ -103,6 +103,21 @@ public partial class MainWindow : Window
         VM.IsClosePromptOpen = true;
     }
 
+    // ---- Reverting ----
+
+    public void OnRevertAllClicked(object? sender, RoutedEventArgs e) => VM.RequestRevert();
+
+    public void OnRevertAllMenuClicked(object? sender, EventArgs e) => VM.RequestRevert();
+
+    public void OnSlotRevertClicked(object? sender, RoutedEventArgs e)
+    {
+        if (SlotOf(sender) is { } slot)
+            VM.RevertSlot(slot);
+    }
+
+    /// <summary>Throws away edits typed into the inspector without touching the save.</summary>
+    public void OnDetailRevertClicked(object? sender, RoutedEventArgs e) => VM.RevertDetailEdits();
+
     public void OnCloseCancelClicked(object? sender, RoutedEventArgs e) => VM.IsClosePromptOpen = false;
 
     public void OnCloseDiscardClicked(object? sender, RoutedEventArgs e)

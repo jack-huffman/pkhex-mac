@@ -24,6 +24,7 @@
                 <NativeMenu>
                     <NativeMenuItem Header="Open Save File…" Gesture="Cmd+O" Click="OnOpenClicked"/>
                     <NativeMenuItem Header="Export Save As…" Gesture="Cmd+S" Click="OnExportClicked"/>
+                    <NativeMenuItem Header="Revert to Saved File…" Click="OnRevertAllMenuClicked"/>
                     <NativeMenuItemSeparator/>
                     <NativeMenuItem Header="Import Showdown Set from Clipboard" Gesture="Cmd+Shift+I" Click="OnShowdownImportClicked"/>
                     <NativeMenuItem Header="Copy Showdown Set to Clipboard" Gesture="Cmd+Shift+E" Click="OnShowdownExportClicked"/>
@@ -73,6 +74,7 @@
                         <MenuItem Header="Copy" Click="OnSlotCopyClicked"/>
                         <MenuItem Header="Paste" Click="OnSlotPasteClicked"/>
                         <MenuItem Header="Delete" Click="OnSlotDeleteClicked"/>
+                        <MenuItem Header="Revert to Saved" Click="OnSlotRevertClicked"/>
                         <Separator/>
                         <MenuItem Header="Import from File…" Click="OnSlotImportClicked"/>
                         <MenuItem Header="Export to File…" Click="OnSlotExportClicked"/>
@@ -154,6 +156,9 @@
                                             Click="OnExportButtonClicked"/>
                                     <Button Content="History" FontSize="{StaticResource FontMicro}" Padding="8,3"
                                             Command="{Binding SaveState.ToggleLogCommand}"/>
+                                    <Button Content="Revert All" FontSize="{StaticResource FontMicro}" Padding="8,4"
+                                            ToolTip.Tip="Throw away every edit and reload the file from disk"
+                                            Click="OnRevertAllClicked"/>
                                 </StackPanel>
 
                                 <!-- Session log: what changed, newest first -->
@@ -2843,10 +2848,17 @@
                                 </StackPanel>
 
                                 <!-- Apply -->
-                                <Button DockPanel.Dock="Bottom" Content="Apply Changes" Margin="0,10,0,0"
-                                        HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                                        IsEnabled="{Binding IsDirty}" Classes="accent"
-                                        Click="OnApplyClicked"/>
+                                <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto"
+                                      ColumnSpacing="6" Margin="0,12,0,0">
+                                    <Button Grid.Column="0" Content="Apply Changes"
+                                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                            IsEnabled="{Binding IsDirty}" Classes="accent"
+                                            Click="OnApplyClicked"/>
+                                    <Button Grid.Column="1" Content="Revert"
+                                            IsEnabled="{Binding IsDirty}"
+                                            ToolTip.Tip="Discard the edits made here and re-read this Pokémon from the save"
+                                            Click="OnDetailRevertClicked"/>
+                                </Grid>
 
                                 <!-- Tabs -->
                                 <TabControl Margin="0,6,0,0" Padding="0,6,0,0">
@@ -3992,6 +4004,27 @@
 
                     </Border>
         </Grid>
+
+            <!-- ══════ Revert confirmation ══════ -->
+            <Border IsVisible="{Binding IsRevertPromptOpen}" Background="#B0000000">
+                <Border Classes="card" Width="440" Padding="20"
+                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="Start over from the saved file?"
+                                   FontSize="{StaticResource FontHeading}" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding RevertSummary}"
+                                   FontSize="{StaticResource FontBody}"
+                                   Foreground="{DynamicResource IllegalFgBrush}"/>
+                        <TextBlock FontSize="{StaticResource FontBody}" Classes="secondary"
+                                   TextWrapping="Wrap"
+                                   Text="The file on disk is re-read as it stands. Nothing is written, so the file itself cannot be harmed by this — but edits made since opening it are gone."/>
+                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+                            <Button Content="Cancel" Command="{Binding CancelRevertCommand}"/>
+                            <Button Content="Revert" Classes="accent" Command="{Binding RevertCommand}"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Border>
 
             <!-- ══════ Close confirmation ══════ -->
             <Border IsVisible="{Binding IsClosePromptOpen}" Background="#B0000000">
