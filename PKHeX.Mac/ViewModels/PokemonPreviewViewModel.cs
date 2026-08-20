@@ -31,6 +31,8 @@ public partial class PokemonPreviewViewModel : ObservableObject
     [ObservableProperty] private IBrush? _type2Brush;
     [ObservableProperty] private IImage? _type1Icon;
     [ObservableProperty] private IImage? _type2Icon;
+    [ObservableProperty] private bool _hasType1Icon;
+    [ObservableProperty] private bool _hasType2Icon;
     [ObservableProperty] private bool _isShiny;
     [ObservableProperty] private bool _isLegal;
     [ObservableProperty] private string _legalityReport = string.Empty;
@@ -74,6 +76,9 @@ public partial class PokemonPreviewViewModel : ObservableObject
         Type2Brush = TypePalette.GetBrush(pi.Type2);
         Type1Icon = TypeIconService.Get(pi.Type1);
         Type2Icon = TypeIconService.Get(pi.Type2);
+        // Stellar has no symbol; those fall back to the coloured pill.
+        HasType1Icon = Type1Icon is not null;
+        HasType2Icon = Type2Icon is not null;
 
         var la = new LegalityAnalysis(pk);
         IsLegal = la.Valid;

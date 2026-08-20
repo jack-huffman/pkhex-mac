@@ -940,19 +940,18 @@
                                             <TextBlock Text="{Binding LevelBadge}" FontSize="10" Classes="secondary"
                                                        VerticalAlignment="Center"/>
                                         </StackPanel>
-                                        <StackPanel Orientation="Horizontal" Spacing="4">
-                                            <Border Classes="chip" Padding="7,2" Background="{Binding Type1Brush}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <Image Source="{Binding Type1Icon}" Width="22" Height="22"
+                                                   IsVisible="{Binding HasType1Icon}" ToolTip.Tip="{Binding Type1Name}"/>
+                                            <Border Classes="chip" Padding="7,2" Background="{Binding Type1Brush}"
+                                                    IsVisible="{Binding !HasType1Icon}">
                                                 <TextBlock Text="{Binding Type1Name}" FontSize="9" FontWeight="SemiBold" Foreground="White"/>
                                             </Border>
-                                            <Border Classes="chip" Padding="7,2" Background="{Binding Type2Brush}"
-                                                    IsVisible="{Binding HasType2}">
-                                                <TextBlock Text="{Binding Type2Name}" FontSize="9" FontWeight="SemiBold" Foreground="White"/>
-                                            </Border>
-                                            <Border Classes="chip" Padding="7,2" Background="{DynamicResource SurfaceMutedBrush}"
-                                                    IsVisible="{Binding IsShiny}">
-                                                <TextBlock Text="★ Shiny" FontSize="9" FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                            </Border>
+                                            <Image Source="{Binding Type2Icon}" Width="22" Height="22"
+                                                   IsVisible="{Binding HasType2Icon}" ToolTip.Tip="{Binding Type2Name}"/>
+                                            <Image Source="{Binding ShinyIcon}" Width="17" Height="17"
+                                                   IsVisible="{Binding IsShiny}" VerticalAlignment="Center"
+                                                   ToolTip.Tip="Shiny"/>
                                         </StackPanel>
                                         <StackPanel Orientation="Horizontal" Spacing="4">
                                             <Border Classes="chip" Padding="7,2" Background="{DynamicResource LegalBgBrush}"
@@ -1023,25 +1022,23 @@
                                         </Border>
                                     </StackPanel>
                                     <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                                        <Border Classes="chip" Background="{Binding Type1Brush}" Padding="6,2">
-                                            <StackPanel Orientation="Horizontal" Spacing="5">
-                                                <Image Source="{Binding Type1Icon}" Width="15" Height="15" VerticalAlignment="Center"/>
-                                                <TextBlock Text="{Binding Type1Name}" FontSize="10" FontWeight="SemiBold" Foreground="White"/>
-                                            </StackPanel>
+                                        <!-- The type symbols are self-explanatory, so no labels -->
+                                        <Image Source="{Binding Type1Icon}" Width="26" Height="26"
+                                               IsVisible="{Binding HasType1Icon}"
+                                               ToolTip.Tip="{Binding Type1Name}"/>
+                                        <Border Classes="chip" Background="{Binding Type1Brush}" Padding="7,2"
+                                                IsVisible="{Binding !HasType1Icon}">
+                                            <TextBlock Text="{Binding Type1Name}" FontSize="10" FontWeight="SemiBold" Foreground="White"/>
                                         </Border>
-                                        <Border Classes="chip" Background="{Binding Type2Brush}" Padding="6,2" IsVisible="{Binding HasType2}">
-                                            <StackPanel Orientation="Horizontal" Spacing="5">
-                                                <Image Source="{Binding Type2Icon}" Width="15" Height="15" VerticalAlignment="Center"/>
-                                                <TextBlock Text="{Binding Type2Name}" FontSize="10" FontWeight="SemiBold" Foreground="White"/>
-                                            </StackPanel>
-                                        </Border>
-                                        <Border Classes="chip" Background="{DynamicResource SurfaceMutedBrush}" IsVisible="{Binding IsShiny}">
-                                            <StackPanel Orientation="Horizontal" Spacing="4">
-                                                <Image Source="{Binding ShinyIcon}" Width="12" Height="12" VerticalAlignment="Center"/>
-                                                <TextBlock Text="Shiny" FontSize="10" FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
-                                            </StackPanel>
-                                        </Border>
+
+                                        <Image Source="{Binding Type2Icon}" Width="26" Height="26"
+                                               IsVisible="{Binding HasType2Icon}"
+                                               ToolTip.Tip="{Binding Type2Name}"/>
+
+                                        <Image Source="{Binding ShinyIcon}" Width="20" Height="20"
+                                               IsVisible="{Binding IsShiny}" VerticalAlignment="Center"
+                                               ToolTip.Tip="Shiny"
+                                               RenderOptions.BitmapInterpolationMode="HighQuality"/>
                                         <Border Classes="chip" Background="{DynamicResource LegalBgBrush}" IsVisible="{Binding IsLegal}">
                                             <TextBlock Text="✓ Legal" FontSize="10" FontWeight="SemiBold"
                                                        Foreground="{DynamicResource LegalFgBrush}"/>
