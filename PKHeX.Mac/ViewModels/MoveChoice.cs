@@ -43,6 +43,8 @@ public sealed class MoveChoice
         CategoryBrush = MoveDataService.BrushFor(facts.Category);
         Description = facts.Description;
         HasCategory = CategoryLabel.Length > 0;
+        HitsText = facts.HitsText;
+        EffectivePower = facts.EffectivePower;
     }
 
     public int Value { get; }
@@ -58,6 +60,13 @@ public sealed class MoveChoice
     public string AccuracyText { get; } = "—";
     public string Description { get; } = string.Empty;
     public byte Pp { get; }
+
+    /// <summary>"3 hits" or "2–5 hits"; empty for single-strike moves.</summary>
+    public string HitsText { get; } = string.Empty;
+
+    /// <summary>Power per use with hit count and crit rate folded in.</summary>
+    public double EffectivePower { get; }
+
     public bool IsRealMove { get; }
     public bool HasCategory { get; }
 
@@ -67,7 +76,8 @@ public sealed class MoveChoice
     /// <summary>"55 power · 100% acc · 15 PP" — the summary shown beside an assigned move.</summary>
     public string StatLine => !IsRealMove
         ? string.Empty
-        : $"{PowerText} pow · {AccuracyText}% acc · {Pp} PP";
+        : $"{PowerText} pow · {AccuracyText}% acc · {Pp} PP"
+          + (HitsText.Length == 0 ? string.Empty : $" · {HitsText}");
 
     /// <summary>Describes one move by id, for read-only displays.</summary>
     public static MoveChoice For(ushort move, EntityContext context, GameStrings strings)

@@ -20,8 +20,44 @@ public static class MoveDataService
 {
     public enum Category { Unknown, Physical, Special, Status }
 
-    public readonly record struct MoveFacts(int? Power, int? Accuracy, Category Category, string Description)
+    public readonly record struct MoveFacts(int? Power, int? Accuracy, Category Category, string Description,
+                                           int MinHits = 1, int MaxHits = 1, int CritRate = 0)
     {
+        /// <summary>True when the move strikes more than once per use.</summary>
+        public bool IsMultiHit => MaxHits > 1;
+
+        /// <summary>"3 hits" or "2–5 hits", for display beside the base power.</summary>
+        public string HitsText => !IsMultiHit
+            ? string.Empty
+            : MinHits == MaxHits ? $"{MinHits} hits" : $"{MinHits}–{MaxHits} hits";
+
+        /// <summary>
+        /// Expected number of hits. A fixed count is exact; the 2–5 spread uses the
+        /// modern distribution (35/35/15/15), which averages 3.1 rather than 3.5.
+        /// </summary>
+        public double ExpectedHits => MinHits == MaxHits
+            ? MinHits
+            : MinHits == 2 && MaxHits == 5 ? 3.1 : (MinHits + MaxHits) / 2.0;
+
+        /// <summary>
+        /// Average damage multiplier from critical hits. PokeAPI grades the rate in
+        /// stages; anything at stage 3 or above always crits.
+        /// </summary>
+        public double CritMultiplier => CritRate switch
+        {
+            <= 0 => 1.0,        // baseline 1/24 chance, not worth modelling
+            1 => 1.0625,        // ~12.5% chance of a 1.5x hit
+            2 => 1.25,          // ~50%
+            _ => 1.5,           // always crits
+        };
+
+        /// <summary>
+        /// Power actually delivered per use, folding in hit count and crit rate. A
+        /// 25-power three-hit move that always crits lands like 112, and ranking it
+        /// as 25 badly understates it.
+        /// </summary>
+        public double EffectivePower => (Power ?? 0) * ExpectedHits * CritMultiplier;
+
         public string PowerText => Power?.ToString() ?? "—";
         public string AccuracyText => Accuracy?.ToString() ?? "—";
 
@@ -70,11 +106,16 @@ public static class MoveDataService
                 if (!int.TryParse(property.Name, out var id))
                     continue;
                 var e = property.Value;
+                var minHits = ReadNullableInt(e, "hl") ?? 1;
+                var maxHits = ReadNullableInt(e, "hh") ?? minHits;
                 result[id] = new MoveFacts(
                     ReadNullableInt(e, "p"),
                     ReadNullableInt(e, "a"),
                     ParseCategory(e.TryGetProperty("c", out var c) ? c.GetString() : null),
-                    (e.TryGetProperty("d", out var d) ? d.GetString() : null) ?? string.Empty);
+                    (e.TryGetProperty("d", out var d) ? d.GetString() : null) ?? string.Empty,
+                    minHits,
+                    maxHits,
+                    ReadNullableInt(e, "cr") ?? 0);
             }
         }
         catch

@@ -202,20 +202,28 @@ public partial class TeamAnalysisViewModel : ObservableObject
             if (_era == ChartEra.Gen1 && defender is 8 or 16)
                 continue;
 
+            // The best multiplier answers "do I have a super-effective hit"; among the
+            // moves that reach it, the strongest one answers "which should I use".
             double best = 0;
-            string bestSource = string.Empty;
             foreach (var member in Members)
             {
-                foreach (var (moveType, moveName) in member.AttackingMoves)
+                foreach (var option in member.AttackingMoves)
+                    best = Math.Max(best, TypeChart.Get(option.Type, defender, _era));
+            }
+
+            var candidates = new List<CoverageCandidate>();
+            foreach (var member in Members)
+            {
+                foreach (var option in member.AttackingMoves)
                 {
-                    var multiplier = TypeChart.Get(moveType, defender, _era);
-                    if (multiplier <= best)
+                    if (Math.Abs(TypeChart.Get(option.Type, defender, _era) - best) > 1e-9)
                         continue;
-                    best = multiplier;
-                    bestSource = $"{moveName} ({member.SpeciesName})";
+                    candidates.Add(new CoverageCandidate(option.Name, option.Owner,
+                                                         option.Score * best, option.HasStab, option.HitsText));
                 }
             }
-            var row = new CoverageRowViewModel(defender, _strings, best, bestSource);
+            candidates.Sort((a, b) => b.Damage.CompareTo(a.Damage));
+            var row = new CoverageRowViewModel(defender, _strings, best, candidates);
             Coverage.Add(row);
             if (!row.IsCovered)
                 Findings.Add($"Nothing hits {row.TypeName} for extra damage.");
@@ -269,8 +277,13 @@ public sealed class TeamMemberViewModel
         // One pass builds both the display list and the damaging subset that feeds
         // offensive coverage. MoveChoice is the same shape the move pickers use, so
         // the type and category icons match the rest of the app.
+        // Party stats are only populated for the party; a box entry needs them
+        // recalculated before its attack stats can be read. This is a copy, so the
+        // save is untouched.
+        pk.ResetPartyStats();
+
         var display = new List<MoveChoice>(4);
-        var attacking = new List<(int Type, string Name)>();
+        var attacking = new List<AttackOption>();
         foreach (var move in new[] { pk.Move1, pk.Move2, pk.Move3, pk.Move4 })
         {
             if (move == 0)
@@ -283,9 +296,18 @@ public sealed class TeamMemberViewModel
             // Unknown category with no power is almost certainly a status move.
             if (facts.Category is MoveDataService.Category.Unknown && facts.Power is null or 0)
                 continue;
+
             var type = MoveInfo.GetType(move, pk.Context);
             var name = move < strings.movelist.Length ? strings.movelist[move] : $"#{move}";
-            attacking.Add((type, name));
+
+            // Rough output per use, before the type matchup: effective power (hits and
+            // crits folded in), same-type bonus, and the stat the move actually uses.
+            var stab = type == _type1 || type == _type2 ? 1.5 : 1.0;
+            var stat = facts.Category == MoveDataService.Category.Physical
+                ? pk.Stat_ATK
+                : pk.Stat_SPA;
+            var score = facts.EffectivePower * stab * stat / 100.0;
+            attacking.Add(new AttackOption(type, name, SpeciesName, score, stab > 1, facts.HitsText));
         }
         Moves = display;
         AttackingMoves = attacking;
@@ -350,8 +372,8 @@ public sealed class TeamMemberViewModel
     /// <summary>Every move this member knows, for display.</summary>
     public IReadOnlyList<MoveChoice> Moves { get; }
 
-    /// <summary>The damaging subset, used for offensive coverage.</summary>
-    public IReadOnlyList<(int Type, string Name)> AttackingMoves { get; }
+    /// <summary>The damaging subset, scored, used for offensive coverage.</summary>
+    public IReadOnlyList<AttackOption> AttackingMoves { get; }
 
     public bool HasMoves => Moves.Count > 0;
 
@@ -383,7 +405,8 @@ public sealed class CoverageRowViewModel
     private static readonly IBrush Ok = new SolidColorBrush(Color.Parse("#6FAFB8"));
     private static readonly IBrush Neutral = new SolidColorBrush(Color.Parse("#8FA6B8"));
 
-    public CoverageRowViewModel(int typeId, GameStrings strings, double best, string source)
+    public CoverageRowViewModel(int typeId, GameStrings strings, double best,
+                               IReadOnlyList<CoverageCandidate> candidates)
     {
         TypeId = typeId;
         TypeName = (uint)typeId < strings.types.Length ? strings.types[typeId] : $"#{typeId}";
@@ -393,7 +416,18 @@ public sealed class CoverageRowViewModel
         IsCovered = best > 1;
 
         BestText = best == 0 ? "no damage" : $"{best.ToString("0.##", CultureInfo.InvariantCulture)}×";
-        Source = IsCovered ? source : string.Empty;
+        Candidates = candidates;
+
+        // Name the hardest hitter; keep the rest for the tooltip.
+        var top = candidates.Count > 0 ? candidates[0] : null;
+        Source = top is null
+            ? string.Empty
+            : $"{top.Move} ({top.Owner})" + (top.HitsText.Length == 0 ? string.Empty : $" · {top.HitsText}");
+        Tooltip = candidates.Count == 0
+            ? $"Nothing on the team damages {TypeName}."
+            : $"Best hits on {TypeName}:\n" + string.Join("\n",
+                candidates.Take(4).Select(c => $"  {c.Move} ({c.Owner}) — {c.Damage:F0}"
+                                               + (c.HasStab ? ", same type" : string.Empty)));
         Verdict = best > 1 ? "covered" : best == 0 ? "immune" : "neutral at best";
         VerdictBrush = best > 1 ? Ok : best == 0 ? Bad : Neutral;
     }
@@ -406,6 +440,8 @@ public sealed class CoverageRowViewModel
     public double Best { get; }
     public string BestText { get; }
     public string Source { get; }
+    public IReadOnlyList<CoverageCandidate> Candidates { get; } = [];
+    public string Tooltip { get; } = string.Empty;
     public bool IsCovered { get; }
     public string Verdict { get; }
     public IBrush VerdictBrush { get; }
@@ -587,3 +623,14 @@ public sealed class TypeBadgeViewModel
     public IBrush? Brush { get; }
     public bool HasIcon => Icon is not null;
 }
+
+/// <summary>
+/// A damaging move a member can use, with its output before the type matchup is
+/// applied. Score is a rough comparison figure, not a damage calculation: it folds in
+/// effective power, the same-type bonus and the stat the move uses, but not the target's
+/// defences, items, abilities, weather or terrain.
+/// </summary>
+public sealed record AttackOption(int Type, string Name, string Owner, double Score, bool HasStab, string HitsText);
+
+/// <summary>One candidate answer against a defending type.</summary>
+public sealed record CoverageCandidate(string Move, string Owner, double Damage, bool HasStab, string HitsText);

@@ -1,5 +1,6 @@
 #!/bin/zsh
-# Fetch battle metadata for every move (power, accuracy, damage class) from PokeAPI
+# Fetch battle metadata for every move (power, accuracy, damage class, hit count,
+# crit rate) from PokeAPI
 # into PKHeX.Mac/Assets/movedata.json.
 #
 # PKHeX.Core only stores each move's type and PP — it is a legality engine and does
@@ -53,12 +54,23 @@ for name in os.listdir(f"{tmp}/m"):
         if e.get("language", {}).get("name") == "en":
             desc = e.get("short_effect", "") or ""
             break
-    result[mid] = {
+    meta = d.get("meta") or {}
+    entry = {
         "p": d.get("power"),                                  # null for status moves
         "a": d.get("accuracy"),                               # null = never misses
         "c": (d.get("damage_class") or {}).get("name", ""),   # physical / special / status
         "d": desc.replace("$effect_chance", "the listed").strip(),
     }
+    # Multi-hit and crit data, so a 25-power three-hit move is not read as weak.
+    # Only stored when non-default, to keep the file small.
+    lo, hi = meta.get("min_hits"), meta.get("max_hits")
+    if lo or hi:
+        entry["hl"] = lo or 1
+        entry["hh"] = hi or lo or 1
+    crit = meta.get("crit_rate") or 0
+    if crit:
+        entry["cr"] = crit
+    result[mid] = entry
 os.makedirs(os.path.dirname(out), exist_ok=True)
 json.dump(result, open(out, "w"), separators=(",", ":"), ensure_ascii=False)
 print(f"wrote {len(result)} moves -> {out} ({os.path.getsize(out)//1024} KB)")

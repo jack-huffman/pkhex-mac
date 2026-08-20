@@ -1618,12 +1618,13 @@
                                         <StackPanel Spacing="5" IsVisible="{Binding CoverageAvailable}">
                                             <TextBlock Classes="sectionTitle" Text="DEALING DAMAGE — GAPS FIRST" Margin="0"/>
                                             <TextBlock FontSize="10" Classes="secondary" TextWrapping="Wrap"
-                                                       Text="The best multiplier any damaging move on the team reaches against each type."/>
+                                                       Text="The best multiplier any damaging move reaches against each type, and the hardest-hitting move that reaches it. Hover a row to see the alternatives."/>
                                             <ItemsControl ItemsSource="{Binding Coverage}">
                                                 <ItemsControl.ItemTemplate>
                                                     <DataTemplate x:DataType="vm:CoverageRowViewModel">
                                                         <Grid ColumnDefinitions="24,80,70,*,110" ColumnSpacing="8"
-                                                              Margin="0,0,0,4">
+                                                              Margin="0,0,0,4"
+                                                              ToolTip.Tip="{Binding Tooltip}">
                                                             <Image Grid.Column="0" Source="{Binding TypeIcon}"
                                                                    Width="18" Height="18"
                                                                    IsVisible="{Binding HasIcon}"/>
