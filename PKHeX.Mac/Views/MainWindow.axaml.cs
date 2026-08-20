@@ -482,17 +482,88 @@ public partial class MainWindow : Window
                     : "That folder contains no Pokémon files.");
     }
 
+    // ---- Save block backup / restore ----
+
+    private static readonly FilePickerFileType BlockFileType = new("Save Block")
+    {
+        Patterns = ["*.bin"],
+    };
+
+    public void OnExportBlockClicked(object? sender, RoutedEventArgs e) => _ = ExportBlockAsync();
+    public void OnImportBlockClicked(object? sender, RoutedEventArgs e) => _ = ImportBlockAsync();
+
+    private async Task ExportBlockAsync()
+    {
+        if (VM.SaveBlocks is not { } blocks || blocks.GetSelectedBytes() is not { } data)
+        {
+            await ShowError("No Block Selected", "Pick a block in the list first.");
+            return;
+        }
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Export Save Block",
+            SuggestedFileName = $"{blocks.SelectedRow?.KeyText ?? "block"}.bin",
+            ShowOverwritePrompt = true,
+            FileTypeChoices = [BlockFileType],
+        });
+        if (file is null || file.TryGetLocalPath() is not { } path)
+            return;
+        try
+        {
+            await File.WriteAllBytesAsync(path, data);
+            await ShowError("Block Exported", $"Wrote {data.Length} bytes to {Path.GetFileName(path)}.");
+        }
+        catch (Exception ex)
+        {
+            await ShowError("Export Failed", ex.Message);
+        }
+    }
+
+    private async Task ImportBlockAsync()
+    {
+        if (VM.SaveBlocks is not { } blocks)
+            return;
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Import Save Block",
+            AllowMultiple = false,
+            FileTypeFilter = [BlockFileType, FilePickerFileTypes.All],
+        });
+        if (files.Count == 0 || files[0].TryGetLocalPath() is not { } path)
+            return;
+        try
+        {
+            var data = await File.ReadAllBytesAsync(path);
+            if (!blocks.ImportSelectedBytes(data, out var message))
+                await ShowError("Import Failed", message);
+        }
+        catch (Exception ex)
+        {
+            await ShowError("Import Failed", ex.Message);
+        }
+    }
+
+    private void OnChooseSearchFolderClicked(object? sender, RoutedEventArgs e) => _ = ChooseSearchFolderAsync();
+
+    private async Task ChooseSearchFolderAsync()
+    {
+        if (VM.Search is not { } search)
+            return;
+        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = "Choose a Folder of Pokémon Files",
+            AllowMultiple = false,
+        });
+        if (folders.Count > 0 && folders[0].TryGetLocalPath() is { } dir)
+            search.FolderPath = dir;
+    }
+
     private void OnCopyReportClicked(object? sender, RoutedEventArgs e)
     {
         if (VM.Tools is { } tools && Clipboard is not null)
             _ = Clipboard.SetTextAsync(tools.BuildReportText());
     }
 
-    private void OnSearchHitSelected(object? sender, SelectionChangedEventArgs e)
-    {
-        if (sender is ListBox { SelectedItem: SearchHitViewModel hit })
-            VM.GoToSearchHit(hit);
-    }
 
     public void OnTrainerClicked(object? sender, EventArgs e) => VM.SetView("save");
     public void OnBagClicked(object? sender, EventArgs e) => VM.SetView("save");

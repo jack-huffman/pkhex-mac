@@ -80,6 +80,8 @@ public partial class SaveBlocksViewModel : ObservableObject
     [ObservableProperty] private bool _editableOnly = true;
     [ObservableProperty] private string _summary = string.Empty;
     [ObservableProperty] private string _capNotice = string.Empty;
+    [ObservableProperty] private ScBlockRowViewModel? _selectedRow;
+    [ObservableProperty] private string _ioResult = string.Empty;
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
     partial void OnNamedOnlyChanged(bool value) => ApplyFilter();
@@ -104,6 +106,36 @@ public partial class SaveBlocksViewModel : ObservableObject
     }
 
     internal void NotifyChanged() => _onChanged();
+
+    /// <summary>Raw bytes of the selected block, for writing to a file.</summary>
+    public byte[]? GetSelectedBytes() => SelectedRow?.RawBytes();
+
+    public string SelectedName => SelectedRow is { } r ? $"{r.Name} ({r.KeyText})" : string.Empty;
+
+    /// <summary>
+    /// Replaces the selected block's contents from a file. The length must match —
+    /// a block's size is fixed by the game, so a different size means the wrong file.
+    /// </summary>
+    public bool ImportSelectedBytes(byte[] data, out string message)
+    {
+        if (SelectedRow is not { } row)
+        {
+            message = "Select a block first.";
+            return false;
+        }
+        var expected = row.ByteLength;
+        if (data.Length != expected)
+        {
+            message = $"That file is {data.Length} bytes but this block holds {expected}. " +
+                      "Blocks are fixed size, so this is almost certainly the wrong file.";
+            return false;
+        }
+        row.Overwrite(data);
+        _onChanged();
+        message = $"Restored {expected} bytes into {row.Name}.";
+        IoResult = message;
+        return true;
+    }
 
     [RelayCommand]
     public void ClearFilters()
@@ -160,6 +192,21 @@ public partial class ScBlockRowViewModel : ObservableObject
     [ObservableProperty] private bool _boolValue;
     [ObservableProperty] private string _textValue = string.Empty;
     [ObservableProperty] private string _error = string.Empty;
+
+    /// <summary>A copy of the block's raw bytes.</summary>
+    internal byte[] RawBytes() => _block.Data.ToArray();
+
+    /// <summary>Writes raw bytes back into the block and refreshes the displayed value.</summary>
+    internal void Overwrite(byte[] data)
+    {
+        data.CopyTo(_block.Data);
+        _loading = true;
+        if (IsBoolean)
+            BoolValue = _block.Type == SCTypeCode.Bool2;
+        else if (IsScalar)
+            TextValue = _block.GetValue().ToString() ?? "0";
+        _loading = false;
+    }
 
     public bool Matches(string query) =>
         Name.Contains(query, StringComparison.OrdinalIgnoreCase)

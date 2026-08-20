@@ -59,24 +59,3 @@ public partial class SlotViewModel : ObservableObject
         ToolTipText = $"{name}\nLv. {pk.CurrentLevel}{(pk.IsShiny ? " ★" : string.Empty)}";
     }
 }
-
-/// <summary>A Pokémon found by the cross-box search, with where it lives.</summary>
-public sealed class SearchHitViewModel
-{
-    public SearchHitViewModel(int box, int slot, string species, string boxName, PKM pk, GameStrings strings)
-    {
-        Box = box;
-        Slot = slot;
-        Species = species;
-        Location = $"{boxName} · slot {slot + 1}";
-        Detail = $"Lv. {pk.CurrentLevel}{(pk.IsShiny ? " · ★" : string.Empty)}";
-        Sprite = SpriteService.GetPokemonSprite(pk);
-    }
-
-    public int Box { get; }
-    public int Slot { get; }
-    public string Species { get; }
-    public string Location { get; }
-    public string Detail { get; }
-    public Avalonia.Media.Imaging.Bitmap? Sprite { get; }
-}

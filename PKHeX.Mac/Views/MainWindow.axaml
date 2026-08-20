@@ -142,45 +142,23 @@
                             <Button Classes="nav" Classes.selected="{Binding IsDexView}"
                                     Command="{Binding SetViewCommand}" CommandParameter="dex"
                                     Content="Pokédex"/>
+                            <Button Classes="nav" Classes.selected="{Binding IsSearchView}"
+                                    Command="{Binding SetViewCommand}" CommandParameter="search"
+                                    Content="Search"/>
                             <Button Classes="nav" Classes.selected="{Binding IsToolsView}"
                                     Command="{Binding SetViewCommand}" CommandParameter="tools"
                                     Content="Tools"/>
                             <Button Classes="nav" Classes.selected="{Binding IsFlagsView}"
                                     Command="{Binding SetViewCommand}" CommandParameter="flags"
                                     Content="Flags &amp; Blocks"/>
+                            <Button Classes="nav" Classes.selected="{Binding IsRaidsView}"
+                                    Command="{Binding SetViewCommand}" CommandParameter="raids"
+                                    Content="Tera Raids"/>
 
-                        </StackPanel>
-
-                        <StackPanel IsVisible="{Binding HasSave}" Spacing="6">
-                            <TextBlock Classes="sectionTitle" Text="FIND" Margin="6,4,0,0"/>
-                            <TextBox Text="{Binding BoxSearchText, Mode=TwoWay}" FontSize="12"
-                                     Watermark="Species, nickname, OT, shiny…"/>
-                            <TextBlock Text="{Binding SearchSummary}" FontSize="10" Classes="secondary"
-                                       Margin="4,0,0,0" TextWrapping="Wrap"/>
                         </StackPanel>
 
                         <TextBlock Classes="sectionTitle" Text="BOXES" IsVisible="{Binding HasSave}" Margin="6,6,0,0"/>
                     </StackPanel>
-
-                    <!-- Search results replace the box list while searching -->
-                    <ListBox DockPanel.Dock="Top" MaxHeight="260" Margin="10,0,10,10"
-                             IsVisible="{Binding HasSearchResults}"
-                             ItemsSource="{Binding SearchResults}"
-                             SelectionChanged="OnSearchHitSelected">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:SearchHitViewModel">
-                                <Grid ColumnDefinitions="40,*" ColumnSpacing="6">
-                                    <Image Grid.Column="0" Source="{Binding Sprite}" Width="38" Height="32"
-                                           RenderOptions.BitmapInterpolationMode="None"/>
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                        <TextBlock Text="{Binding Species}" FontSize="12" FontWeight="SemiBold"/>
-                                        <TextBlock Text="{Binding Location}" FontSize="10" Classes="secondary"/>
-                                        <TextBlock Text="{Binding Detail}" FontSize="10" Classes="secondary"/>
-                                    </StackPanel>
-                                </Grid>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
 
                     <!-- Box list. Tapped (not SelectionChanged) drives the view switch so
                          clicking the already-selected box still returns to the grid. -->
@@ -266,9 +244,13 @@
                                         <Grid ColumnDefinitions="Auto,*,Auto">
                                             <Button Grid.Column="0" Content="‹" FontSize="15" Padding="10,2"
                                                     Command="{Binding PreviousBoxCommand}"/>
-                                            <TextBlock Grid.Column="1" Text="{Binding CurrentBoxName}"
-                                                       FontSize="15" FontWeight="SemiBold"
-                                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <!-- Editable: renames the box in the save -->
+                                            <TextBox Grid.Column="1" Text="{Binding CurrentBoxName, Mode=TwoWay}"
+                                                     FontSize="15" FontWeight="SemiBold" MaxLength="16"
+                                                     Background="Transparent" BorderThickness="0"
+                                                     TextAlignment="Center" VerticalAlignment="Center"
+                                                     IsEnabled="{Binding CanRenameBox}"
+                                                     ToolTip.Tip="Click to rename this box"/>
                                             <Button Grid.Column="2" Content="›" FontSize="15" Padding="10,2"
                                                     Command="{Binding NextBoxCommand}"/>
                                         </Grid>
@@ -368,7 +350,26 @@
                                         </DockPanel>
                                     </StackPanel>
 
-                                    <ListBox Classes="plain" ItemsSource="{Binding Rows}" IsVisible="{Binding IsSupported}">
+                                    <Border DockPanel.Dock="Bottom" CornerRadius="10" Padding="10" Margin="0,10,0,0"
+                                            Background="{DynamicResource SurfaceMutedBrush}"
+                                            IsVisible="{Binding IsSupported}">
+                                        <StackPanel Spacing="6">
+                                            <TextBlock Classes="fieldLabel" Text="Back up or restore the selected block"/>
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <Button Content="Export block…" FontSize="11" Padding="8,3"
+                                                        Click="OnExportBlockClicked"/>
+                                                <Button Content="Import block…" FontSize="11" Padding="8,3"
+                                                        Click="OnImportBlockClicked"/>
+                                                <TextBlock Text="{Binding SelectedName}" FontSize="10"
+                                                           Classes="secondary" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding IoResult}" FontSize="10" Classes="secondary"
+                                                       TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                    </Border>
+
+                                    <ListBox Classes="plain" ItemsSource="{Binding Rows}" IsVisible="{Binding IsSupported}"
+                                             SelectedItem="{Binding SelectedRow, Mode=TwoWay}">
                                         <ListBox.ItemTemplate>
                                             <DataTemplate x:DataType="vm:ScBlockRowViewModel">
                                                 <Grid ColumnDefinitions="*,86,72,150" ColumnSpacing="10">
@@ -401,6 +402,177 @@
                                 </DockPanel>
                             </TabItem>
                         </TabControl>
+                    </Border>
+
+                    <!-- ══════ SEARCH view: this save, or a folder of Pokémon files ══════ -->
+                    <Border Classes="card" IsVisible="{Binding IsSearchView}" Margin="18,14,18,14">
+                        <DockPanel DataContext="{Binding Search}" x:DataType="vm:SearchViewModel">
+                            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
+                                <TextBlock DockPanel.Dock="Left" Text="Search" FontSize="17" FontWeight="Bold"
+                                           VerticalAlignment="Center"/>
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding Summary}" FontSize="12"
+                                           Classes="secondary" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                            </DockPanel>
+
+                            <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,12">
+                                <Grid ColumnDefinitions="240,*,Auto" ColumnSpacing="10">
+                                    <ComboBox Grid.Column="0" HorizontalAlignment="Stretch"
+                                              ItemsSource="{Binding SourceChoices}"
+                                              SelectedIndex="{Binding SourceIndex, Mode=TwoWay}"/>
+                                    <TextBox Grid.Column="1" Text="{Binding FolderPath, Mode=TwoWay}"
+                                             IsVisible="{Binding IsFolderSource}"
+                                             Watermark="Folder containing .pk files (searched recursively)"/>
+                                    <Button Grid.Column="2" Content="Choose folder…" FontSize="12"
+                                            IsVisible="{Binding IsFolderSource}"
+                                            Click="OnChooseSearchFolderClicked"/>
+                                </Grid>
+
+                                <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="10" RowDefinitions="Auto,Auto" RowSpacing="8">
+                                    <TextBox Grid.Row="0" Grid.Column="0" Text="{Binding Text, Mode=TwoWay}"
+                                             Watermark="Species, nickname or OT"/>
+                                    <ComboBox Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch"
+                                              ItemsSource="{Binding SpeciesChoices}"
+                                              SelectedValue="{Binding SpeciesValue, Mode=TwoWay}"
+                                              SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
+                                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                                    <ComboBox Grid.Row="0" Grid.Column="2" HorizontalAlignment="Stretch"
+                                              ItemsSource="{Binding NatureChoices}"
+                                              SelectedValue="{Binding NatureValue, Mode=TwoWay}"
+                                              SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
+                                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                                    <ComboBox Grid.Row="0" Grid.Column="3" HorizontalAlignment="Stretch"
+                                              ItemsSource="{Binding MoveChoices}"
+                                              SelectedValue="{Binding MoveValue, Mode=TwoWay}"
+                                              SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
+                                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+
+                                    <ComboBox Grid.Row="1" Grid.Column="0" HorizontalAlignment="Stretch"
+                                              ItemsSource="{Binding BallChoices}"
+                                              SelectedValue="{Binding BallValue, Mode=TwoWay}"
+                                              SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
+                                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                                    <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="Auto,*,Auto,*" ColumnSpacing="6">
+                                        <TextBlock Grid.Column="0" Text="Lv" FontSize="11" Classes="secondary" VerticalAlignment="Center"/>
+                                        <NumericUpDown Grid.Column="1" Value="{Binding MinLevel, Mode=TwoWay}" Minimum="1" Maximum="100"
+                                                       FormatString="0" Increment="1" FontSize="11" ShowButtonSpinner="False"/>
+                                        <TextBlock Grid.Column="2" Text="to" FontSize="11" Classes="secondary" VerticalAlignment="Center"/>
+                                        <NumericUpDown Grid.Column="3" Value="{Binding MaxLevel, Mode=TwoWay}" Minimum="1" Maximum="100"
+                                                       FormatString="0" Increment="1" FontSize="11" ShowButtonSpinner="False"/>
+                                    </Grid>
+                                    <Grid Grid.Row="1" Grid.Column="2" ColumnDefinitions="Auto,*" ColumnSpacing="6">
+                                        <TextBlock Grid.Column="0" Text="Min IV total" FontSize="11" Classes="secondary" VerticalAlignment="Center"/>
+                                        <NumericUpDown Grid.Column="1" Value="{Binding MinIvTotal, Mode=TwoWay}" Minimum="0" Maximum="186"
+                                                       FormatString="0" Increment="6" FontSize="11" ShowButtonSpinner="False"/>
+                                    </Grid>
+                                    <StackPanel Grid.Row="1" Grid.Column="3" Orientation="Horizontal" Spacing="6">
+                                        <ComboBox HorizontalAlignment="Stretch" Width="86" FontSize="11"
+                                                  ItemsSource="{Binding TriStateChoices}"
+                                                  SelectedIndex="{Binding ShinyIndex, Mode=TwoWay}"
+                                                  ToolTip.Tip="Shiny"/>
+                                        <ComboBox HorizontalAlignment="Stretch" Width="86" FontSize="11"
+                                                  ItemsSource="{Binding TriStateChoices}"
+                                                  SelectedIndex="{Binding LegalIndex, Mode=TwoWay}"
+                                                  ToolTip.Tip="Legal"/>
+                                        <ComboBox HorizontalAlignment="Stretch" Width="76" FontSize="11"
+                                                  ItemsSource="{Binding TriStateChoices}"
+                                                  SelectedIndex="{Binding EggIndex, Mode=TwoWay}"
+                                                  ToolTip.Tip="Egg"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Content="Search" Classes="accent" Command="{Binding SearchCommand}"/>
+                                    <Button Content="Reset filters" FontSize="12" Command="{Binding ResetCommand}"/>
+                                    <TextBlock Text="Shiny · Legal · Egg filters are the three dropdowns above right."
+                                               FontSize="10" Classes="secondary" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <ListBox Classes="plain" ItemsSource="{Binding Results}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:SearchResultViewModel">
+                                        <Grid ColumnDefinitions="46,150,*,190,60,110" ColumnSpacing="10">
+                                            <Image Grid.Column="0" Source="{Binding Sprite}" Width="42" Height="36"
+                                                   RenderOptions.BitmapInterpolationMode="None"/>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Species}" FontSize="13" FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding Nickname}" FontSize="10" Classes="secondary"/>
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="2" Text="{Binding Detail}" FontSize="11"
+                                                       Classes="secondary" VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Column="3" Text="{Binding Location}" FontSize="11"
+                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                                       ToolTip.Tip="{Binding FullPath}"/>
+                                            <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="4"
+                                                        VerticalAlignment="Center">
+                                                <TextBlock Text="★" FontSize="12" Foreground="Gold"
+                                                           IsVisible="{Binding IsShiny}"/>
+                                                <TextBlock Text="✓" FontSize="12" IsVisible="{Binding IsLegal}"
+                                                           Foreground="{DynamicResource LegalFgBrush}"/>
+                                                <TextBlock Text="✕" FontSize="12" IsVisible="{Binding !IsLegal}"
+                                                           Foreground="{DynamicResource IllegalFgBrush}"/>
+                                            </StackPanel>
+                                            <Button Grid.Column="5" Content="Reveal" FontSize="11" Padding="8,2"
+                                                    IsVisible="{Binding !IsFromFile}"
+                                                    Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).GoToSearchResultCommand}"
+                                                    CommandParameter="{Binding}"/>
+                                            <Button Grid.Column="5" Content="Add to box" FontSize="11" Padding="8,2"
+                                                    IsVisible="{Binding IsFromFile}"
+                                                    Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ImportSearchResultCommand}"
+                                                    CommandParameter="{Binding}"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </DockPanel>
+                    </Border>
+
+                    <!-- ══════ TERA RAIDS view ══════ -->
+                    <Border Classes="card" IsVisible="{Binding IsRaidsView}" Margin="18,14,18,14">
+                        <DockPanel DataContext="{Binding Raids}" x:DataType="vm:RaidsViewModel">
+                            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
+                                <TextBlock DockPanel.Dock="Left" Text="Seven-Star Tera Raids" FontSize="17"
+                                           FontWeight="Bold" VerticalAlignment="Center"/>
+                                <TextBlock DockPanel.Dock="Right" Text="{Binding Summary}" FontSize="12"
+                                           Classes="secondary" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                            </DockPanel>
+
+                            <Border DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}" CornerRadius="10"
+                                    Padding="14" Background="{DynamicResource SurfaceMutedBrush}">
+                                <TextBlock FontSize="13" TextWrapping="Wrap" Classes="secondary"
+                                           Text="Seven-star raid records only exist in Scarlet and Violet."/>
+                            </Border>
+
+                            <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,12"
+                                        IsVisible="{Binding IsSupported}">
+                                <TextBlock FontSize="11" Classes="secondary" TextWrapping="Wrap"
+                                           Text="Clearing a capture flag lets that event raid be caught again. Defeated marks it as beaten without granting a catch."/>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <CheckBox IsChecked="{Binding UsedOnly, Mode=TwoWay}" Content="Used slots only"
+                                              VerticalAlignment="Center"/>
+                                    <Button Content="Allow re-catch on all" FontSize="12"
+                                            Command="{Binding AllowRecatchAllCommand}"/>
+                                    <Button Content="Mark all defeated" FontSize="12"
+                                            Command="{Binding MarkAllDefeatedCommand}"/>
+                                </StackPanel>
+                            </StackPanel>
+
+                            <ListBox Classes="plain" ItemsSource="{Binding Rows}" IsVisible="{Binding IsSupported}">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:RaidRowViewModel">
+                                        <Grid ColumnDefinitions="*,120,120" ColumnSpacing="10">
+                                            <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="12"
+                                                       FontFamily="Menlo, monospace" VerticalAlignment="Center"/>
+                                            <CheckBox Grid.Column="1" Content="Captured" FontSize="12"
+                                                      IsChecked="{Binding Captured, Mode=TwoWay}"/>
+                                            <CheckBox Grid.Column="2" Content="Defeated" FontSize="12"
+                                                      IsChecked="{Binding Defeated, Mode=TwoWay}"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </DockPanel>
                     </Border>
 
                     <!-- ══════ TOOLS view: batch editor + box report ══════ -->
@@ -705,6 +877,16 @@
                                             <NumericUpDown Value="{Binding Money, Mode=TwoWay}" Minimum="0"
                                                            Maximum="9999999" FormatString="0" Increment="1000"/>
                                         </StackPanel>
+                                        <StackPanel IsVisible="{Binding IsScarletViolet}">
+                                            <TextBlock Classes="fieldLabel" Text="League Points"/>
+                                            <NumericUpDown Value="{Binding LeaguePoints, Mode=TwoWay}" Minimum="0"
+                                                           Maximum="9999999" FormatString="0" Increment="1000"/>
+                                        </StackPanel>
+                                        <StackPanel IsVisible="{Binding IsScarletViolet}">
+                                            <TextBlock Classes="fieldLabel" Text="Blueberry Points (BP)"/>
+                                            <NumericUpDown Value="{Binding BlueberryPoints, Mode=TwoWay}" Minimum="0"
+                                                           Maximum="9999999" FormatString="0" Increment="100"/>
+                                        </StackPanel>
                                         <StackPanel>
                                             <TextBlock Classes="fieldLabel" Text="Play Time  (h : m : s)"/>
                                             <Grid ColumnDefinitions="*,*,*" ColumnSpacing="6">
@@ -712,6 +894,27 @@
                                                 <NumericUpDown Grid.Column="1" Value="{Binding Minutes, Mode=TwoWay}" Minimum="0" Maximum="59" FormatString="0" Increment="1"/>
                                                 <NumericUpDown Grid.Column="2" Value="{Binding Seconds, Mode=TwoWay}" Minimum="0" Maximum="59" FormatString="0" Increment="1"/>
                                             </Grid>
+                                        </StackPanel>
+                                        <StackPanel IsVisible="{Binding IsScarletViolet}" Spacing="6" Margin="0,6,0,0">
+                                            <Separator/>
+                                            <TextBlock Classes="sectionTitle" Text="PROGRESSION SHORTCUTS"/>
+                                            <Button Content="Unlock all TM recipes" FontSize="11" Padding="8,3"
+                                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                                    Command="{Binding UnlockAllTmRecipesCommand}"/>
+                                            <Button Content="Unlock all throw styles" FontSize="11" Padding="8,3"
+                                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                                    Command="{Binding UnlockAllThrowStylesCommand}"/>
+                                            <Button Content="Unlock Blueberry coaches" FontSize="11" Padding="8,3"
+                                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                                    Command="{Binding UnlockAllCoachesCommand}"/>
+                                            <Button Content="Collect all Ogre Clan stakes" FontSize="11" Padding="8,3"
+                                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                                    Command="{Binding CollectAllStakesCommand}"/>
+                                            <Button Content="Activate Snacksworth legendaries" FontSize="11" Padding="8,3"
+                                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+                                                    Command="{Binding ActivateSnacksworthLegendariesCommand}"/>
+                                            <TextBlock Text="{Binding UnlockResult}" FontSize="10" Classes="secondary"
+                                                       TextWrapping="Wrap"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </ScrollViewer>

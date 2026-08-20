@@ -17,11 +17,15 @@ public partial class BagViewModel : ObservableObject
     private readonly GameStrings _strings;
     private readonly PlayerBag _bag;
 
+    /// <summary>Item id to the move its machine teaches, for TM pouches.</summary>
+    private readonly Dictionary<int, string> _machineMoves = [];
+
     public BagViewModel(SaveFile sav, GameStrings strings)
     {
         _sav = sav;
         _strings = strings;
         _bag = sav.Inventory;
+        BuildMachineMoveNames();
         foreach (var pouch in _bag.Pouches)
             PouchNames.Add(pouch.Type.ToString());
         HasPouches = _bag.Pouches.Count > 0;
@@ -41,6 +45,51 @@ public partial class BagViewModel : ObservableObject
     [ObservableProperty] private int _giveAllCount = 1;
     [ObservableProperty] private string _pouchSummary = string.Empty;
 
+    /// <summary>
+    /// TM items are named only "TM01" in the game's string table. The move each one
+    /// teaches comes from the technical-record ordering, where record 0 is TM00 — so
+    /// the TM's printed number indexes that list directly.
+    /// </summary>
+    private void BuildMachineMoveNames()
+    {
+        try
+        {
+            if (_sav.BlankPKM is not ITechRecord record)
+                return;
+            var moves = record.Permit.RecordPermitIndexes;
+            var pouch = _bag.Pouches.FirstOrDefault(p => p.Type == InventoryType.TMHMs);
+            if (pouch is null)
+                return;
+
+            foreach (var id in _bag.Info.GetItems(InventoryType.TMHMs))
+            {
+                if (id >= _strings.itemlist.Length)
+                    continue;
+                var name = _strings.itemlist[id];
+                if (!name.StartsWith("TM", StringComparison.OrdinalIgnoreCase))
+                    continue;
+                if (!int.TryParse(name.AsSpan(2), out var number) || (uint)number >= moves.Length)
+                    continue;
+                var move = moves[number];
+                if (move != 0 && move < _strings.movelist.Length)
+                    _machineMoves[id] = _strings.movelist[move];
+            }
+        }
+        catch
+        {
+            _machineMoves.Clear(); // labels are a nicety; never block the editor
+        }
+    }
+
+    /// <summary>Item label, with the taught move appended for machines.</summary>
+    internal string DescribeItem(int id)
+    {
+        if (id == 0)
+            return "—";
+        var name = (uint)id < _strings.itemlist.Length ? _strings.itemlist[id] : $"#{id}";
+        return _machineMoves.TryGetValue(id, out var move) ? $"{name} · {move}" : name;
+    }
+
     private InventoryPouch? CurrentPouch =>
         (uint)SelectedPouchIndex < _bag.Pouches.Count ? _bag.Pouches[SelectedPouchIndex] : null;
 
@@ -52,7 +101,7 @@ public partial class BagViewModel : ObservableObject
         MaxCount = pouch.MaxCount;
         GiveAllCount = Math.Min(pouch.MaxCount, 1);
         foreach (var item in pouch.Items)
-            Rows.Add(new BagItemRowViewModel(item, _strings, pouch.MaxCount));
+            Rows.Add(new BagItemRowViewModel(item, DescribeItem, pouch.MaxCount));
         PouchSummary = $"{pouch.Count} of {pouch.Items.Length} slots used · max {pouch.MaxCount} per item";
 
         // Legal items for this pouch, for the picker.
@@ -61,7 +110,7 @@ public partial class BagViewModel : ObservableObject
         foreach (var id in legal)
         {
             if (id < _strings.itemlist.Length)
-                choices.Add(new ComboItem(_strings.itemlist[id], id));
+                choices.Add(new ComboItem(DescribeItem(id), id));
         }
         choices.Sort((a, b) => a.Value == 0 ? -1 : b.Value == 0 ? 1 : string.CompareOrdinal(a.Text, b.Text));
         ItemPickerChoices = choices;
@@ -140,14 +189,14 @@ public partial class BagViewModel : ObservableObject
 public partial class BagItemRowViewModel : ObservableObject
 {
     private readonly InventoryItem _item;
-    private readonly GameStrings _strings;
+    private readonly Func<int, string> _describe;
     private readonly int _maxCount;
     private bool _loading;
 
-    public BagItemRowViewModel(InventoryItem item, GameStrings strings, int maxCount)
+    public BagItemRowViewModel(InventoryItem item, Func<int, string> describe, int maxCount)
     {
         _item = item;
-        _strings = strings;
+        _describe = describe;
         _maxCount = maxCount;
         _loading = true;
         Count = item.Count;
@@ -190,6 +239,5 @@ public partial class BagItemRowViewModel : ObservableObject
         _item.Count = System.Math.Clamp(value, 0, _maxCount);
     }
 
-    private string NameOf(int id) =>
-        id == 0 ? "—" : (uint)id < _strings.itemlist.Length ? _strings.itemlist[id] : $"#{id}";
+    private string NameOf(int id) => _describe(id);
 }

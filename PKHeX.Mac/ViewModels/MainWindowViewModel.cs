@@ -42,12 +42,16 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private ToolsViewModel? _tools;
     [ObservableProperty] private EventFlagsViewModel? _eventFlags;
     [ObservableProperty] private SaveBlocksViewModel? _saveBlocks;
+    [ObservableProperty] private RaidsViewModel? _raids;
+    [ObservableProperty] private SearchViewModel? _search;
 
     public bool IsBoxesView => CurrentView == "boxes";
     public bool IsSaveView => CurrentView == "save";
     public bool IsDexView => CurrentView == "dex";
     public bool IsToolsView => CurrentView == "tools";
     public bool IsFlagsView => CurrentView == "flags";
+    public bool IsRaidsView => CurrentView == "raids";
+    public bool IsSearchView => CurrentView == "search";
     public bool IsAddView => CurrentView == "add";
     public bool IsGiftsView => CurrentView == "gifts";
     public bool IsDatabaseView => IsAddView || IsGiftsView;
@@ -70,7 +74,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     /// <summary>Collapses the inspector column for the full-width Save view.</summary>
     public Avalonia.Controls.GridLength InspectorWidth =>
-        IsSaveView || IsDexView || IsToolsView || IsFlagsView
+        IsSaveView || IsDexView || IsToolsView || IsFlagsView || IsRaidsView || IsSearchView
             ? new Avalonia.Controls.GridLength(0)
             : new Avalonia.Controls.GridLength(438);
 
@@ -81,6 +85,8 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsDexView));
         OnPropertyChanged(nameof(IsToolsView));
         OnPropertyChanged(nameof(IsFlagsView));
+        OnPropertyChanged(nameof(IsRaidsView));
+        OnPropertyChanged(nameof(IsSearchView));
         OnPropertyChanged(nameof(IsAddView));
         OnPropertyChanged(nameof(IsGiftsView));
         OnPropertyChanged(nameof(IsDatabaseView));
@@ -104,6 +110,13 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             StatusText = "Select an empty slot in a box first — that's where the Pokémon will go.";
             return;
+        }
+        if (view == "search" && _sav is not null)
+            Search ??= new SearchViewModel(_sav, _strings, GameInfo.FilteredSources);
+        if (view == "raids" && _sav is not null)
+        {
+            Raids ??= new RaidsViewModel(_sav, () =>
+                StatusText = "Raid records updated. Remember to export the save (⌘S).");
         }
         if (view == "flags" && _sav is not null)
         {
@@ -230,6 +243,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private string _updateBannerText = string.Empty;
 
     private SlotViewModel? _selected;
+    private bool _switchingBox;
 
     public SaveFile? SAV => _sav;
     public string? SavePath => _savPath;
@@ -293,7 +307,9 @@ public partial class MainWindowViewModel : ViewModelBase
 
             RebuildBoxSlots();
             CurrentBox = 0;
+            _switchingBox = true;
             CurrentBoxName = BoxNames.Count > 0 ? BoxNames[0] : string.Empty;
+            _switchingBox = false;
             LoadBox(0);
             LoadParty();
             SelectSlot(null);
@@ -388,9 +404,31 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         if (_sav is null || !_sav.HasBox || (uint)value >= _sav.BoxCount)
             return;
+        _switchingBox = true;
         CurrentBoxName = (uint)value < BoxNames.Count ? BoxNames[value] : $"Box {value + 1}";
+        _switchingBox = false;
         LoadBox(value);
         CurrentView = "boxes"; // clicking a box in the sidebar returns to the box view
+    }
+
+    /// <summary>
+    /// Renames the current box in the save. Only formats that expose box names
+    /// support this; others simply ignore the edit.
+    /// </summary>
+    public bool CanRenameBox => _sav is IBoxDetailName;
+
+    partial void OnCurrentBoxNameChanged(string value)
+    {
+        if (_switchingBox || _sav is not IBoxDetailName named || !_sav.HasBox)
+            return;
+        if ((uint)CurrentBox >= _sav.BoxCount)
+            return;
+        named.SetBoxName(CurrentBox, value);
+        // Keep the sidebar list in step with the edit.
+        var stored = named.GetBoxName(CurrentBox);
+        if ((uint)CurrentBox < BoxNames.Count && BoxNames[CurrentBox] != stored)
+            BoxNames[CurrentBox] = stored;
+        StatusText = $"Renamed box to \"{stored}\". Remember to export the save (⌘S).";
     }
 
     private void LoadBox(int box)
@@ -651,6 +689,47 @@ public partial class MainWindowViewModel : ViewModelBase
         StatusText = "Trainer info updated. Remember to export the save (⌘S).";
     }
 
+    /// <summary>Reveals a search hit that lives in this save.</summary>
+    [RelayCommand]
+    public void GoToSearchResult(SearchResultViewModel? result)
+    {
+        if (result is null || result.IsFromFile || _sav is null)
+            return;
+        var c = result.Candidate;
+        CurrentView = "boxes";
+        if (c.Box >= 0)
+        {
+            CurrentBox = c.Box;
+            if ((uint)c.Slot < BoxSlots.Count)
+                SelectSlot(BoxSlots[c.Slot]);
+        }
+        else if ((uint)c.Slot < PartySlots.Count)
+        {
+            SelectSlot(PartySlots[c.Slot]);
+        }
+    }
+
+    /// <summary>Copies a search hit found on disk into the current box.</summary>
+    [RelayCommand]
+    public void ImportSearchResult(SearchResultViewModel? result)
+    {
+        if (result is null || _sav is null)
+            return;
+        var pk = result.Candidate.Entity;
+        if (pk.GetType() != _sav.PKMType)
+        {
+            var converted = EntityConverter.ConvertToType(pk, _sav.PKMType, out var res);
+            if (converted is null)
+            {
+                StatusText = $"Cannot bring that Pokémon into this save ({res}).";
+                return;
+            }
+            pk = converted;
+        }
+        if (!TryAddToCurrentBox(pk.Clone(), out var message))
+            StatusText = message;
+    }
+
     // =====================================================================
     // Folder import / export
     // =====================================================================
@@ -791,70 +870,6 @@ public partial class MainWindowViewModel : ViewModelBase
         StatusText = $"Moved {name} to {boxName}, slot {empty + 1}.";
     }
 
-    // ---- Search across every box ----
-
-    public ObservableCollection<SearchHitViewModel> SearchResults { get; } = [];
-
-    [ObservableProperty] private string _boxSearchText = string.Empty;
-    [ObservableProperty] private bool _hasSearchResults;
-    [ObservableProperty] private string _searchSummary = string.Empty;
-
-    partial void OnBoxSearchTextChanged(string value) => RunBoxSearch();
-
-    /// <summary>Finds Pokémon in any box by species name, nickname, or OT.</summary>
-    private void RunBoxSearch()
-    {
-        SearchResults.Clear();
-        var query = BoxSearchText.Trim();
-        if (_sav is null || !_sav.HasBox || query.Length < 2)
-        {
-            HasSearchResults = false;
-            SearchSummary = string.Empty;
-            return;
-        }
-
-        var matches = 0;
-        for (int box = 0; box < _sav.BoxCount && matches < 200; box++)
-        {
-            for (int slot = 0; slot < _sav.BoxSlotCount && matches < 200; slot++)
-            {
-                var pk = _sav.GetBoxSlotAtIndex(box, slot);
-                if (pk.Species == 0)
-                    continue;
-                var species = (uint)pk.Species < _strings.specieslist.Length ? _strings.specieslist[pk.Species] : $"#{pk.Species}";
-                var isShiny = query.Equals("shiny", StringComparison.OrdinalIgnoreCase) && pk.IsShiny;
-                if (!isShiny
-                    && !species.Contains(query, StringComparison.OrdinalIgnoreCase)
-                    && !pk.Nickname.Contains(query, StringComparison.OrdinalIgnoreCase)
-                    && !pk.OriginalTrainerName.Contains(query, StringComparison.OrdinalIgnoreCase))
-                    continue;
-
-                var boxName = (uint)box < BoxNames.Count ? BoxNames[box] : $"Box {box + 1}";
-                SearchResults.Add(new SearchHitViewModel(box, slot, species, boxName, pk, _strings));
-                matches++;
-            }
-        }
-        HasSearchResults = SearchResults.Count > 0;
-        SearchSummary = SearchResults.Count == 0
-            ? $"No Pokémon match \"{query}\"."
-            : $"{SearchResults.Count} match{(SearchResults.Count == 1 ? string.Empty : "es")}" +
-              (SearchResults.Count >= 200 ? " (first 200)" : string.Empty);
-    }
-
-    /// <summary>Jumps to the box and slot of a search hit.</summary>
-    [RelayCommand]
-    public void GoToSearchHit(SearchHitViewModel? hit)
-    {
-        if (hit is null || _sav is null)
-            return;
-        CurrentView = "boxes";
-        CurrentBox = hit.Box;
-        if ((uint)hit.Slot < BoxSlots.Count)
-            SelectSlot(BoxSlots[hit.Slot]);
-    }
-
-    [RelayCommand]
-    public void ClearBoxSearch() => BoxSearchText = string.Empty;
 
     // =====================================================================
     // Box tools
