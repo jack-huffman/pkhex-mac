@@ -82,6 +82,8 @@ public partial class PokemonDetailViewModel : ObservableObject
     [ObservableProperty] private bool _hasType2;
     [ObservableProperty] private IBrush? _type1Brush;
     [ObservableProperty] private IBrush? _type2Brush;
+    [ObservableProperty] private IImage? _type1Icon;
+    [ObservableProperty] private IImage? _type2Icon;
     [ObservableProperty] private string _levelBadge = string.Empty;
 
     public Bitmap? ShinyIcon => SpriteService.GetOverlay("rare_icon");
@@ -375,6 +377,8 @@ public partial class PokemonDetailViewModel : ObservableObject
         HasType2 = pi.Type1 != pi.Type2;
         Type1Brush = TypePalette.GetBrush(pi.Type1);
         Type2Brush = TypePalette.GetBrush(pi.Type2);
+        Type1Icon = TypeIconService.Get(pi.Type1);
+        Type2Icon = TypeIconService.Get(pi.Type2);
         LevelBadge = $"Lv. {p.CurrentLevel}";
         PidText = $"{p.PID:X8}";
         EcText = $"{p.EncryptionConstant:X8}";

@@ -29,6 +29,8 @@ public partial class PokemonPreviewViewModel : ObservableObject
     [ObservableProperty] private bool _hasType2;
     [ObservableProperty] private IBrush? _type1Brush;
     [ObservableProperty] private IBrush? _type2Brush;
+    [ObservableProperty] private IImage? _type1Icon;
+    [ObservableProperty] private IImage? _type2Icon;
     [ObservableProperty] private bool _isShiny;
     [ObservableProperty] private bool _isLegal;
     [ObservableProperty] private string _legalityReport = string.Empty;
@@ -70,6 +72,8 @@ public partial class PokemonPreviewViewModel : ObservableObject
         HasType2 = pi.Type1 != pi.Type2;
         Type1Brush = TypePalette.GetBrush(pi.Type1);
         Type2Brush = TypePalette.GetBrush(pi.Type2);
+        Type1Icon = TypeIconService.Get(pi.Type1);
+        Type2Icon = TypeIconService.Get(pi.Type2);
 
         var la = new LegalityAnalysis(pk);
         IsLegal = la.Valid;

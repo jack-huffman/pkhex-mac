@@ -31,6 +31,8 @@ public sealed class MoveChoice
         var typeId = MoveInfo.GetType(move, context);
         TypeName = (uint)typeId < strings.types.Length ? strings.types[typeId] : string.Empty;
         TypeBrush = TypePalette.GetBrush(typeId);
+        TypeIcon = TypeIconService.Get(typeId);
+        HasTypeIcon = TypeIcon is not null;
         Pp = MoveInfo.GetPP(context, move);
 
         var facts = MoveDataService.Get(move);
@@ -47,6 +49,8 @@ public sealed class MoveChoice
     public string Name { get; }
     public string TypeName { get; }
     public IBrush? TypeBrush { get; }
+    public Avalonia.Media.IImage? TypeIcon { get; }
+    public bool HasTypeIcon { get; }
     public string CategoryLabel { get; } = string.Empty;
     public MoveDataService.Category CategoryKind { get; } = MoveDataService.Category.Unknown;
     public IBrush? CategoryBrush { get; }
