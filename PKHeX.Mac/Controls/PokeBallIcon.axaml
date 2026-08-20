@@ -3,23 +3,24 @@
              xmlns:ctrl="using:PKHeX.Mac.Controls"
              x:Class="PKHeX.Mac.Controls.PokeBallIcon"
              x:Name="Root">
-    <!-- Outline-style Poké Ball, drawn as vectors so it scales cleanly and takes
-         its colour from the surrounding text. The band stops either side of the
-         centre button so no fill is needed — it reads correctly on any background. -->
+    <!-- Poké Ball: filled upper half, solid band running into the centre button,
+         and an open lower half. The button is a genuine hole — the "F0" prefix
+         selects the even-odd fill rule — so it reads on any surface without
+         needing a background-matching disc. -->
     <Viewbox Stretch="Uniform">
         <Canvas Width="100" Height="100">
-            <!-- Shell -->
+
+            <!-- Shell outline; gives the empty lower half its edge -->
             <Ellipse Canvas.Left="5" Canvas.Top="5" Width="90" Height="90"
                      Stroke="{Binding #Root.Stroke}" StrokeThickness="8"/>
 
-            <!-- Band, split around the button -->
-            <Rectangle Canvas.Left="7" Canvas.Top="46" Width="27" Height="8"
-                       Fill="{Binding #Root.Stroke}"/>
-            <Rectangle Canvas.Left="66" Canvas.Top="46" Width="27" Height="8"
-                       Fill="{Binding #Root.Stroke}"/>
+            <!-- Upper half + band, with the button punched out -->
+            <Path Fill="{Binding #Root.Stroke}"
+                  Data="F0 M5,50 A45,45 0 0,1 95,50 L95,58 L5,58 Z
+                           M67,50 A17,17 0 1,0 33,50 A17,17 0 1,0 67,50 Z"/>
 
-            <!-- Button -->
-            <Ellipse Canvas.Left="36" Canvas.Top="36" Width="28" Height="28"
+            <!-- Button ring, meeting the punched hole exactly -->
+            <Ellipse Canvas.Left="37" Canvas.Top="37" Width="26" Height="26"
                      Stroke="{Binding #Root.Stroke}" StrokeThickness="8"/>
         </Canvas>
     </Viewbox>
