@@ -17,11 +17,10 @@ public partial class MainWindow : Window
     private MainWindowViewModel VM => (MainWindowViewModel)DataContext!;
 
     private SlotViewModel? _dragSource;
-    private PointerPressedEventArgs? _dragPressArgs;
+    private SlotViewModel? _dragOverSlot;
     private Avalonia.Point _dragStart;
     private bool _dragPending;
-
-    private const string SlotDragPrefix = "pkhex-slot:";
+    private bool _dragging;
 
     public MainWindow()
     {
@@ -136,9 +135,10 @@ public partial class MainWindow : Window
             if (!slot.IsEmpty)
             {
                 _dragSource = slot;
-                _dragPressArgs = e;
                 _dragStart = point.Position;
                 _dragPending = true;
+                // Capture so we keep receiving moves/release anywhere in the window.
+                e.Pointer.Capture(sender as IInputElement);
             }
         }
         else
@@ -150,53 +150,99 @@ public partial class MainWindow : Window
 
     private void OnSlotPointerMoved(object? sender, PointerEventArgs e)
     {
-        if (!_dragPending || _dragSource is null || _dragPressArgs is null)
+        if (_dragSource is null)
             return;
         var pos = e.GetCurrentPoint(this).Position;
-        var dx = Math.Abs(pos.X - _dragStart.X);
-        var dy = Math.Abs(pos.Y - _dragStart.Y);
-        if (dx < 6 && dy < 6)
+
+        if (_dragPending)
+        {
+            if (Math.Abs(pos.X - _dragStart.X) < 6 && Math.Abs(pos.Y - _dragStart.Y) < 6)
+                return;
+            // Threshold crossed: start the drag and show the sprite ghost.
+            _dragPending = false;
+            _dragging = true;
+            DragGhost.Source = _dragSource.Sprite;
+            DragGhost.IsVisible = true;
+        }
+
+        if (!_dragging)
             return;
 
-        _dragPending = false;
-        var transfer = new DataTransfer();
-        transfer.Add(DataTransferItem.CreateText($"{SlotDragPrefix}{_dragSource.Box}:{_dragSource.Slot}"));
-        _ = DragDrop.DoDragDropAsync(_dragPressArgs, transfer, DragDropEffects.Move);
+        // Ghost follows the pointer, centred on it.
+        Canvas.SetLeft(DragGhost, pos.X - (DragGhost.Width / 2));
+        Canvas.SetTop(DragGhost, pos.Y - (DragGhost.Height / 2));
+        HighlightDropTarget(SlotAt(pos));
     }
 
     private void OnSlotPointerReleased(object? sender, PointerReleasedEventArgs e)
     {
+        var wasDragging = _dragging;
+        var source = _dragSource;
+        var target = wasDragging ? SlotAt(e.GetCurrentPoint(this).Position) : null;
+
+        EndDrag();
+        e.Pointer.Capture(null);
+
+        if (wasDragging && source is not null && target is not null && target != source)
+            VM.MoveOrSwapSlot(source, target);
+    }
+
+    private void EndDrag()
+    {
         _dragPending = false;
+        _dragging = false;
+        _dragSource = null;
+        DragGhost.IsVisible = false;
+        DragGhost.Source = null;
+        HighlightDropTarget(null);
+    }
+
+    /// <summary>Applies the drag-over highlight to a single slot at a time.</summary>
+    private void HighlightDropTarget(SlotViewModel? slot)
+    {
+        if (ReferenceEquals(_dragOverSlot, slot))
+            return;
+        if (_dragOverSlot is not null)
+            _dragOverSlot.IsDragOver = false;
+        _dragOverSlot = slot;
+        if (slot is not null && !ReferenceEquals(slot, _dragSource))
+            slot.IsDragOver = true;
+    }
+
+    /// <summary>Finds the slot under a window-relative point, if any.</summary>
+    private SlotViewModel? SlotAt(Avalonia.Point point)
+    {
+        var visual = this.GetVisualsAt(point)
+            .FirstOrDefault(v => FindSlotBorder(v) is not null);
+        return visual is null ? null : FindSlotBorder(visual)?.DataContext as SlotViewModel;
+    }
+
+    private static Border? FindSlotBorder(Avalonia.Visual? visual)
+    {
+        while (visual is not null)
+        {
+            if (visual is Border { DataContext: SlotViewModel } b && b.Classes.Contains("slot"))
+                return b;
+            visual = visual.GetVisualParent();
+        }
+        return null;
     }
 
     // =====================================================================
     // Drag & drop targets
     // =====================================================================
 
-    private bool IsSlotDrag(DragEventArgs e) =>
-        e.DataTransfer.TryGetText() is { } text && text.StartsWith(SlotDragPrefix, StringComparison.Ordinal);
-
+    // Slot-to-slot moves are handled by the custom ghost drag above; these handlers
+    // exist for files dragged in from Finder (save files and .pk* entities).
     private void OnDragOver(object? sender, DragEventArgs e)
     {
-        if (IsSlotDrag(e))
-            e.DragEffects = FindSlotTarget(e) is not null ? DragDropEffects.Move : DragDropEffects.None;
-        else if (e.DataTransfer.Contains(DataFormat.File))
-            e.DragEffects = DragDropEffects.Copy;
-        else
-            e.DragEffects = DragDropEffects.None;
+        e.DragEffects = e.DataTransfer.Contains(DataFormat.File)
+            ? DragDropEffects.Copy
+            : DragDropEffects.None;
     }
 
     private void OnDrop(object? sender, DragEventArgs e)
     {
-        if (IsSlotDrag(e))
-        {
-            var target = FindSlotTarget(e);
-            if (target is not null && _dragSource is not null && target != _dragSource)
-                VM.MoveOrSwapSlot(_dragSource, target);
-            _dragSource = null;
-            return;
-        }
-
         if (e.DataTransfer.Contains(DataFormat.File))
         {
             var files = e.DataTransfer.TryGetFiles()?.Select(f => f.TryGetLocalPath()).OfType<string>().ToList();

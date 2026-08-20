@@ -188,6 +188,10 @@
         <Style Selector="Border.slot:pointerover">
             <Setter Property="Background" Value="{DynamicResource SlotHoverBrush}"/>
         </Style>
+        <Style Selector="Border.slot.dragover">
+            <Setter Property="Background" Value="{DynamicResource SlotHoverBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource SystemControlHighlightAccentBrush}"/>
+        </Style>
         <Style Selector="Border.slot.selected">
             <Setter Property="BorderBrush" Value="{DynamicResource SystemControlHighlightAccentBrush}"/>
             <Setter Property="Background" Value="{DynamicResource SlotHoverBrush}"/>

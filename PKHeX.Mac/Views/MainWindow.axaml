@@ -54,6 +54,7 @@
     <Window.Resources>
         <DataTemplate x:Key="SlotTemplate" x:DataType="vm:SlotViewModel">
             <Border Classes="slot" Classes.selected="{Binding IsSelected}"
+                    Classes.dragover="{Binding IsDragOver}"
                     Width="94" Height="82"
                     PointerPressed="OnSlotPressed"
                     PointerMoved="OnSlotPointerMoved"
@@ -251,8 +252,16 @@
                     </ScrollViewer>
 
                     <!-- ══════ SAVE view: trainer identity + bag, side by side ══════ -->
-                    <Grid IsVisible="{Binding IsSaveView}" Margin="18,0,18,14"
-                          ColumnDefinitions="380,*" ColumnSpacing="14">
+                    <DockPanel IsVisible="{Binding IsSaveView}" Margin="18,0,18,14">
+
+                    <!-- Action bar, docked so it can never overlap the cards -->
+                    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8"
+                                HorizontalAlignment="Right" Margin="0,12,0,0">
+                        <Button Content="Revert" Click="OnSaveRevertClicked"/>
+                        <Button Content="Apply" Classes="accent" Click="OnSaveApplyClicked"/>
+                    </StackPanel>
+
+                    <Grid ColumnDefinitions="380,*" ColumnSpacing="14">
 
                         <!-- Trainer identity -->
                         <Border Grid.Column="0" Classes="card" VerticalAlignment="Stretch">
@@ -335,10 +344,12 @@
                                              SelectedItem="{Binding SelectedRow, Mode=TwoWay}">
                                         <ListBox.ItemTemplate>
                                             <DataTemplate x:DataType="vm:BagItemRowViewModel">
-                                                <Grid ColumnDefinitions="*,96" ColumnSpacing="8">
-                                                    <TextBlock Grid.Column="0" Text="{Binding ItemName}" FontSize="13" VerticalAlignment="Center"/>
+                                                <Grid ColumnDefinitions="*,136" ColumnSpacing="8">
+                                                    <TextBlock Grid.Column="0" Text="{Binding ItemName}" FontSize="13"
+                                                               VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                                     <NumericUpDown Grid.Column="1" Value="{Binding Count, Mode=TwoWay}"
-                                                                   Minimum="0" Maximum="9999" FormatString="0" Increment="1" FontSize="12"/>
+                                                                   Minimum="0" Maximum="9999" FormatString="0" Increment="1"
+                                                                   FontSize="12" HorizontalContentAlignment="Right"/>
                                                 </Grid>
                                             </DataTemplate>
                                         </ListBox.ItemTemplate>
@@ -347,13 +358,7 @@
                             </DockPanel>
                         </Border>
                     </Grid>
-
-                    <!-- Save view action bar -->
-                    <StackPanel IsVisible="{Binding IsSaveView}" Orientation="Horizontal" Spacing="8"
-                                HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,32,26">
-                        <Button Content="Revert" Click="OnSaveRevertClicked"/>
-                        <Button Content="Apply" Classes="accent" Click="OnSaveApplyClicked"/>
-                    </StackPanel>
+                    </DockPanel>
 
                     <!-- ══════ Add Pokémon view ══════ -->
                     <Border Classes="card" IsVisible="{Binding IsAddView}" Margin="18,0,10,14">
@@ -389,17 +394,28 @@
                             </DockPanel>
 
                             <!-- Filters -->
-                            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="10"
-                                  Margin="0,0,0,10">
-                                <TextBox Grid.Column="0" Text="{Binding SearchText, Mode=TwoWay}"
-                                         Watermark="Filter by species or event name…"/>
-                                <CheckBox Grid.Column="1" IsChecked="{Binding ShinyOnly, Mode=TwoWay}"
-                                          Content="Shiny only" VerticalAlignment="Center"/>
-                                <CheckBox Grid.Column="2" IsChecked="{Binding EggsOnly, Mode=TwoWay}"
-                                          Content="Eggs only" VerticalAlignment="Center"/>
-                                <Button Grid.Column="3" Content="Clear" FontSize="12"
-                                        Command="{Binding ClearFiltersCommand}"/>
-                            </Grid>
+                            <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,10">
+                                <Grid ColumnDefinitions="*,168,168,Auto" ColumnSpacing="10">
+                                    <TextBox Grid.Column="0" Text="{Binding SearchText, Mode=TwoWay}"
+                                             Watermark="Search species, event, or game…"/>
+                                    <ComboBox Grid.Column="1" HorizontalAlignment="Stretch"
+                                              ItemsSource="{Binding GenerationChoices}"
+                                              SelectedIndex="{Binding SelectedGenerationIndex, Mode=TwoWay}"/>
+                                    <ComboBox Grid.Column="2" HorizontalAlignment="Stretch"
+                                              ItemsSource="{Binding GameChoices}"
+                                              SelectedIndex="{Binding SelectedGameIndex, Mode=TwoWay}"/>
+                                    <Button Grid.Column="3" Content="Clear" FontSize="12"
+                                            Command="{Binding ClearFiltersCommand}"/>
+                                </Grid>
+                                <StackPanel Orientation="Horizontal" Spacing="16">
+                                    <CheckBox IsChecked="{Binding ShinyOnly, Mode=TwoWay}" Content="Shiny only"/>
+                                    <CheckBox IsChecked="{Binding EggsOnly, Mode=TwoWay}" Content="Eggs only"/>
+                                    <CheckBox IsChecked="{Binding AddableOnly, Mode=TwoWay}"
+                                              Content="Only gifts this save can accept"/>
+                                    <TextBlock Text="{Binding CapNotice}" FontSize="11" Classes="secondary"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </StackPanel>
 
                             <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusText}" FontSize="12"
                                        Classes="secondary" TextWrapping="Wrap" Margin="0,8,0,0"/>
@@ -414,6 +430,7 @@
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate x:DataType="vm:GiftTileViewModel">
                                             <Button Classes="giftTile" Classes.selected="{Binding IsSelected}"
+                                                    Opacity="{Binding TileOpacity}"
                                                     Command="{Binding $parent[ItemsControl].((vm:GiftsViewModel)DataContext).SelectTileCommand}"
                                                     CommandParameter="{Binding}"
                                                     ToolTip.Tip="{Binding ToolTipText}">
@@ -430,6 +447,8 @@
                                                                HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                                     <TextBlock Text="{Binding LevelText}" FontSize="10" Classes="secondary"
                                                                HorizontalAlignment="Center"/>
+                                                    <TextBlock Text="{Binding OriginText}" FontSize="9" Classes="secondary"
+                                                               HorizontalAlignment="Center" Opacity="0.75"/>
                                                     <TextBlock Text="{Binding CardTitle}" FontSize="9" Classes="secondary"
                                                                HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"
                                                                MaxWidth="100"/>
@@ -843,5 +862,11 @@
                 </Grid>
             </DockPanel>
         </Grid>
+
+        <!-- Drag ghost: follows the pointer while moving a Pokémon between slots -->
+        <Canvas IsHitTestVisible="False">
+            <Image x:Name="DragGhost" Width="68" Height="56" Opacity="0.85" IsVisible="False"
+                   RenderOptions.BitmapInterpolationMode="None"/>
+        </Canvas>
     </Panel>
 </Window>

@@ -43,7 +43,9 @@ public static class SpriteService
         // (Maushold "Family of Three") also resolve there, so try the form lookup
         // first and fall back to the species-indexed render.
         var hires = LoadHiResForm(pk.Species, pk.Form, pk.Context, pk.IsShiny)
-            ?? (pk.Form == 0 || DefaultFormSprite.Contains(pk.Species) ? LoadHiRes(pk.Species, pk.IsShiny) : null);
+            ?? (pk.Form == 0 || DefaultFormSprite.Contains(pk.Species) || CanUseBaseRenderForForm(pk.Species)
+                ? LoadHiRes(pk.Species, pk.IsShiny)
+                : null);
         if (hires is not null)
             return hires;
         return GetSprite(pk.Species, pk.Form, pk.Gender, pk is IFormArgument fa ? fa.FormArgument : 0, pk.IsShiny, pk.Context, artwork: true);
@@ -121,6 +123,27 @@ public static class SpriteService
             return null;
         }
     }
+
+    /// <summary>
+    /// Species whose alternate forms change the Pokémon's actual shape or identity
+    /// (not just a colour accent). PokeAPI has no per-form HOME render for these, so
+    /// falling back to the base-species render would show the wrong creature —
+    /// PKHeX's own form-accurate (low-res) artwork is the better answer there.
+    /// Every other gap (Flabébé/Floette/Florges flowers, Alcremie creams, Vivillon
+    /// patterns, Deerling seasons, Furfrou trims…) is cosmetic, so the crisp
+    /// base render wins.
+    /// </summary>
+    private static readonly HashSet<ushort> FormIsStructural =
+    [
+        (ushort)Species.Unown, (ushort)Species.Arceus, (ushort)Species.Silvally,
+        (ushort)Species.Genesect, (ushort)Species.Koraidon, (ushort)Species.Miraidon,
+        (ushort)Species.Cherrim, (ushort)Species.Burmy, (ushort)Species.Mothim,
+    ];
+
+    /// <summary>
+    /// True when a form with no dedicated render may borrow the base-species render.
+    /// </summary>
+    public static bool CanUseBaseRenderForForm(ushort species) => !FormIsStructural.Contains(species);
 
     private static Bitmap? LoadHiResForm(ushort species, byte form, EntityContext context, bool shiny)
     {
@@ -326,7 +349,9 @@ public static class SpriteService
         // For alternate forms only a correctly-mapped form render is acceptable;
         // base-species art would show the wrong appearance in the box.
         var full = LoadHiResForm(species, form, context, shiny)
-            ?? (form == 0 || DefaultFormSprite.Contains(species) ? LoadHiRes(species, shiny) : null);
+            ?? (form == 0 || DefaultFormSprite.Contains(species) || CanUseBaseRenderForForm(species)
+                ? LoadHiRes(species, shiny)
+                : null);
         return ScaleToSlot(full, $"hr:{species}:{form}:{shiny}");
     }
 

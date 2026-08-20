@@ -65,6 +65,12 @@ public partial class MainWindowViewModel : ViewModelBase
             StatusText = "Open a save file first (⌘O).";
             return;
         }
+        if (view == "gifts" && GiftDb is null && _sav is not null)
+        {
+            StatusText = "Loading the Mystery Gift archive…";
+            GiftDb = new GiftsViewModel(_sav, _strings) { PreviewReady = pk => Preview.Load(pk) };
+        }
+        Preview.Load(null);
         CurrentView = view;
     }
 
@@ -197,9 +203,10 @@ public partial class MainWindowViewModel : ViewModelBase
             Trainer = new TrainerEditorViewModel(sav);
             Bag = new BagViewModel(sav, _strings);
             AddDb = new AddPokemonViewModel(sav, GameInfo.FilteredSources, _strings);
-            GiftDb = new GiftsViewModel(sav, _strings);
             AddDb.PreviewReady = pk => Preview.Load(pk);
-            GiftDb.PreviewReady = pk => Preview.Load(pk);
+            // The gift archive is ~2.6k entries with sprites; build it on first open
+            // so loading a save stays instant.
+            GiftDb = null;
             Preview.Load(null);
             CurrentView = "boxes";
             return true;
