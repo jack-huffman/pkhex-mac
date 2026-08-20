@@ -1681,6 +1681,40 @@
                                                               SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
                                                               DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
                                                 </StackPanel>
+
+                                                <!-- Transfer / HOME: what makes a foreign-version Pokémon legal -->
+                                                <Border CornerRadius="10" Padding="10" Margin="0,2,0,2"
+                                                        Background="{DynamicResource SurfaceMutedBrush}">
+                                                    <StackPanel Spacing="8">
+                                                        <TextBlock Classes="sectionTitle" Text="TRANSFER &amp; POKÉMON HOME" Margin="0"/>
+                                                        <TextBlock Text="{Binding TransferSummary}" FontSize="10"
+                                                                   Classes="secondary" TextWrapping="Wrap"/>
+                                                        <Button Content="Mark as traded into this save" FontSize="11"
+                                                                Padding="10,3" HorizontalAlignment="Stretch"
+                                                                HorizontalContentAlignment="Center"
+                                                                ToolTip.Tip="Sets this save's trainer as the handling trainer, leaving the original trainer intact — what receiving a trade does."
+                                                                Command="{Binding MarkAsTradedCommand}"/>
+
+                                                        <StackPanel Spacing="6" IsVisible="{Binding SupportsHomeTracker}">
+                                                            <StackPanel DataContext="{Binding History}" x:DataType="vm:PokemonHistoryViewModel">
+                                                                <CheckBox IsChecked="{Binding HideTracker, Mode=TwoWay}" FontSize="11"
+                                                                          Content="Hide HOME tracker (it identifies your save)"/>
+                                                                <StackPanel IsVisible="{Binding !HideTracker}" Margin="0,4,0,0">
+                                                                    <TextBlock Classes="fieldLabel" Text="HOME Tracker"/>
+                                                                    <TextBox Text="{Binding TrackerText, Mode=TwoWay}"
+                                                                             FontFamily="Menlo, monospace" MaxLength="16"
+                                                                             Watermark="0123456789ABCDEF"/>
+                                                                </StackPanel>
+                                                            </StackPanel>
+                                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                <Button Content="Generate tracker" FontSize="11" Padding="8,3"
+                                                                        Command="{Binding GenerateHomeTrackerCommand}"/>
+                                                                <Button Content="Clear" FontSize="11" Padding="8,3"
+                                                                        Command="{Binding ClearHomeTrackerCommand}"/>
+                                                            </StackPanel>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                </Border>
                                                 <StackPanel>
                                                     <DockPanel>
                                                         <TextBlock DockPanel.Dock="Left" Classes="fieldLabel" Text="Met Location"/>

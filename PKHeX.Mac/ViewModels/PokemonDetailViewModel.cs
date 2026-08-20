@@ -262,6 +262,7 @@ public partial class PokemonDetailViewModel : ObservableObject
             History.Load(p);
             Ribbons.Load(p);
             TechRecords.Load(p);
+            RefreshTransferSummary(p);
             RefreshDerived(p);
             IsDirty = false;
         }
@@ -1102,6 +1103,79 @@ public partial class PokemonDetailViewModel : ObservableObject
         SuggestionResult = la.Valid
             ? "Fixed the moves — this Pokémon is now legal."
             : "Fixed the moves, but other issues remain. Try Suggest beside Met Location if the origin looks wrong.";
+    }
+
+    // =====================================================================
+    // Pokémon HOME / transfer
+    // =====================================================================
+
+    [ObservableProperty] private bool _supportsHomeTracker;
+    [ObservableProperty] private string _transferSummary = string.Empty;
+
+    private void RefreshTransferSummary(PKM p)
+    {
+        SupportsHomeTracker = p is IHomeTrack;
+        var hasTracker = p is IHomeTrack { HasTracker: true };
+        var traded = p.CurrentHandler != 0 || !string.IsNullOrWhiteSpace(p.HandlingTrainerName);
+        var origin = GameInfo.GetVersionName(p.Version);
+        var here = _sav is null ? "this save" : GameInfo.GetVersionName(_sav.Version);
+
+        var parts = new List<string> { $"Originated in {origin}" };
+        parts.Add(traded
+            ? $"held by {(string.IsNullOrWhiteSpace(p.HandlingTrainerName) ? "a handling trainer" : p.HandlingTrainerName)} (traded)"
+            : "still held by its original trainer");
+        if (SupportsHomeTracker)
+            parts.Add(hasTracker ? "carries a HOME tracker" : "no HOME tracker");
+        if (_sav is not null && p.Version != _sav.Version)
+            parts.Add($"foreign to {here} — it must look traded in to be legal");
+        TransferSummary = string.Join(" · ", parts) + ".";
+    }
+
+    /// <summary>
+    /// Applies what a trade does: the loaded save's trainer becomes the handling
+    /// trainer, leaving the original trainer intact. Required for a Pokémon from the
+    /// other version (a Scarlet exclusive sitting in Violet, say) to be legal.
+    /// </summary>
+    [RelayCommand]
+    public void MarkAsTraded()
+    {
+        if (_pk is null || _sav is null)
+            return;
+        if (_pk is not IHandlerUpdate handler)
+        {
+            SuggestionResult = "This format does not track a handling trainer.";
+            return;
+        }
+        handler.UpdateHandler(_sav);
+        Load(_pk);
+        IsDirty = true;
+        SuggestionResult = $"Marked as traded to {_sav.OT} — the original trainer is unchanged.";
+    }
+
+    /// <summary>Gives the entity a plausible HOME tracker, as a real transfer would.</summary>
+    [RelayCommand]
+    public void GenerateHomeTracker()
+    {
+        if (_pk is not IHomeTrack track)
+            return;
+        var high = (ulong)Util.Rand32() << 32;
+        track.Tracker = high | Util.Rand32();
+        History.Load(_pk);
+        RefreshTransferSummary(_pk!);
+        IsDirty = true;
+        SuggestionResult = "Generated a HOME tracker.";
+    }
+
+    [RelayCommand]
+    public void ClearHomeTracker()
+    {
+        if (_pk is not IHomeTrack track)
+            return;
+        track.Tracker = 0;
+        History.Load(_pk);
+        RefreshTransferSummary(_pk!);
+        IsDirty = true;
+        SuggestionResult = "Cleared the HOME tracker.";
     }
 
     [RelayCommand]
