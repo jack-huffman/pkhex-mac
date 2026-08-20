@@ -43,6 +43,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private EventFlagsViewModel? _eventFlags;
     [ObservableProperty] private SaveBlocksViewModel? _saveBlocks;
     [ObservableProperty] private RaidsViewModel? _raids;
+    [ObservableProperty] private TrainerStyleViewModel? _style;
     [ObservableProperty] private SearchViewModel? _search;
 
     public bool IsBoxesView => CurrentView == "boxes";
@@ -317,6 +318,8 @@ public partial class MainWindowViewModel : ViewModelBase
             // In-window editor views for this save.
             Trainer = new TrainerEditorViewModel(sav);
             Bag = new BagViewModel(sav, _strings);
+            Style = new TrainerStyleViewModel(sav, () =>
+                StatusText = "Trainer appearance updated. Remember to export the save (⌘S).");
             AddDb = new AddPokemonViewModel(sav, GameInfo.FilteredSources, _strings);
             AddDb.PreviewReady = pk => Preview.Load(pk);
             // The gift archive is ~2.6k entries with sprites; build it on first open

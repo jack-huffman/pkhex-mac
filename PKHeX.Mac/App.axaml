@@ -149,6 +149,10 @@
 
         <!-- Stat editor: compact sliders and inline numeric boxes -->
         <Style Selector="ProgressBar.statbar">
+            <!-- The stock ProgressBar theme sets a 200px MinWidth. A Grid does not clip
+                 its children, so in a narrow column the bar would overflow and paint
+                 over whatever sits beside it. -->
+            <Setter Property="MinWidth" Value="0"/>
             <Setter Property="MinHeight" Value="8"/>
             <Setter Property="Height" Value="8"/>
             <Setter Property="CornerRadius" Value="4"/>

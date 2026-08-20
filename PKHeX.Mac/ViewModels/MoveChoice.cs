@@ -66,6 +66,13 @@ public sealed class MoveChoice
         ? string.Empty
         : $"{PowerText} pow · {AccuracyText}% acc · {Pp} PP";
 
+    /// <summary>Describes one move by id, for read-only displays.</summary>
+    public static MoveChoice For(ushort move, EntityContext context, GameStrings strings)
+    {
+        var name = (uint)move < strings.movelist.Length ? strings.movelist[move] : $"Move #{move}";
+        return new MoveChoice(move, name, context, strings);
+    }
+
     /// <summary>Builds picker entries for every move the save allows.</summary>
     public static List<MoveChoice> Build(IReadOnlyList<ComboItem> source, EntityContext context, GameStrings strings)
     {

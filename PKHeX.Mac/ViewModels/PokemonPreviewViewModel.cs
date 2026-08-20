@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -39,6 +41,17 @@ public partial class PokemonPreviewViewModel : ObservableObject
     [ObservableProperty] private bool _isBlocked;
     [ObservableProperty] private string _blockedReason = string.Empty;
 
+    // ---- Detail shown alongside the artwork ----
+    [ObservableProperty] private string _natureText = string.Empty;
+    [ObservableProperty] private string _abilityText = string.Empty;
+    [ObservableProperty] private string _itemText = string.Empty;
+    [ObservableProperty] private string _originText = string.Empty;
+    [ObservableProperty] private int _statTotal;
+    [ObservableProperty] private bool _hasMoves;
+
+    public ObservableCollection<MoveChoice> Moves { get; } = [];
+    public ObservableCollection<PreviewStatRow> Stats { get; } = [];
+
     public Bitmap? ShinyIcon => SpriteService.GetOverlay("rare_icon");
 
     /// <summary>Shows why the selected entry cannot be added, instead of an empty pane.</summary>
@@ -58,6 +71,8 @@ public partial class PokemonPreviewViewModel : ObservableObject
         if (pk is null || pk.Species == 0)
         {
             HasPokemon = false;
+            Moves.Clear();
+            Stats.Clear();
             return;
         }
 
@@ -80,11 +95,95 @@ public partial class PokemonPreviewViewModel : ObservableObject
         HasType1Icon = Type1Icon is not null;
         HasType2Icon = Type2Icon is not null;
 
+        NatureText = (uint)pk.Nature < _strings.natures.Length ? _strings.natures[(int)pk.Nature] : pk.Nature.ToString();
+        AbilityText = (uint)pk.Ability < _strings.abilitylist.Length ? _strings.abilitylist[pk.Ability] : $"#{pk.Ability}";
+        ItemText = pk.HeldItem == 0
+            ? "No held item"
+            : (uint)pk.HeldItem < _strings.itemlist.Length ? _strings.itemlist[pk.HeldItem] : $"#{pk.HeldItem}";
+        OriginText = $"{GameInfo.GetVersionName(pk.Version)} · met Lv. {pk.MetLevel}";
+
+        BuildMoves(pk);
+        BuildStats(pk);
+
         var la = new LegalityAnalysis(pk);
         IsLegal = la.Valid;
         LegalityReport = la.Report();
     }
 
+    private void BuildMoves(PKM pk)
+    {
+        Moves.Clear();
+        foreach (var move in new[] { pk.Move1, pk.Move2, pk.Move3, pk.Move4 })
+        {
+            if (move != 0)
+                Moves.Add(MoveChoice.For(move, pk.Context, _strings));
+        }
+        HasMoves = Moves.Count != 0;
+    }
+
+    private void BuildStats(PKM pk)
+    {
+        Stats.Clear();
+        pk.ResetPartyStats();
+        var (up, dn) = pk.StatAlignment.GetNatureModification();
+        // Nature indexes use the internal order (Atk, Def, Spe, SpA, SpD).
+        int[] internalToRow = [1, 2, 5, 3, 4];
+        var upRow = up == dn ? -1 : internalToRow[up];
+        var dnRow = up == dn ? -1 : internalToRow[dn];
+
+        (string Label, int Value)[] rows =
+        [
+            ("HP", pk.Stat_HPMax), ("ATK", pk.Stat_ATK), ("DEF", pk.Stat_DEF),
+            ("SATK", pk.Stat_SPA), ("SDEF", pk.Stat_SPD), ("SPE", pk.Stat_SPE),
+        ];
+        StatTotal = 0;
+        for (int i = 0; i < rows.Length; i++)
+        {
+            var direction = i == upRow ? 1 : i == dnRow ? -1 : 0;
+            Stats.Add(new PreviewStatRow(rows[i].Label, rows[i].Value, direction));
+            StatTotal += rows[i].Value;
+        }
+    }
+
     private string Name(int type) =>
         (uint)type < _strings.types.Length ? _strings.types[type] : $"#{type}";
+}
+
+/// <summary>A read-only stat row in the database preview, matching the Stats tab's look.</summary>
+public sealed class PreviewStatRow
+{
+    private const double BarScale = 500.0;
+
+    private static readonly IBrush Neutral = new SolidColorBrush(Color.Parse("#8FA6B8"));
+    private static readonly IBrush Raised = new SolidColorBrush(Color.Parse("#FF8A80"));
+    private static readonly IBrush Lowered = new SolidColorBrush(Color.Parse("#82B1FF"));
+    private static readonly IBrush NeutralBar = new SolidColorBrush(Color.Parse("#6FAFB8"));
+    private static readonly IBrush RaisedBar = new SolidColorBrush(Color.Parse("#E5776D"));
+    private static readonly IBrush LoweredBar = new SolidColorBrush(Color.Parse("#5E8FD0"));
+
+    public PreviewStatRow(string label, int value, int natureDirection)
+    {
+        Label = label;
+        Value = value;
+        BarPercent = System.Math.Min(100.0, value / BarScale * 100.0);
+        LabelBrush = natureDirection switch { 1 => Raised, -1 => Lowered, _ => Neutral };
+        BarBrush = natureDirection switch { 1 => RaisedBar, -1 => LoweredBar, _ => NeutralBar };
+        NatureBadge = natureDirection switch { 1 => "▲", -1 => "▼", _ => string.Empty };
+        HasNatureBadge = natureDirection != 0;
+        Tooltip = natureDirection switch
+        {
+            1 => $"{label} {value} — raised by nature",
+            -1 => $"{label} {value} — lowered by nature",
+            _ => $"{label} {value}",
+        };
+    }
+
+    public string Label { get; }
+    public int Value { get; }
+    public double BarPercent { get; }
+    public IBrush LabelBrush { get; }
+    public IBrush BarBrush { get; }
+    public string NatureBadge { get; }
+    public bool HasNatureBadge { get; }
+    public string Tooltip { get; }
 }

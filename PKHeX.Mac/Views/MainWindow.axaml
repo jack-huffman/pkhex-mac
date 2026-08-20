@@ -531,8 +531,8 @@
                     <!-- ══════ TERA RAIDS view ══════ -->
                     <Border Classes="card" IsVisible="{Binding IsRaidsView}" Margin="18,14,18,14">
                         <DockPanel DataContext="{Binding Raids}" x:DataType="vm:RaidsViewModel">
-                            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
-                                <TextBlock DockPanel.Dock="Left" Text="Seven-Star Tera Raids" FontSize="17"
+                            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                                <TextBlock DockPanel.Dock="Left" Text="Tera Raids" FontSize="17"
                                            FontWeight="Bold" VerticalAlignment="Center"/>
                                 <TextBlock DockPanel.Dock="Right" Text="{Binding Summary}" FontSize="12"
                                            Classes="secondary" HorizontalAlignment="Right" VerticalAlignment="Center"/>
@@ -541,73 +541,176 @@
                             <Border DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}" CornerRadius="10"
                                     Padding="14" Background="{DynamicResource SurfaceMutedBrush}">
                                 <TextBlock FontSize="13" TextWrapping="Wrap" Classes="secondary"
-                                           Text="Seven-star raid records only exist in Scarlet and Violet."/>
+                                           Text="Tera Raid data only exists in Scarlet and Violet."/>
                             </Border>
 
-                            <StackPanel DockPanel.Dock="Top" Spacing="10" Margin="0,0,0,12"
-                                        IsVisible="{Binding IsSupported}">
-                                <!-- Tier unlocks and tallies: the context for an empty record list -->
-                                <Grid ColumnDefinitions="*,*" ColumnSpacing="18">
-                                    <StackPanel Grid.Column="0" Spacing="4">
-                                        <TextBlock Classes="sectionTitle" Text="TIERS UNLOCKED" Margin="0"/>
-                                        <ItemsControl ItemsSource="{Binding Unlocks}">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate x:DataType="vm:RaidFlagViewModel">
-                                                    <CheckBox Content="{Binding Label}" FontSize="12"
-                                                              IsChecked="{Binding Value, Mode=TwoWay}" Margin="0,1"/>
-                                                </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="1" Spacing="4">
-                                        <TextBlock Classes="sectionTitle" Text="RAIDS WON" Margin="0"/>
-                                        <ItemsControl ItemsSource="{Binding Counters}">
-                                            <ItemsControl.ItemTemplate>
-                                                <DataTemplate x:DataType="vm:RaidCounterViewModel">
-                                                    <Grid ColumnDefinitions="*,90" ColumnSpacing="8" Margin="0,1">
+                            <TabControl IsVisible="{Binding IsSupported}" Padding="0,6,0,0">
+
+                                <!-- ── Live raid crystals, per region ── -->
+                                <TabItem Header="Active Dens">
+                                    <DockPanel Margin="2,8,2,2">
+                                        <Grid DockPanel.Dock="Top" ColumnDefinitions="240,*" ColumnSpacing="12"
+                                              Margin="0,0,0,10">
+                                            <ComboBox Grid.Column="0" HorizontalAlignment="Stretch"
+                                                      ItemsSource="{Binding Regions}"
+                                                      SelectedItem="{Binding SelectedRegion, Mode=TwoWay}"/>
+                                            <TextBlock Grid.Column="1" FontSize="11" Classes="secondary"
+                                                       VerticalAlignment="Center" TextWrapping="Wrap"
+                                                       Text="Each crystal has its own 32-bit seed and tier. The region seeds below drive today's and tomorrow's line-up."/>
+                                        </Grid>
+
+                                        <Panel>
+                                            <TextBlock IsVisible="{Binding !HasRegions}" FontSize="13" Classes="secondary"
+                                                       TextWrapping="Wrap" VerticalAlignment="Top"
+                                                       Text="This save has no raid crystal blocks — they appear once the game has generated its first daily raids."/>
+                                            <ContentControl Content="{Binding SelectedRegion}">
+                                                <ContentControl.ContentTemplate>
+                                                    <DataTemplate x:DataType="vm:RaidRegionViewModel">
+                                                        <DockPanel>
+                                                            <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,10">
+                                                                <TextBlock Text="{Binding Summary}" FontSize="11" Classes="secondary"/>
+                                                                <Grid ColumnDefinitions="Auto,170,Auto,170" ColumnSpacing="8"
+                                                                      IsVisible="{Binding HasSeeds}">
+                                                                    <TextBlock Grid.Column="0" Text="Today" FontSize="11"
+                                                                               Classes="secondary" VerticalAlignment="Center"/>
+                                                                    <TextBox Grid.Column="1" Text="{Binding CurrentSeedText, Mode=TwoWay}"
+                                                                             FontSize="11" FontFamily="Menlo, monospace"/>
+                                                                    <TextBlock Grid.Column="2" Text="Tomorrow" FontSize="11"
+                                                                               Classes="secondary" VerticalAlignment="Center"
+                                                                               Margin="8,0,0,0"/>
+                                                                    <TextBox Grid.Column="3" Text="{Binding TomorrowSeedText, Mode=TwoWay}"
+                                                                             FontSize="11" FontFamily="Menlo, monospace"/>
+                                                                </Grid>
+                                                                <TextBlock Text="{Binding SeedError}" FontSize="11"
+                                                                           Foreground="{DynamicResource IllegalFgBrush}"
+                                                                           IsVisible="{Binding SeedError, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                                    <CheckBox Content="Placed dens only" FontSize="12"
+                                                                              IsChecked="{Binding ActiveOnly, Mode=TwoWay}"
+                                                                              VerticalAlignment="Center"/>
+                                                                    <Button Content="Copy selected den to all" FontSize="12"
+                                                                            Command="{Binding PropagateSelectedCommand}"
+                                                                            ToolTip.Tip="Writes the selected den's tier and seed onto every placed den in this region."/>
+                                                                    <Button Content="Enable all placed" FontSize="12"
+                                                                            Command="{Binding EnableAllPlacedCommand}"/>
+                                                                    <Button Content="Unclaim all LP" FontSize="12"
+                                                                            Command="{Binding UnclaimAllPointsCommand}"/>
+                                                                </StackPanel>
+                                                            </StackPanel>
+
+                                                            <ListBox Classes="plain" ItemsSource="{Binding Dens}"
+                                                                     SelectedItem="{Binding SelectedDen, Mode=TwoWay}">
+                                                                <ListBox.ItemTemplate>
+                                                                    <DataTemplate x:DataType="vm:DenRowViewModel">
+                                                                        <Grid ColumnDefinitions="62,180,64,190,120,Auto" ColumnSpacing="10">
+                                                                            <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="12"
+                                                                                       FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                                            <TextBlock Grid.Column="1" Text="{Binding PlaceText}" FontSize="11"
+                                                                                       Classes="secondary" VerticalAlignment="Center"
+                                                                                       TextTrimming="CharacterEllipsis"/>
+                                                                            <CheckBox Grid.Column="2" Content="Up" FontSize="11"
+                                                                                      IsChecked="{Binding IsEnabled, Mode=TwoWay}"
+                                                                                      VerticalAlignment="Center"
+                                                                                      ToolTip.Tip="Is the raid crystal currently active?"/>
+                                                                            <ComboBox Grid.Column="3" HorizontalAlignment="Stretch"
+                                                                                      FontSize="11"
+                                                                                      ItemsSource="{Binding ContentChoices}"
+                                                                                      SelectedIndex="{Binding ContentIndex, Mode=TwoWay}"/>
+                                                                            <TextBox Grid.Column="4" Text="{Binding SeedText, Mode=TwoWay}"
+                                                                                     FontSize="11" FontFamily="Menlo, monospace"
+                                                                                     ToolTip.Tip="Raid seed (32-bit hex)"/>
+                                                                            <CheckBox Grid.Column="5" Content="LP taken" FontSize="11"
+                                                                                      IsChecked="{Binding ClaimedLeaguePoints, Mode=TwoWay}"
+                                                                                      VerticalAlignment="Center"/>
+                                                                        </Grid>
+                                                                    </DataTemplate>
+                                                                </ListBox.ItemTemplate>
+                                                            </ListBox>
+                                                        </DockPanel>
+                                                    </DataTemplate>
+                                                </ContentControl.ContentTemplate>
+                                            </ContentControl>
+                                        </Panel>
+                                    </DockPanel>
+                                </TabItem>
+
+                                <!-- ── Seven-star event capture records ── -->
+                                <TabItem Header="Event Records">
+                                    <DockPanel Margin="2,8,2,2">
+                                        <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,10">
+                                            <TextBlock Text="{Binding EmptyNote}" FontSize="11" TextWrapping="Wrap"
+                                                       Foreground="{DynamicResource IllegalFgBrush}"
+                                                       IsVisible="{Binding EmptyNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                            <TextBlock FontSize="11" Classes="secondary" TextWrapping="Wrap"
+                                                       Text="Clearing a capture flag lets that event raid be caught again. Defeated marks it as beaten without granting a catch."/>
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <CheckBox IsChecked="{Binding UsedOnly, Mode=TwoWay}" Content="Used slots only"
+                                                          VerticalAlignment="Center"/>
+                                                <Button Content="Allow re-catch on all" FontSize="12"
+                                                        Command="{Binding AllowRecatchAllCommand}"/>
+                                                <Button Content="Mark all defeated" FontSize="12"
+                                                        Command="{Binding MarkAllDefeatedCommand}"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                        <ListBox Classes="plain" ItemsSource="{Binding Rows}">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:RaidRowViewModel">
+                                                    <Grid ColumnDefinitions="*,120,120" ColumnSpacing="10">
                                                         <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="12"
-                                                                   VerticalAlignment="Center"/>
-                                                        <NumericUpDown Grid.Column="1" Value="{Binding Value, Mode=TwoWay}"
-                                                                       Minimum="0" Maximum="99999" FormatString="0"
-                                                                       Increment="1" FontSize="11"/>
+                                                                   FontFamily="Menlo, monospace" VerticalAlignment="Center"/>
+                                                        <CheckBox Grid.Column="1" Content="Captured" FontSize="12"
+                                                                  IsChecked="{Binding Captured, Mode=TwoWay}"/>
+                                                        <CheckBox Grid.Column="2" Content="Defeated" FontSize="12"
+                                                                  IsChecked="{Binding Defeated, Mode=TwoWay}"/>
                                                     </Grid>
                                                 </DataTemplate>
-                                            </ItemsControl.ItemTemplate>
-                                        </ItemsControl>
-                                    </StackPanel>
-                                </Grid>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </DockPanel>
+                                </TabItem>
 
-                                <Separator/>
-                                <TextBlock Classes="sectionTitle" Text="SEVEN-STAR EVENT RECORDS" Margin="0"/>
-                                <TextBlock Text="{Binding EmptyNote}" FontSize="11" TextWrapping="Wrap"
-                                           Foreground="{DynamicResource IllegalFgBrush}"
-                                           IsVisible="{Binding EmptyNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                                <TextBlock FontSize="11" Classes="secondary" TextWrapping="Wrap"
-                                           Text="Clearing a capture flag lets that event raid be caught again. Defeated marks it as beaten without granting a catch."/>
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <CheckBox IsChecked="{Binding UsedOnly, Mode=TwoWay}" Content="Used slots only"
-                                              VerticalAlignment="Center"/>
-                                    <Button Content="Allow re-catch on all" FontSize="12"
-                                            Command="{Binding AllowRecatchAllCommand}"/>
-                                    <Button Content="Mark all defeated" FontSize="12"
-                                            Command="{Binding MarkAllDefeatedCommand}"/>
-                                </StackPanel>
-                            </StackPanel>
-
-                            <ListBox Classes="plain" ItemsSource="{Binding Rows}" IsVisible="{Binding IsSupported}">
-                                <ListBox.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:RaidRowViewModel">
-                                        <Grid ColumnDefinitions="*,120,120" ColumnSpacing="10">
-                                            <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="12"
-                                                       FontFamily="Menlo, monospace" VerticalAlignment="Center"/>
-                                            <CheckBox Grid.Column="1" Content="Captured" FontSize="12"
-                                                      IsChecked="{Binding Captured, Mode=TwoWay}"/>
-                                            <CheckBox Grid.Column="2" Content="Defeated" FontSize="12"
-                                                      IsChecked="{Binding Defeated, Mode=TwoWay}"/>
+                                <!-- ── Tier unlocks and win tallies ── -->
+                                <TabItem Header="Progression">
+                                    <ScrollViewer Margin="2,8,2,2">
+                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="18">
+                                            <StackPanel Grid.Column="0" Spacing="6">
+                                                <TextBlock Classes="sectionTitle" Text="TIERS UNLOCKED" Margin="0"/>
+                                                <TextBlock FontSize="11" Classes="secondary" TextWrapping="Wrap"
+                                                           Text="A tier must be unlocked before the game will generate raids of that difficulty."/>
+                                                <ItemsControl ItemsSource="{Binding Unlocks}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:RaidFlagViewModel">
+                                                            <CheckBox Content="{Binding Label}" FontSize="12"
+                                                                      IsChecked="{Binding Value, Mode=TwoWay}" Margin="0,1"/>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Spacing="6">
+                                                <TextBlock Classes="sectionTitle" Text="RAIDS WON" Margin="0"/>
+                                                <TextBlock FontSize="11" Classes="secondary" TextWrapping="Wrap"
+                                                           Text="Win counts the game uses to decide when to raise the raid difficulty."/>
+                                                <ItemsControl ItemsSource="{Binding Counters}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:RaidCounterViewModel">
+                                                            <Grid ColumnDefinitions="*,150" ColumnSpacing="8" Margin="0,2">
+                                                                <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="12"
+                                                                           VerticalAlignment="Center"/>
+                                                                <!-- Wide enough that the spinner buttons don't crush the text field -->
+                                                                <NumericUpDown Grid.Column="1" MinWidth="140"
+                                                                               Value="{Binding Value, Mode=TwoWay}"
+                                                                               Minimum="0" Maximum="99999" FormatString="0"
+                                                                               Increment="1" FontSize="12"
+                                                                               HorizontalContentAlignment="Right"/>
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
                                         </Grid>
-                                    </DataTemplate>
-                                </ListBox.ItemTemplate>
-                            </ListBox>
+                                    </ScrollViewer>
+                                </TabItem>
+                            </TabControl>
                         </DockPanel>
                     </Border>
 
@@ -979,11 +1082,11 @@
                             </DockPanel>
                         </Border>
 
-                        <!-- Bag -->
+                        <!-- Bag and the trainer's look share the right column -->
                         <Border Grid.Column="1" Classes="card">
-                            <DockPanel DataContext="{Binding Bag}" x:DataType="vm:BagViewModel">
-                                <TextBlock DockPanel.Dock="Top" Text="Bag" FontSize="17" FontWeight="Bold"
-                                           Margin="0,0,0,12"/>
+                            <TabControl Padding="0,4,0,0">
+                            <TabItem Header="Bag">
+                            <DockPanel DataContext="{Binding Bag}" x:DataType="vm:BagViewModel" Margin="2,8,2,2">
                                 <TextBlock DockPanel.Dock="Top" Classes="fieldLabel" IsVisible="{Binding !HasPouches}"
                                            Text="This save format does not expose an editable inventory."/>
 
@@ -1044,6 +1147,109 @@
                                     </ListBox>
                                 </Grid>
                             </DockPanel>
+                            </TabItem>
+
+                            <!-- ── Trainer look: throw style, outfit, appearance, club perks ── -->
+                            <TabItem Header="Appearance &amp; Style">
+                            <DockPanel DataContext="{Binding Style}" x:DataType="vm:TrainerStyleViewModel"
+                                       Margin="2,8,2,2">
+                                <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}"
+                                           FontSize="13" Classes="secondary" TextWrapping="Wrap"
+                                           Text="Only Scarlet/Violet and Legends Z-A store the player's outfit and appearance in an editable form."/>
+
+                                <StackPanel DockPanel.Dock="Top" Spacing="9" Margin="0,0,0,12"
+                                            IsVisible="{Binding IsSupported}">
+                                    <TextBlock Text="{Binding Summary}" FontSize="11" Classes="secondary"/>
+
+                                    <Grid ColumnDefinitions="Auto,200,Auto" ColumnSpacing="10"
+                                          IsVisible="{Binding HasThrowStyle}">
+                                        <TextBlock Grid.Column="0" Text="Ball throw style" FontSize="12"
+                                                   VerticalAlignment="Center"/>
+                                        <ComboBox Grid.Column="1" HorizontalAlignment="Stretch"
+                                                  ItemsSource="{Binding ThrowStyleChoices}"
+                                                  SelectedIndex="{Binding ThrowStyleIndex, Mode=TwoWay}"/>
+                                        <Button Grid.Column="2" Content="Unlock all styles" FontSize="12"
+                                                Command="{Binding UnlockThrowStylesCommand}"
+                                                ToolTip.Tip="Sets the three club-room style flags and marks the support board entries bought."/>
+                                    </Grid>
+
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Button Content="Unlock all fashion" FontSize="12"
+                                                Command="{Binding UnlockFashionCommand}"
+                                                ToolTip.Tip="Adds every clothing item for this trainer's gender to the wardrobe."/>
+                                        <Button Content="Buy all club perks" FontSize="12"
+                                                IsVisible="{Binding HasSupportBoard}"
+                                                Command="{Binding UnlockClubPerksCommand}"/>
+                                    </StackPanel>
+
+                                    <TextBlock Text="{Binding Status}" FontSize="11"
+                                               Foreground="{DynamicResource LegalFgBrush}" TextWrapping="Wrap"
+                                               IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                </StackPanel>
+
+                                <ScrollViewer IsVisible="{Binding IsSupported}">
+                                    <StackPanel Spacing="16">
+
+                                        <StackPanel Spacing="5">
+                                            <TextBlock Classes="sectionTitle" Text="WORN OUTFIT" Margin="0"/>
+                                            <TextBlock FontSize="11" Classes="secondary" TextWrapping="Wrap"
+                                                       Text="Each slot holds an opaque 64-bit item id. No name table for these exists anywhere in PKHeX, so they read as hex — zero means nothing equipped."/>
+                                            <ItemsControl ItemsSource="{Binding Outfit}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:StyleFieldViewModel">
+                                                        <Grid ColumnDefinitions="110,*,Auto" ColumnSpacing="8" Margin="0,0,0,4">
+                                                            <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="12"
+                                                                       VerticalAlignment="Center"/>
+                                                            <TextBox Grid.Column="1" Text="{Binding HexText, Mode=TwoWay}"
+                                                                     FontSize="11" FontFamily="{Binding FieldFont}"/>
+                                                            <TextBlock Grid.Column="2" Text="{Binding Error}" FontSize="10"
+                                                                       Foreground="{DynamicResource IllegalFgBrush}"
+                                                                       VerticalAlignment="Center"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+
+                                        <StackPanel Spacing="5">
+                                            <TextBlock Classes="sectionTitle" Text="FACIAL APPEARANCE" Margin="0"/>
+                                            <TextBlock FontSize="11" Classes="secondary" TextWrapping="Wrap"
+                                                       Text="These are option indexes from the character creator, counting from zero. Nudge one up or down to move through the choices."/>
+                                            <ItemsControl ItemsSource="{Binding Appearance}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:StyleFieldViewModel">
+                                                        <Grid ColumnDefinitions="110,*,Auto" ColumnSpacing="8" Margin="0,0,0,4">
+                                                            <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="12"
+                                                                       VerticalAlignment="Center"/>
+                                                            <TextBox Grid.Column="1" Text="{Binding HexText, Mode=TwoWay}"
+                                                                     FontSize="11" FontFamily="{Binding FieldFont}"/>
+                                                            <TextBlock Grid.Column="2" Text="{Binding Error}" FontSize="10"
+                                                                       Foreground="{DynamicResource IllegalFgBrush}"
+                                                                       VerticalAlignment="Center"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+
+                                        <StackPanel Spacing="5" IsVisible="{Binding HasSupportBoard}">
+                                            <TextBlock Classes="sectionTitle" Text="BLUEBERRY CLUB PERKS" Margin="0"/>
+                                            <TextBlock FontSize="11" Classes="secondary" TextWrapping="Wrap"
+                                                       Text="Support-board purchases. The three baseball-club entries are what make the extra throw styles selectable."/>
+                                            <ItemsControl ItemsSource="{Binding ClubPurchases}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:StyleToggleViewModel">
+                                                        <CheckBox Content="{Binding Label}" FontSize="12" Margin="0,1"
+                                                                  IsChecked="{Binding Value, Mode=TwoWay}"/>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </DockPanel>
+                            </TabItem>
+                            </TabControl>
                         </Border>
                     </Grid>
                     </DockPanel>
@@ -1191,10 +1397,10 @@
 
                             </Panel>
 
-                        <!-- Compact preview of the selected database entry -->
-                        <Border Grid.Row="1" Classes="card" Padding="12">
+                        <!-- Preview of the selected database entry, before it is added -->
+                        <Border Grid.Row="1" Classes="card" Padding="14">
                             <StackPanel DataContext="{Binding Preview}" x:DataType="vm:PokemonPreviewViewModel"
-                                        Spacing="8">
+                                        Spacing="10">
                                 <TextBlock Text="Select an entry to preview it here" FontSize="12" Classes="secondary"
                                            HorizontalAlignment="Center" IsVisible="{Binding !HasPokemon}"
                                            TextWrapping="Wrap" TextAlignment="Center"/>
@@ -1206,43 +1412,120 @@
                                                Foreground="{DynamicResource IllegalFgBrush}"/>
                                 </Border>
 
-                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" IsVisible="{Binding HasPokemon}">
-                                    <Image Grid.Column="0" Source="{Binding Artwork}" Width="84" Height="84"
-                                           RenderOptions.BitmapInterpolationMode="HighQuality"/>
-                                    <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <Image Source="{Binding BallSprite}" Width="16" Height="16" VerticalAlignment="Center"/>
-                                            <TextBlock Text="{Binding SpeciesName}" FontSize="15" FontWeight="Bold"/>
-                                            <TextBlock Text="{Binding LevelBadge}" FontSize="10" Classes="secondary"
-                                                       VerticalAlignment="Center"/>
+                                <StackPanel IsVisible="{Binding HasPokemon}" Spacing="12">
+
+                                    <!-- Identity: artwork, name, types, legality, held item -->
+                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                        <Image Grid.Column="0" Source="{Binding Artwork}" Width="96" Height="96"
+                                               VerticalAlignment="Top"
+                                               RenderOptions.BitmapInterpolationMode="HighQuality"/>
+                                        <StackPanel Grid.Column="1" Spacing="5">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <Image Source="{Binding BallSprite}" Width="16" Height="16" VerticalAlignment="Center"/>
+                                                <TextBlock Text="{Binding SpeciesName}" FontSize="16" FontWeight="Bold"/>
+                                                <TextBlock Text="{Binding LevelBadge}" FontSize="10" Classes="secondary"
+                                                           VerticalAlignment="Center"/>
+                                                <Image Source="{Binding ShinyIcon}" Width="17" Height="17"
+                                                       IsVisible="{Binding IsShiny}" VerticalAlignment="Center"
+                                                       ToolTip.Tip="Shiny"/>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <Image Source="{Binding Type1Icon}" Width="22" Height="22"
+                                                       IsVisible="{Binding HasType1Icon}" ToolTip.Tip="{Binding Type1Name}"/>
+                                                <Border Classes="chip" Padding="7,2" Background="{Binding Type1Brush}"
+                                                        IsVisible="{Binding !HasType1Icon}">
+                                                    <TextBlock Text="{Binding Type1Name}" FontSize="9" FontWeight="SemiBold" Foreground="White"/>
+                                                </Border>
+                                                <Image Source="{Binding Type2Icon}" Width="22" Height="22"
+                                                       IsVisible="{Binding HasType2Icon}" ToolTip.Tip="{Binding Type2Name}"/>
+                                                <Border Classes="chip" Padding="7,2" Background="{DynamicResource LegalBgBrush}"
+                                                        IsVisible="{Binding IsLegal}" VerticalAlignment="Center">
+                                                    <TextBlock Text="✓ Legal" FontSize="9" FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource LegalFgBrush}"/>
+                                                </Border>
+                                                <Border Classes="chip" Padding="7,2" Background="{DynamicResource IllegalBgBrush}"
+                                                        IsVisible="{Binding !IsLegal}" VerticalAlignment="Center"
+                                                        ToolTip.Tip="{Binding LegalityReport}">
+                                                    <TextBlock Text="✕ Issues" FontSize="9" FontWeight="SemiBold"
+                                                               Foreground="{DynamicResource IllegalFgBrush}"/>
+                                                </Border>
+                                            </StackPanel>
+                                            <StackPanel Spacing="1">
+                                                <TextBlock Text="{Binding NatureText, StringFormat='{}{0} nature'}"
+                                                           FontSize="11" Classes="secondary"/>
+                                                <TextBlock Text="{Binding AbilityText}" FontSize="11" Classes="secondary"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding ItemText}" FontSize="11" Classes="secondary"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding OriginText}" FontSize="11" Classes="secondary"
+                                                           TextTrimming="CharacterEllipsis"/>
+                                            </StackPanel>
                                         </StackPanel>
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <Image Source="{Binding Type1Icon}" Width="22" Height="22"
-                                                   IsVisible="{Binding HasType1Icon}" ToolTip.Tip="{Binding Type1Name}"/>
-                                            <Border Classes="chip" Padding="7,2" Background="{Binding Type1Brush}"
-                                                    IsVisible="{Binding !HasType1Icon}">
-                                                <TextBlock Text="{Binding Type1Name}" FontSize="9" FontWeight="SemiBold" Foreground="White"/>
-                                            </Border>
-                                            <Image Source="{Binding Type2Icon}" Width="22" Height="22"
-                                                   IsVisible="{Binding HasType2Icon}" ToolTip.Tip="{Binding Type2Name}"/>
-                                            <Image Source="{Binding ShinyIcon}" Width="17" Height="17"
-                                                   IsVisible="{Binding IsShiny}" VerticalAlignment="Center"
-                                                   ToolTip.Tip="Shiny"/>
+                                    </Grid>
+
+                                    <!-- Moves beside stats, same visual language as the inspector tabs -->
+                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+                                        <StackPanel Grid.Column="0" Spacing="6">
+                                            <TextBlock Text="MOVES" FontSize="9" FontWeight="Bold" Classes="secondary"/>
+                                            <ItemsControl ItemsSource="{Binding Moves}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:MoveChoice">
+                                                        <Grid ColumnDefinitions="20,20,*" ColumnSpacing="5" Margin="0,0,0,5">
+                                                            <Image Grid.Column="0" Source="{Binding TypeIcon}" Width="18" Height="18"
+                                                                   IsVisible="{Binding HasTypeIcon}" VerticalAlignment="Center"
+                                                                   ToolTip.Tip="{Binding TypeName}"/>
+                                                            <ctrl:MoveCategoryIcon Grid.Column="1" Category="{Binding CategoryKind}"
+                                                                                   Width="18" Height="18"
+                                                                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                            <StackPanel Grid.Column="2" Spacing="0" VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding Name}" FontSize="12"
+                                                                           TextTrimming="CharacterEllipsis"/>
+                                                                <TextBlock Text="{Binding StatLine}" FontSize="9" Classes="secondary"
+                                                                           TextTrimming="CharacterEllipsis"/>
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <TextBlock Text="No moves set" FontSize="11" Classes="secondary"
+                                                       IsVisible="{Binding !HasMoves}"/>
                                         </StackPanel>
-                                        <StackPanel Orientation="Horizontal" Spacing="4">
-                                            <Border Classes="chip" Padding="7,2" Background="{DynamicResource LegalBgBrush}"
-                                                    IsVisible="{Binding IsLegal}">
-                                                <TextBlock Text="✓ Legal" FontSize="9" FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource LegalFgBrush}"/>
-                                            </Border>
-                                            <Border Classes="chip" Padding="7,2" Background="{DynamicResource IllegalBgBrush}"
-                                                    IsVisible="{Binding !IsLegal}">
-                                                <TextBlock Text="✕ Issues" FontSize="9" FontWeight="SemiBold"
-                                                           Foreground="{DynamicResource IllegalFgBrush}"/>
-                                            </Border>
+
+                                        <StackPanel Grid.Column="1" Spacing="6">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <TextBlock Grid.Column="0" Text="STATS" FontSize="9" FontWeight="Bold" Classes="secondary"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding StatTotal, StringFormat='TOT {0}'}"
+                                                           FontSize="9" FontWeight="Bold" Classes="secondary"/>
+                                            </Grid>
+                                            <ItemsControl ItemsSource="{Binding Stats}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:PreviewStatRow">
+                                                        <!-- Value sits after the bar so a wide bar can never paint over it. -->
+                                                        <Grid ColumnDefinitions="44,*,32" ColumnSpacing="6" Margin="0,0,0,5">
+                                                            <Grid Grid.Column="0" ColumnDefinitions="32,*" VerticalAlignment="Center">
+                                                                <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="10"
+                                                                           FontWeight="Bold" Foreground="{Binding LabelBrush}"
+                                                                           VerticalAlignment="Center"/>
+                                                                <TextBlock Grid.Column="1" Text="{Binding NatureBadge}" FontSize="8"
+                                                                           IsVisible="{Binding HasNatureBadge}"
+                                                                           Foreground="{Binding LabelBrush}"
+                                                                           VerticalAlignment="Center"/>
+                                                            </Grid>
+                                                            <ProgressBar Grid.Column="1" Classes="statbar"
+                                                                         Value="{Binding BarPercent}"
+                                                                         Foreground="{Binding BarBrush}"
+                                                                         VerticalAlignment="Center"
+                                                                         ToolTip.Tip="{Binding Tooltip}"/>
+                                                            <TextBlock Grid.Column="2" Text="{Binding Value}" FontSize="11"
+                                                                       FontWeight="SemiBold" VerticalAlignment="Center"
+                                                                       TextAlignment="Right" HorizontalAlignment="Right"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
                                         </StackPanel>
-                                    </StackPanel>
-                                </Grid>
+                                    </Grid>
+                                </StackPanel>
 
                                 <Button Content="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).TargetSlotText}"
                                         Classes="accent" HorizontalAlignment="Stretch"
