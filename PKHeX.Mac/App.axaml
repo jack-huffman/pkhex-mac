@@ -161,6 +161,20 @@
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
 
+        <!-- Rows that are containers, not selectable items: no selection tint -->
+        <Style Selector="ListBox.plain > ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SurfaceMutedBrush}"/>
+        </Style>
+        <Style Selector="ListBox.plain > ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ListBox.plain > ListBoxItem:selected:focus /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ListBox.plain > ListBoxItem:selected:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SurfaceMutedBrush}"/>
+        </Style>
+
         <!-- Disclosure triangle for expandable rows -->
         <Style Selector="ToggleButton.disclose">
             <Setter Property="Background" Value="Transparent"/>

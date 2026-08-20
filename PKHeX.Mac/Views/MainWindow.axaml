@@ -340,7 +340,7 @@
                                         Command="{Binding ClearVisibleCommand}"/>
                             </Grid>
 
-                            <ListBox ItemsSource="{Binding Flags}" IsVisible="{Binding SupportsFlags}">
+                            <ListBox Classes="plain" ItemsSource="{Binding Flags}" IsVisible="{Binding SupportsFlags}">
                                 <ListBox.ItemsPanel>
                                     <ItemsPanelTemplate>
                                         <WrapPanel/>
@@ -497,7 +497,7 @@
                             </Grid>
 
                             <!-- ListBox virtualizes, so all ~1000 entries stay responsive -->
-                            <ListBox ItemsSource="{Binding Rows}" IsVisible="{Binding IsSupported}">
+                            <ListBox Classes="plain" ItemsSource="{Binding Rows}" IsVisible="{Binding IsSupported}">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate x:DataType="vm:DexRowViewModel">
                                         <StackPanel>
