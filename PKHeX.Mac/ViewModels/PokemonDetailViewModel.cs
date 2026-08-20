@@ -28,7 +28,15 @@ public partial class PokemonDetailViewModel : ObservableObject
         _strings = strings;
         for (int i = 0; i < 6; i++)
             Stats.Add(new StatEditRowViewModel(this, i));
+        History = new PokemonHistoryViewModel(strings, MarkDirty);
+        Ribbons = new RibbonsViewModel(strings, MarkDirty);
     }
+
+    /// <summary>Trainer &amp; History group (handler, memories, contest, markings, HOME).</summary>
+    public PokemonHistoryViewModel History { get; }
+
+    /// <summary>Ribbons &amp; Marks group.</summary>
+    public RibbonsViewModel Ribbons { get; }
 
     public void SetContext(SaveFile sav, FilteredGameDataSource sources)
     {
@@ -41,6 +49,7 @@ public partial class PokemonDetailViewModel : ObservableObject
         MoveChoices = sources.Moves;
         VersionChoices = sources.Games;
         LanguageChoices = sources.Languages;
+        History.SetLanguageChoices(sources.Languages);
         OnPropertyChanged(string.Empty); // refresh all bindings
     }
 
@@ -93,6 +102,49 @@ public partial class PokemonDetailViewModel : ObservableObject
     [ObservableProperty] private int _languageValue;
     [ObservableProperty] private int _genderIndex;
     [ObservableProperty] private int _friendship;
+    [ObservableProperty] private uint _experience;
+    [ObservableProperty] private int _statNatureValue;
+    [ObservableProperty] private bool _hasStatNature;
+    [ObservableProperty] private bool _isFavorite;
+    [ObservableProperty] private bool _supportsFavorite;
+    [ObservableProperty] private int _pokerusStrain;
+    [ObservableProperty] private int _pokerusDays;
+    [ObservableProperty] private bool _formArgumentVisible;
+    [ObservableProperty] private uint _formArgument;
+
+    // ---- Tera type (PK9) ----
+    [ObservableProperty] private bool _supportsTeraType;
+    [ObservableProperty] private IReadOnlyList<ComboItem> _teraTypeChoices = [];
+    [ObservableProperty] private int _teraTypeOriginalValue;
+    [ObservableProperty] private int _teraTypeOverrideValue;
+
+    // ---- Hyper training ----
+    [ObservableProperty] private bool _supportsHyperTraining;
+    [ObservableProperty] private bool _htHp;
+    [ObservableProperty] private bool _htAtk;
+    [ObservableProperty] private bool _htDef;
+    [ObservableProperty] private bool _htSpa;
+    [ObservableProperty] private bool _htSpd;
+    [ObservableProperty] private bool _htSpe;
+
+    // ---- Size ----
+    [ObservableProperty] private bool _supportsScalars;
+    [ObservableProperty] private bool _supportsScale;
+    [ObservableProperty] private int _heightScalar;
+    [ObservableProperty] private int _weightScalar;
+    [ObservableProperty] private int _scale;
+    [ObservableProperty] private string _sizeSummary = string.Empty;
+
+    // ---- Obedience / battle version ----
+    [ObservableProperty] private bool _supportsObedience;
+    [ObservableProperty] private int _obedienceLevel;
+    [ObservableProperty] private bool _supportsBattleVersion;
+    [ObservableProperty] private int _battleVersionValue;
+
+    // ---- Egg met data ----
+    [ObservableProperty] private bool _isEgg;
+    [ObservableProperty] private DateTimeOffset? _eggMetDate;
+    [ObservableProperty] private int _eggLocationValue;
 
     // ---- Moves tab ----
     [ObservableProperty] private int _move1;
@@ -143,6 +195,8 @@ public partial class PokemonDetailViewModel : ObservableObject
             {
                 HasPokemon = false;
                 IsDirty = false;
+                History.Load(null);
+                Ribbons.Load(null);
                 return;
             }
 
@@ -183,6 +237,9 @@ public partial class PokemonDetailViewModel : ObservableObject
             DisplayTid = p.DisplayTID;
             DisplaySid = p.DisplaySID;
 
+            LoadExtendedFields(p);
+            History.Load(p);
+            Ribbons.Load(p);
             RefreshDerived(p);
             IsDirty = false;
         }
@@ -190,6 +247,95 @@ public partial class PokemonDetailViewModel : ObservableObject
         {
             _loading = false;
         }
+    }
+
+    /// <summary>
+    /// Loads the format-dependent field groups (Tera type, hyper training, size,
+    /// obedience, Pokérus, egg data…). Each group advertises support so the UI can
+    /// hide what this entity format does not carry.
+    /// </summary>
+    private void LoadExtendedFields(PKM p)
+    {
+        Experience = p.EXP;
+        HasStatNature = p.Format >= 8;
+        StatNatureValue = (int)p.StatAlignment;
+        PokerusStrain = p.PokerusStrain;
+        PokerusDays = p.PokerusDays;
+        IsEgg = p.IsEgg;
+
+        SupportsFavorite = p is IFavorite;
+        IsFavorite = p is IFavorite { IsFavorite: true };
+
+        FormArgumentVisible = p is IFormArgument && p.Format >= 6;
+        FormArgument = p is IFormArgument fa ? fa.FormArgument : 0;
+
+        // Tera type (Scarlet/Violet only).
+        SupportsTeraType = p is ITeraType;
+        if (p is ITeraType tera)
+        {
+            if (TeraTypeChoices.Count == 0)
+                TeraTypeChoices = BuildTeraTypeChoices();
+            TeraTypeOriginalValue = (int)tera.TeraTypeOriginal;
+            TeraTypeOverrideValue = (int)tera.TeraTypeOverride;
+        }
+
+        // Hyper training (bottle caps).
+        SupportsHyperTraining = p is IHyperTrain;
+        if (p is IHyperTrain ht)
+        {
+            HtHp = ht.HT_HP; HtAtk = ht.HT_ATK; HtDef = ht.HT_DEF;
+            HtSpa = ht.HT_SPA; HtSpd = ht.HT_SPD; HtSpe = ht.HT_SPE;
+        }
+
+        // Size.
+        SupportsScalars = p is IScaledSize;
+        SupportsScale = p is IScaledSize3;
+        if (p is IScaledSize ss)
+        {
+            HeightScalar = ss.HeightScalar;
+            WeightScalar = ss.WeightScalar;
+        }
+        Scale = p is IScaledSize3 s3 ? s3.Scale : 0;
+        RefreshSizeSummary(p);
+
+        SupportsObedience = p is IObedienceLevel;
+        ObedienceLevel = p is IObedienceLevel ob ? ob.ObedienceLevel : 0;
+
+        SupportsBattleVersion = p is IBattleVersion;
+        BattleVersionValue = p is IBattleVersion bv ? (int)bv.BattleVersion : 0;
+
+        EggMetDate = p.EggMetDate is { } ed
+            ? new DateTimeOffset(ed.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero)
+            : null;
+        EggLocationValue = p.EggLocation;
+    }
+
+    private IReadOnlyList<ComboItem> BuildTeraTypeChoices()
+    {
+        // The 18 regular types plus Stellar, which uses a sentinel value.
+        var list = new List<ComboItem>(20);
+        for (int i = 0; i <= TeraTypeUtil.MaxType; i++)
+            list.Add(new ComboItem(Name(_strings.types, i), i));
+        list.Add(new ComboItem(Name(_strings.types, TeraTypeUtil.StellarTypeDisplayStringIndex), TeraTypeUtil.Stellar));
+        return list;
+    }
+
+    /// <summary>Choices for the override slot, including "no override".</summary>
+    public IReadOnlyList<ComboItem> TeraTypeOverrideChoices =>
+        [new ComboItem("(No override)", TeraTypeUtil.OverrideNone), .. TeraTypeChoices];
+
+    private void RefreshSizeSummary(PKM p)
+    {
+        if (p is not IScaledSize sz)
+        {
+            SizeSummary = string.Empty;
+            return;
+        }
+        // PK9 rates size from Scale; earlier Gen 8 formats use height/weight scalars.
+        if (p is IScaledSize3 sc)
+            SizeSummary = $"Scale class: {PokeSizeDetailedUtil.GetSizeRating(sc.Scale)}";
+        else
+            SizeSummary = $"Height class: {PokeSizeUtil.GetSizeRating(sz.HeightScalar)}";
     }
 
     private void RefreshDerived(PKM p)
@@ -404,6 +550,230 @@ public partial class PokemonDetailViewModel : ObservableObject
         Pp2 = p.Move2 == 0 ? "—" : $"{p.Move2_PP} PP";
         Pp3 = p.Move3 == 0 ? "—" : $"{p.Move3_PP} PP";
         Pp4 = p.Move4 == 0 ? "—" : $"{p.Move4_PP} PP";
+    }
+
+    // ---- Extended field handlers (Pass 1) ----
+
+    partial void OnExperienceChanged(uint value)
+    {
+        if (_loading || _pk is null)
+            return;
+        _pk.EXP = value;
+        _loading = true;
+        Level = _pk.CurrentLevel; // EXP and level move together
+        _loading = false;
+        RefreshStats();
+        LevelBadge = $"Lv. {_pk.CurrentLevel}";
+        MarkDirty();
+    }
+
+    partial void OnStatNatureValueChanged(int value)
+    {
+        if (_loading || _pk is null || value < 0)
+            return;
+        _pk.StatAlignment = (Nature)value;
+        RefreshStats();
+        MarkDirty();
+    }
+
+    partial void OnIsFavoriteChanged(bool value)
+    {
+        if (_loading || _pk is not IFavorite fav)
+            return;
+        fav.IsFavorite = value;
+        MarkDirty();
+    }
+
+    partial void OnPokerusStrainChanged(int value)
+    {
+        if (_loading || _pk is null)
+            return;
+        _pk.PokerusStrain = Math.Clamp(value, 0, 15);
+        MarkDirty();
+    }
+
+    partial void OnPokerusDaysChanged(int value)
+    {
+        if (_loading || _pk is null)
+            return;
+        _pk.PokerusDays = Math.Clamp(value, 0, 4);
+        MarkDirty();
+    }
+
+    partial void OnFormArgumentChanged(uint value)
+    {
+        if (_loading || _pk is not IFormArgument fa)
+            return;
+        fa.FormArgument = value;
+        MarkDirty();
+    }
+
+    partial void OnTeraTypeOriginalValueChanged(int value)
+    {
+        if (_loading || _pk is not ITeraType tera || value < 0)
+            return;
+        tera.TeraTypeOriginal = (MoveType)value;
+        MarkDirty();
+    }
+
+    partial void OnTeraTypeOverrideValueChanged(int value)
+    {
+        if (_loading || _pk is not ITeraType tera || value < 0)
+            return;
+        tera.TeraTypeOverride = (MoveType)value;
+        MarkDirty();
+    }
+
+    private void SetHyperTrain(int index, bool value)
+    {
+        if (_loading || _pk is not IHyperTrain ht)
+            return;
+        switch (index)
+        {
+            case 0: ht.HT_HP = value; break;
+            case 1: ht.HT_ATK = value; break;
+            case 2: ht.HT_DEF = value; break;
+            case 3: ht.HT_SPA = value; break;
+            case 4: ht.HT_SPD = value; break;
+            case 5: ht.HT_SPE = value; break;
+        }
+        RefreshStats();
+        MarkDirty();
+    }
+
+    partial void OnHtHpChanged(bool value) => SetHyperTrain(0, value);
+    partial void OnHtAtkChanged(bool value) => SetHyperTrain(1, value);
+    partial void OnHtDefChanged(bool value) => SetHyperTrain(2, value);
+    partial void OnHtSpaChanged(bool value) => SetHyperTrain(3, value);
+    partial void OnHtSpdChanged(bool value) => SetHyperTrain(4, value);
+    partial void OnHtSpeChanged(bool value) => SetHyperTrain(5, value);
+
+    partial void OnHeightScalarChanged(int value)
+    {
+        if (_loading || _pk is not IScaledSize ss)
+            return;
+        ss.HeightScalar = (byte)Math.Clamp(value, 0, 255);
+        RefreshSizeSummary(_pk!);
+        MarkDirty();
+    }
+
+    partial void OnWeightScalarChanged(int value)
+    {
+        if (_loading || _pk is not IScaledSize ss)
+            return;
+        ss.WeightScalar = (byte)Math.Clamp(value, 0, 255);
+        RefreshSizeSummary(_pk!);
+        MarkDirty();
+    }
+
+    partial void OnScaleChanged(int value)
+    {
+        if (_loading || _pk is not IScaledSize3 s3)
+            return;
+        s3.Scale = (byte)Math.Clamp(value, 0, 255);
+        RefreshSizeSummary(_pk!);
+        MarkDirty();
+    }
+
+    partial void OnObedienceLevelChanged(int value)
+    {
+        if (_loading || _pk is not IObedienceLevel ob)
+            return;
+        ob.ObedienceLevel = (byte)Math.Clamp(value, 0, 100);
+        MarkDirty();
+    }
+
+    partial void OnBattleVersionValueChanged(int value)
+    {
+        if (_loading || _pk is not IBattleVersion bv || value < 0)
+            return;
+        bv.BattleVersion = (GameVersion)value;
+        MarkDirty();
+    }
+
+    partial void OnIsEggChanged(bool value)
+    {
+        if (_loading || _pk is null)
+            return;
+        _pk.IsEgg = value;
+        RefreshDerived(_pk);
+        MarkDirty();
+    }
+
+    partial void OnEggMetDateChanged(DateTimeOffset? value)
+    {
+        if (_loading || _pk is null)
+            return;
+        _pk.EggMetDate = value is { } d ? DateOnly.FromDateTime(d.DateTime) : null;
+        MarkDirty();
+    }
+
+    partial void OnEggLocationValueChanged(int value)
+    {
+        if (_loading || _pk is null || value < 0)
+            return;
+        _pk.EggLocation = (ushort)value;
+        MarkDirty();
+    }
+
+    // ---- Commands for the new groups ----
+
+    [RelayCommand]
+    public void RerollPid()
+    {
+        if (_pk is null)
+            return;
+        _pk.SetPIDGender(_pk.Gender);
+        _loading = true;
+        IsShiny = _pk.IsShiny;
+        _loading = false;
+        RefreshDerived(_pk);
+        MarkDirty();
+    }
+
+    [RelayCommand]
+    public void RerollEncryptionConstant()
+    {
+        if (_pk is null)
+            return;
+        _pk.EncryptionConstant = Util.Rand32();
+        EcText = $"{_pk.EncryptionConstant:X8}";
+        MarkDirty();
+    }
+
+    [RelayCommand]
+    public void MaxHyperTraining()
+    {
+        if (_pk is not IHyperTrain ht)
+            return;
+        _loading = true;
+        HtHp = HtAtk = HtDef = HtSpa = HtSpd = HtSpe = true;
+        _loading = false;
+        ht.HT_HP = ht.HT_ATK = ht.HT_DEF = ht.HT_SPA = ht.HT_SPD = ht.HT_SPE = true;
+        RefreshStats();
+        MarkDirty();
+    }
+
+    [RelayCommand]
+    public void ClearHyperTraining()
+    {
+        if (_pk is not IHyperTrain ht)
+            return;
+        _loading = true;
+        HtHp = HtAtk = HtDef = HtSpa = HtSpd = HtSpe = false;
+        _loading = false;
+        ht.HyperTrainFlags = 0;
+        RefreshStats();
+        MarkDirty();
+    }
+
+    [RelayCommand]
+    public void RandomizeScale()
+    {
+        if (_pk is not IScaledSize3 s3)
+            return;
+        Scale = (byte)Util.Rand.Next(0, 256);
+        _ = s3;
     }
 
     private void SetMove(int index, int value)

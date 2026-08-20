@@ -94,10 +94,10 @@
             <Setter Property="FontSize" Value="13"/>
         </Style>
         <Style Selector="TabItem">
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="MinHeight" Value="34"/>
-            <Setter Property="Padding" Value="10,4"/>
+            <Setter Property="MinHeight" Value="32"/>
+            <Setter Property="Padding" Value="7,4"/>
         </Style>
         <Style Selector="Separator">
             <Setter Property="Background" Value="{DynamicResource HairlineBrush}"/>

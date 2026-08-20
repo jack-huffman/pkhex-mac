@@ -687,15 +687,58 @@
                                                               SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
                                                               DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
                                                 </StackPanel>
+                                                <StackPanel IsVisible="{Binding HasStatNature}">
+                                                    <TextBlock Classes="fieldLabel" Text="Stat Nature (Gen 8+ split)"/>
+                                                    <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding NatureChoices}"
+                                                              SelectedValue="{Binding StatNatureValue, Mode=TwoWay}"
+                                                              SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
+                                                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                                                </StackPanel>
+                                                <StackPanel>
+                                                    <TextBlock Classes="fieldLabel" Text="Experience"/>
+                                                    <NumericUpDown Value="{Binding Experience, Mode=TwoWay}" Minimum="0"
+                                                                   Maximum="1640000" FormatString="0" Increment="1000"/>
+                                                </StackPanel>
+                                                <StackPanel IsVisible="{Binding FormArgumentVisible}">
+                                                    <TextBlock Classes="fieldLabel" Text="Form Argument"/>
+                                                    <NumericUpDown Value="{Binding FormArgument, Mode=TwoWay}" Minimum="0"
+                                                                   Maximum="4294967295" FormatString="0" Increment="1"/>
+                                                </StackPanel>
+                                                <Separator Margin="0,4"/>
+                                                <TextBlock Classes="sectionTitle" Text="POKÉRUS"/>
                                                 <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                                    <StackPanel Grid.Column="0">
+                                                        <TextBlock Classes="fieldLabel" Text="Strain"/>
+                                                        <NumericUpDown Value="{Binding PokerusStrain, Mode=TwoWay}" Minimum="0"
+                                                                       Maximum="15" FormatString="0" Increment="1"/>
+                                                    </StackPanel>
+                                                    <StackPanel Grid.Column="1">
+                                                        <TextBlock Classes="fieldLabel" Text="Days left"/>
+                                                        <NumericUpDown Value="{Binding PokerusDays, Mode=TwoWay}" Minimum="0"
+                                                                       Maximum="4" FormatString="0" Increment="1"/>
+                                                    </StackPanel>
+                                                </Grid>
+                                                <StackPanel Orientation="Horizontal" Spacing="16">
+                                                    <CheckBox IsChecked="{Binding IsEgg, Mode=TwoWay}" Content="Is Egg"/>
+                                                    <CheckBox IsChecked="{Binding IsFavorite, Mode=TwoWay}" Content="Favorite"
+                                                              IsVisible="{Binding SupportsFavorite}"/>
+                                                </StackPanel>
+                                                <Separator Margin="0,4"/>
+                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                                                     <StackPanel Grid.Column="0">
                                                         <TextBlock Classes="fieldLabel" Text="PID"/>
                                                         <TextBlock Text="{Binding PidText}" FontFamily="Menlo, monospace" FontSize="12"/>
                                                     </StackPanel>
-                                                    <StackPanel Grid.Column="1">
-                                                        <TextBlock Classes="fieldLabel" Text="Encryption Const."/>
+                                                    <Button Grid.Column="1" Content="Reroll" FontSize="11" Padding="8,3"
+                                                            VerticalAlignment="Bottom" Command="{Binding RerollPidCommand}"/>
+                                                </Grid>
+                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                    <StackPanel Grid.Column="0">
+                                                        <TextBlock Classes="fieldLabel" Text="Encryption Constant"/>
                                                         <TextBlock Text="{Binding EcText}" FontFamily="Menlo, monospace" FontSize="12"/>
                                                     </StackPanel>
+                                                    <Button Grid.Column="1" Content="Reroll" FontSize="11" Padding="8,3"
+                                                            VerticalAlignment="Bottom" Command="{Binding RerollEncryptionConstantCommand}"/>
                                                 </Grid>
                                             </StackPanel>
                                         </ScrollViewer>
@@ -737,6 +780,72 @@
                                                     <Button Content="Max IVs" Command="{Binding MaxIVsCommand}" FontSize="12"/>
                                                     <Button Content="Clear EVs" Command="{Binding ClearEVsCommand}" FontSize="12"/>
                                                     <Button Content="Heal" Command="{Binding HealPokemonCommand}" FontSize="12"/>
+                                                </StackPanel>
+
+                                                <!-- Hyper training (bottle caps) -->
+                                                <StackPanel IsVisible="{Binding SupportsHyperTraining}" Spacing="6" Margin="0,10,0,0">
+                                                    <Separator/>
+                                                    <TextBlock Classes="sectionTitle" Text="HYPER TRAINING"/>
+                                                    <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto" ColumnSpacing="4" RowSpacing="2">
+                                                        <CheckBox Grid.Row="0" Grid.Column="0" Content="HP" FontSize="11" IsChecked="{Binding HtHp, Mode=TwoWay}"/>
+                                                        <CheckBox Grid.Row="0" Grid.Column="1" Content="Atk" FontSize="11" IsChecked="{Binding HtAtk, Mode=TwoWay}"/>
+                                                        <CheckBox Grid.Row="0" Grid.Column="2" Content="Def" FontSize="11" IsChecked="{Binding HtDef, Mode=TwoWay}"/>
+                                                        <CheckBox Grid.Row="1" Grid.Column="0" Content="SpA" FontSize="11" IsChecked="{Binding HtSpa, Mode=TwoWay}"/>
+                                                        <CheckBox Grid.Row="1" Grid.Column="1" Content="SpD" FontSize="11" IsChecked="{Binding HtSpd, Mode=TwoWay}"/>
+                                                        <CheckBox Grid.Row="1" Grid.Column="2" Content="Spe" FontSize="11" IsChecked="{Binding HtSpe, Mode=TwoWay}"/>
+                                                    </Grid>
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <Button Content="Train all" FontSize="12" Command="{Binding MaxHyperTrainingCommand}"/>
+                                                        <Button Content="Clear" FontSize="12" Command="{Binding ClearHyperTrainingCommand}"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+
+                                                <!-- Tera type (Scarlet/Violet) -->
+                                                <StackPanel IsVisible="{Binding SupportsTeraType}" Spacing="8" Margin="0,10,0,0">
+                                                    <Separator/>
+                                                    <TextBlock Classes="sectionTitle" Text="TERA TYPE"/>
+                                                    <StackPanel>
+                                                        <TextBlock Classes="fieldLabel" Text="Original"/>
+                                                        <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding TeraTypeChoices}"
+                                                                  SelectedValue="{Binding TeraTypeOriginalValue, Mode=TwoWay}"
+                                                                  SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
+                                                                  DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                                                    </StackPanel>
+                                                    <StackPanel>
+                                                        <TextBlock Classes="fieldLabel" Text="Override (Tera Shard change)"/>
+                                                        <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding TeraTypeOverrideChoices}"
+                                                                  SelectedValue="{Binding TeraTypeOverrideValue, Mode=TwoWay}"
+                                                                  SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
+                                                                  DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+
+                                                <!-- Size -->
+                                                <StackPanel IsVisible="{Binding SupportsScalars}" Spacing="8" Margin="0,10,0,0">
+                                                    <Separator/>
+                                                    <TextBlock Classes="sectionTitle" Text="SIZE"/>
+                                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                                        <StackPanel Grid.Column="0">
+                                                            <TextBlock Classes="fieldLabel" Text="Height"/>
+                                                            <NumericUpDown Value="{Binding HeightScalar, Mode=TwoWay}" Minimum="0"
+                                                                           Maximum="255" FormatString="0" Increment="1" FontSize="12"/>
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Column="1">
+                                                            <TextBlock Classes="fieldLabel" Text="Weight"/>
+                                                            <NumericUpDown Value="{Binding WeightScalar, Mode=TwoWay}" Minimum="0"
+                                                                           Maximum="255" FormatString="0" Increment="1" FontSize="12"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" IsVisible="{Binding SupportsScale}">
+                                                        <StackPanel Grid.Column="0">
+                                                            <TextBlock Classes="fieldLabel" Text="Scale (drives Jumbo / Mini marks)"/>
+                                                            <NumericUpDown Value="{Binding Scale, Mode=TwoWay}" Minimum="0"
+                                                                           Maximum="255" FormatString="0" Increment="1" FontSize="12"/>
+                                                        </StackPanel>
+                                                        <Button Grid.Column="1" Content="Random" FontSize="11" Padding="8,3"
+                                                                VerticalAlignment="Bottom" Command="{Binding RandomizeScaleCommand}"/>
+                                                    </Grid>
+                                                    <TextBlock Text="{Binding SizeSummary}" FontSize="11" Classes="secondary"/>
                                                 </StackPanel>
                                             </StackPanel>
                                         </ScrollViewer>
@@ -846,6 +955,33 @@
                                                     <TextBlock Classes="fieldLabel" Text="Met Date"/>
                                                     <DatePicker SelectedDate="{Binding MetDate, Mode=TwoWay}" HorizontalAlignment="Stretch"/>
                                                 </StackPanel>
+                                                <StackPanel IsVisible="{Binding SupportsObedience}">
+                                                    <TextBlock Classes="fieldLabel" Text="Obedience Level"/>
+                                                    <NumericUpDown Value="{Binding ObedienceLevel, Mode=TwoWay}" Minimum="0"
+                                                                   Maximum="100" FormatString="0" Increment="1"/>
+                                                </StackPanel>
+                                                <StackPanel IsVisible="{Binding SupportsBattleVersion}">
+                                                    <TextBlock Classes="fieldLabel" Text="Battle Version (reset for ranked)"/>
+                                                    <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding VersionChoices}"
+                                                              SelectedValue="{Binding BattleVersionValue, Mode=TwoWay}"
+                                                              SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
+                                                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                                                </StackPanel>
+
+                                                <Separator Margin="0,6"/>
+                                                <TextBlock Classes="sectionTitle" Text="EGG DATA"/>
+                                                <StackPanel>
+                                                    <TextBlock Classes="fieldLabel" Text="Egg Met Location"/>
+                                                    <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding MetLocationChoices}"
+                                                              SelectedValue="{Binding EggLocationValue, Mode=TwoWay}"
+                                                              SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
+                                                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                                                </StackPanel>
+                                                <StackPanel>
+                                                    <TextBlock Classes="fieldLabel" Text="Egg Met Date"/>
+                                                    <DatePicker SelectedDate="{Binding EggMetDate, Mode=TwoWay}" HorizontalAlignment="Stretch"/>
+                                                </StackPanel>
+
                                                 <Separator Margin="0,6"/>
                                                 <TextBlock Classes="sectionTitle" Text="ORIGINAL TRAINER"/>
                                                 <StackPanel>
@@ -873,6 +1009,223 @@
                                                 </StackPanel>
                                             </StackPanel>
                                         </ScrollViewer>
+                                    </TabItem>
+
+                                    <!-- ══════ Trainer &amp; History ══════ -->
+                                    <TabItem Header="Trainer">
+                                        <ScrollViewer>
+                                            <StackPanel Spacing="9" Margin="2,6,6,2"
+                                                        DataContext="{Binding History}" x:DataType="vm:PokemonHistoryViewModel">
+
+                                                <!-- Who holds it -->
+                                                <StackPanel IsVisible="{Binding SupportsHandler}" Spacing="6">
+                                                    <TextBlock Classes="sectionTitle" Text="CURRENT HANDLER"/>
+                                                    <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding HandlerChoices}"
+                                                              SelectedIndex="{Binding CurrentHandlerIndex, Mode=TwoWay}"/>
+                                                    <TextBlock Text="{Binding HandlerSummary}" FontSize="11" Classes="secondary"
+                                                               TextWrapping="Wrap"/>
+                                                </StackPanel>
+
+                                                <!-- Handling trainer -->
+                                                <StackPanel IsVisible="{Binding SupportsHandler}" Spacing="9">
+                                                    <Separator Margin="0,4"/>
+                                                    <TextBlock Classes="sectionTitle" Text="HANDLING TRAINER"/>
+                                                    <StackPanel>
+                                                        <TextBlock Classes="fieldLabel" Text="Name"/>
+                                                        <TextBox Text="{Binding HtName, Mode=TwoWay}"/>
+                                                    </StackPanel>
+                                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                                        <StackPanel Grid.Column="0">
+                                                            <TextBlock Classes="fieldLabel" Text="Gender"/>
+                                                            <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding GenderChoices}"
+                                                                      SelectedIndex="{Binding HtGenderIndex, Mode=TwoWay}"/>
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Column="1">
+                                                            <TextBlock Classes="fieldLabel" Text="Friendship"/>
+                                                            <NumericUpDown Value="{Binding HtFriendship, Mode=TwoWay}" Minimum="0"
+                                                                           Maximum="255" FormatString="0" Increment="1"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                    <StackPanel IsVisible="{Binding SupportsHandlerLanguage}">
+                                                        <TextBlock Classes="fieldLabel" Text="Language"/>
+                                                        <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding LanguageChoices}"
+                                                                  SelectedValue="{Binding HtLanguageValue, Mode=TwoWay}"
+                                                                  SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
+                                                                  DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                                                    </StackPanel>
+                                                </StackPanel>
+
+                                                <!-- Memories -->
+                                                <StackPanel IsVisible="{Binding SupportsMemories}" Spacing="8">
+                                                    <Separator Margin="0,4"/>
+                                                    <DockPanel>
+                                                        <TextBlock DockPanel.Dock="Left" Classes="sectionTitle" Text="MEMORIES"/>
+                                                        <Button DockPanel.Dock="Right" Content="Clear" FontSize="11" Padding="8,2"
+                                                                HorizontalAlignment="Right" Command="{Binding ClearMemoriesCommand}"/>
+                                                    </DockPanel>
+
+                                                    <TextBlock Classes="fieldLabel" Text="Original Trainer memory"/>
+                                                    <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding MemoryChoices}"
+                                                              SelectedValue="{Binding OtMemory, Mode=TwoWay}"
+                                                              SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
+                                                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                                        <ComboBox Grid.Column="0" HorizontalAlignment="Stretch" ItemsSource="{Binding IntensityChoices}"
+                                                                  SelectedValue="{Binding OtMemoryIntensity, Mode=TwoWay}"
+                                                                  SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
+                                                                  DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                                                        <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" ItemsSource="{Binding FeelingChoices}"
+                                                                  SelectedValue="{Binding OtMemoryFeeling, Mode=TwoWay}"
+                                                                  SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
+                                                                  DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                                                    </Grid>
+                                                    <TextBlock Text="{Binding OtMemoryText}" FontSize="10" Classes="secondary" TextWrapping="Wrap"/>
+
+                                                    <TextBlock Classes="fieldLabel" Text="Handling Trainer memory" Margin="0,6,0,0"/>
+                                                    <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding MemoryChoices}"
+                                                              SelectedValue="{Binding HtMemory, Mode=TwoWay}"
+                                                              SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
+                                                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                                        <ComboBox Grid.Column="0" HorizontalAlignment="Stretch" ItemsSource="{Binding IntensityChoices}"
+                                                                  SelectedValue="{Binding HtMemoryIntensity, Mode=TwoWay}"
+                                                                  SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
+                                                                  DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                                                        <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" ItemsSource="{Binding FeelingChoices}"
+                                                                  SelectedValue="{Binding HtMemoryFeeling, Mode=TwoWay}"
+                                                                  SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
+                                                                  DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                                                    </Grid>
+                                                    <TextBlock Text="{Binding HtMemoryText}" FontSize="10" Classes="secondary" TextWrapping="Wrap"/>
+                                                </StackPanel>
+
+                                                <!-- Markings -->
+                                                <StackPanel IsVisible="{Binding SupportsMarkings}" Spacing="6">
+                                                    <Separator Margin="0,4"/>
+                                                    <TextBlock Classes="sectionTitle" Text="MARKINGS"/>
+                                                    <ItemsControl ItemsSource="{Binding Markings}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate x:DataType="vm:MarkingRowViewModel">
+                                                                <Grid ColumnDefinitions="72,*" ColumnSpacing="8" Margin="0,2">
+                                                                    <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12"
+                                                                               Classes="secondary" VerticalAlignment="Center"/>
+                                                                    <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" FontSize="12"
+                                                                              ItemsSource="{Binding Choices}"
+                                                                              SelectedIndex="{Binding Value, Mode=TwoWay}"/>
+                                                                </Grid>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
+
+                                                <!-- Contest stats -->
+                                                <StackPanel IsVisible="{Binding SupportsContest}" Spacing="6">
+                                                    <Separator Margin="0,4"/>
+                                                    <DockPanel>
+                                                        <TextBlock DockPanel.Dock="Left" Classes="sectionTitle" Text="CONTEST STATS"/>
+                                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6"
+                                                                    HorizontalAlignment="Right">
+                                                            <Button Content="Max" FontSize="11" Padding="8,2" Command="{Binding MaxContestCommand}"/>
+                                                            <Button Content="Clear" FontSize="11" Padding="8,2" Command="{Binding ClearContestCommand}"/>
+                                                        </StackPanel>
+                                                    </DockPanel>
+                                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8" RowDefinitions="Auto,Auto,Auto" RowSpacing="6">
+                                                        <StackPanel Grid.Row="0" Grid.Column="0">
+                                                            <TextBlock Classes="fieldLabel" Text="Cool"/>
+                                                            <NumericUpDown Value="{Binding ContestCool, Mode=TwoWay}" Minimum="0" Maximum="255" FormatString="0" Increment="5" FontSize="12"/>
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Row="0" Grid.Column="1">
+                                                            <TextBlock Classes="fieldLabel" Text="Beauty"/>
+                                                            <NumericUpDown Value="{Binding ContestBeauty, Mode=TwoWay}" Minimum="0" Maximum="255" FormatString="0" Increment="5" FontSize="12"/>
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Row="1" Grid.Column="0">
+                                                            <TextBlock Classes="fieldLabel" Text="Cute"/>
+                                                            <NumericUpDown Value="{Binding ContestCute, Mode=TwoWay}" Minimum="0" Maximum="255" FormatString="0" Increment="5" FontSize="12"/>
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Row="1" Grid.Column="1">
+                                                            <TextBlock Classes="fieldLabel" Text="Smart"/>
+                                                            <NumericUpDown Value="{Binding ContestSmart, Mode=TwoWay}" Minimum="0" Maximum="255" FormatString="0" Increment="5" FontSize="12"/>
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Row="2" Grid.Column="0">
+                                                            <TextBlock Classes="fieldLabel" Text="Tough"/>
+                                                            <NumericUpDown Value="{Binding ContestTough, Mode=TwoWay}" Minimum="0" Maximum="255" FormatString="0" Increment="5" FontSize="12"/>
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Row="2" Grid.Column="1">
+                                                            <TextBlock Classes="fieldLabel" Text="Sheen"/>
+                                                            <NumericUpDown Value="{Binding ContestSheen, Mode=TwoWay}" Minimum="0" Maximum="255" FormatString="0" Increment="5" FontSize="12"/>
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </StackPanel>
+
+                                                <!-- HOME tracker -->
+                                                <StackPanel IsVisible="{Binding SupportsTracker}" Spacing="6">
+                                                    <Separator Margin="0,4"/>
+                                                    <TextBlock Classes="sectionTitle" Text="POKÉMON HOME"/>
+                                                    <CheckBox IsChecked="{Binding HideTracker, Mode=TwoWay}"
+                                                              Content="Hide tracker (it identifies your save)"/>
+                                                    <StackPanel IsVisible="{Binding !HideTracker}">
+                                                        <TextBlock Classes="fieldLabel" Text="HOME Tracker (16 hex digits)"/>
+                                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                                            <TextBox Grid.Column="0" Text="{Binding TrackerText, Mode=TwoWay}"
+                                                                     FontFamily="Menlo, monospace" MaxLength="16"
+                                                                     Watermark="0123456789ABCDEF"/>
+                                                            <Button Grid.Column="1" Content="Zero" FontSize="11" Padding="8,3"
+                                                                    Command="{Binding ClearTrackerCommand}"/>
+                                                        </Grid>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </ScrollViewer>
+                                    </TabItem>
+
+                                    <!-- ══════ Ribbons &amp; Marks ══════ -->
+                                    <TabItem Header="Ribbons">
+                                        <DockPanel DataContext="{Binding Ribbons}" x:DataType="vm:RibbonsViewModel"
+                                                   Margin="2,6,6,2">
+                                            <StackPanel DockPanel.Dock="Top" Spacing="8">
+                                                <TextBox Text="{Binding SearchText, Mode=TwoWay}" Watermark="Search ribbons &amp; marks…"/>
+                                                <DockPanel>
+                                                    <CheckBox DockPanel.Dock="Left" IsChecked="{Binding OwnedOnly, Mode=TwoWay}"
+                                                              Content="Owned only" FontSize="12"/>
+                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding Summary}" FontSize="11"
+                                                               Classes="secondary" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                                </DockPanel>
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <Button Content="Give all legal" FontSize="12" Command="{Binding GiveAllLegalCommand}"/>
+                                                    <Button Content="Remove all" FontSize="12" Command="{Binding RemoveAllCommand}"/>
+                                                </StackPanel>
+                                            </StackPanel>
+
+                                            <StackPanel DockPanel.Dock="Bottom" IsVisible="{Binding SupportsAffixed}" Margin="0,8,0,0">
+                                                <TextBlock Classes="fieldLabel" Text="Affixed ribbon (shown in-game)"/>
+                                                <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding AffixedChoices}"
+                                                          SelectedValue="{Binding AffixedValue, Mode=TwoWay}"
+                                                          SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
+                                                          DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
+                                            </StackPanel>
+
+                                            <ScrollViewer Margin="0,8,0,0">
+                                                <ItemsControl ItemsSource="{Binding Rows}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:RibbonRowViewModel">
+                                                            <Grid ColumnDefinitions="*,76" ColumnSpacing="6" Margin="0,1">
+                                                                <CheckBox Grid.Column="0" FontSize="12"
+                                                                          Content="{Binding DisplayName}"
+                                                                          IsChecked="{Binding HasRibbon, Mode=TwoWay}"
+                                                                          IsVisible="{Binding IsFlag}"/>
+                                                                <TextBlock Grid.Column="0" FontSize="12" VerticalAlignment="Center"
+                                                                           Text="{Binding DisplayName}"
+                                                                           IsVisible="{Binding IsCounter}"/>
+                                                                <NumericUpDown Grid.Column="1" FontSize="12" ShowButtonSpinner="False"
+                                                                               Value="{Binding Count, Mode=TwoWay}" Minimum="0"
+                                                                               Maximum="{Binding MaxCount}" FormatString="0"
+                                                                               IsVisible="{Binding IsCounter}"/>
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </ScrollViewer>
+                                        </DockPanel>
                                     </TabItem>
                                 </TabControl>
                             </DockPanel>

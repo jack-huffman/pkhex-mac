@@ -49,7 +49,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     /// <summary>Collapses the inspector column for the full-width Save view.</summary>
     public Avalonia.Controls.GridLength InspectorWidth =>
-        IsSaveView ? new Avalonia.Controls.GridLength(0) : new Avalonia.Controls.GridLength(392);
+        IsSaveView ? new Avalonia.Controls.GridLength(0) : new Avalonia.Controls.GridLength(438);
 
     partial void OnCurrentViewChanged(string value)
     {
