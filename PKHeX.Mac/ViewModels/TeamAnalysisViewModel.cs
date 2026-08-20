@@ -313,8 +313,8 @@ public sealed class TeamMemberViewModel
             else
                 weak.Add(group);
         }
-        // Strongest first in both directions: immunities lead, 4x leads.
-        weak.Reverse();
+        // Both bands read in ascending multiplier order, so resistances run
+        // x0 -> x1/2 and weaknesses run x2 -> x4.
         Resistances = resist;
         Weaknesses = weak;
     }
@@ -338,10 +338,10 @@ public sealed class TeamMemberViewModel
     /// <summary>True when the ability changes incoming damage, so the UI can say so.</summary>
     public bool AbilityMatters { get; }
 
-    /// <summary>Incoming multipliers below 1, grouped: immunities first.</summary>
+    /// <summary>Incoming multipliers below 1, grouped ascending: immunities first.</summary>
     public IReadOnlyList<MatchupGroupViewModel> Resistances { get; } = [];
 
-    /// <summary>Incoming multipliers above 1, grouped: 4x first.</summary>
+    /// <summary>Incoming multipliers above 1, grouped ascending: x2 then x4.</summary>
     public IReadOnlyList<MatchupGroupViewModel> Weaknesses { get; } = [];
 
     public bool HasResistances => Resistances.Count > 0;
