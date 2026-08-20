@@ -27,11 +27,15 @@ public partial class ToolsViewModel : ObservableObject
         _strings = strings;
         _onChanged = onChanged;
         Team = new TeamAnalysisViewModel(sav, strings);
+        Breeding = new BreedingViewModel(sav, strings);
         BuildReport();
     }
 
     /// <summary>Type coverage and shared weaknesses for the party or a box.</summary>
     public TeamAnalysisViewModel Team { get; }
+
+    /// <summary>Egg groups, egg moves and which partners can pass them.</summary>
+    public BreedingViewModel Breeding { get; }
 
     // =====================================================================
     // Batch editor
