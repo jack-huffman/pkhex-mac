@@ -1442,7 +1442,7 @@
                                                                     <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12"
                                                                                MinWidth="96" VerticalAlignment="Center"
                                                                                TextTrimming="CharacterEllipsis"/>
-                                                                    <Border Grid.Column="1" Classes="chip" Padding="4,1"
+                                                                    <Border Grid.Column="1" Classes="chip" Padding="6,2" MinHeight="18"
                                                                             Background="{Binding TypeBrush}"
                                                                             IsVisible="{Binding IsRealMove}">
                                                                         <TextBlock Text="{Binding TypeName}" FontSize="9" FontWeight="SemiBold"
@@ -1466,8 +1466,8 @@
                                                                     VerticalAlignment="Center"
                                                                     DataContext="{Binding MoveInfo1}" x:DataType="vm:MoveChoice"
                                                                     IsVisible="{Binding $self.DataContext, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                                            <Border Classes="chip" Padding="6,1" Background="{Binding TypeBrush}"
-                                                                    VerticalAlignment="Center">
+                                                            <Border Classes="chip" Padding="7,2" MinHeight="18"
+                                                                    Background="{Binding TypeBrush}">
                                                                 <TextBlock Text="{Binding TypeName}" FontSize="9" FontWeight="SemiBold"
                                                                            Foreground="White"/>
                                                             </Border>
@@ -1495,7 +1495,7 @@
                                                                     <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12"
                                                                                MinWidth="96" VerticalAlignment="Center"
                                                                                TextTrimming="CharacterEllipsis"/>
-                                                                    <Border Grid.Column="1" Classes="chip" Padding="4,1"
+                                                                    <Border Grid.Column="1" Classes="chip" Padding="6,2" MinHeight="18"
                                                                             Background="{Binding TypeBrush}"
                                                                             IsVisible="{Binding IsRealMove}">
                                                                         <TextBlock Text="{Binding TypeName}" FontSize="9" FontWeight="SemiBold"
@@ -1519,8 +1519,8 @@
                                                                     VerticalAlignment="Center"
                                                                     DataContext="{Binding MoveInfo2}" x:DataType="vm:MoveChoice"
                                                                     IsVisible="{Binding $self.DataContext, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                                            <Border Classes="chip" Padding="6,1" Background="{Binding TypeBrush}"
-                                                                    VerticalAlignment="Center">
+                                                            <Border Classes="chip" Padding="7,2" MinHeight="18"
+                                                                    Background="{Binding TypeBrush}">
                                                                 <TextBlock Text="{Binding TypeName}" FontSize="9" FontWeight="SemiBold"
                                                                            Foreground="White"/>
                                                             </Border>
@@ -1548,7 +1548,7 @@
                                                                     <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12"
                                                                                MinWidth="96" VerticalAlignment="Center"
                                                                                TextTrimming="CharacterEllipsis"/>
-                                                                    <Border Grid.Column="1" Classes="chip" Padding="4,1"
+                                                                    <Border Grid.Column="1" Classes="chip" Padding="6,2" MinHeight="18"
                                                                             Background="{Binding TypeBrush}"
                                                                             IsVisible="{Binding IsRealMove}">
                                                                         <TextBlock Text="{Binding TypeName}" FontSize="9" FontWeight="SemiBold"
@@ -1572,8 +1572,8 @@
                                                                     VerticalAlignment="Center"
                                                                     DataContext="{Binding MoveInfo3}" x:DataType="vm:MoveChoice"
                                                                     IsVisible="{Binding $self.DataContext, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                                            <Border Classes="chip" Padding="6,1" Background="{Binding TypeBrush}"
-                                                                    VerticalAlignment="Center">
+                                                            <Border Classes="chip" Padding="7,2" MinHeight="18"
+                                                                    Background="{Binding TypeBrush}">
                                                                 <TextBlock Text="{Binding TypeName}" FontSize="9" FontWeight="SemiBold"
                                                                            Foreground="White"/>
                                                             </Border>
@@ -1601,7 +1601,7 @@
                                                                     <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12"
                                                                                MinWidth="96" VerticalAlignment="Center"
                                                                                TextTrimming="CharacterEllipsis"/>
-                                                                    <Border Grid.Column="1" Classes="chip" Padding="4,1"
+                                                                    <Border Grid.Column="1" Classes="chip" Padding="6,2" MinHeight="18"
                                                                             Background="{Binding TypeBrush}"
                                                                             IsVisible="{Binding IsRealMove}">
                                                                         <TextBlock Text="{Binding TypeName}" FontSize="9" FontWeight="SemiBold"
@@ -1625,8 +1625,8 @@
                                                                     VerticalAlignment="Center"
                                                                     DataContext="{Binding MoveInfo4}" x:DataType="vm:MoveChoice"
                                                                     IsVisible="{Binding $self.DataContext, Converter={x:Static ObjectConverters.IsNotNull}}">
-                                                            <Border Classes="chip" Padding="6,1" Background="{Binding TypeBrush}"
-                                                                    VerticalAlignment="Center">
+                                                            <Border Classes="chip" Padding="7,2" MinHeight="18"
+                                                                    Background="{Binding TypeBrush}">
                                                                 <TextBlock Text="{Binding TypeName}" FontSize="9" FontWeight="SemiBold"
                                                                            Foreground="White"/>
                                                             </Border>
@@ -1663,7 +1663,7 @@
                                                                     <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12"
                                                                                MinWidth="96" VerticalAlignment="Center"
                                                                                TextTrimming="CharacterEllipsis"/>
-                                                                    <Border Grid.Column="1" Classes="chip" Padding="4,1"
+                                                                    <Border Grid.Column="1" Classes="chip" Padding="6,2" MinHeight="18"
                                                                             Background="{Binding TypeBrush}"
                                                                             IsVisible="{Binding IsRealMove}">
                                                                         <TextBlock Text="{Binding TypeName}" FontSize="9" FontWeight="SemiBold"
@@ -1690,7 +1690,7 @@
                                                                     <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12"
                                                                                MinWidth="96" VerticalAlignment="Center"
                                                                                TextTrimming="CharacterEllipsis"/>
-                                                                    <Border Grid.Column="1" Classes="chip" Padding="4,1"
+                                                                    <Border Grid.Column="1" Classes="chip" Padding="6,2" MinHeight="18"
                                                                             Background="{Binding TypeBrush}"
                                                                             IsVisible="{Binding IsRealMove}">
                                                                         <TextBlock Text="{Binding TypeName}" FontSize="9" FontWeight="SemiBold"
@@ -1717,7 +1717,7 @@
                                                                     <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12"
                                                                                MinWidth="96" VerticalAlignment="Center"
                                                                                TextTrimming="CharacterEllipsis"/>
-                                                                    <Border Grid.Column="1" Classes="chip" Padding="4,1"
+                                                                    <Border Grid.Column="1" Classes="chip" Padding="6,2" MinHeight="18"
                                                                             Background="{Binding TypeBrush}"
                                                                             IsVisible="{Binding IsRealMove}">
                                                                         <TextBlock Text="{Binding TypeName}" FontSize="9" FontWeight="SemiBold"
@@ -1744,7 +1744,7 @@
                                                                     <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="12"
                                                                                MinWidth="96" VerticalAlignment="Center"
                                                                                TextTrimming="CharacterEllipsis"/>
-                                                                    <Border Grid.Column="1" Classes="chip" Padding="4,1"
+                                                                    <Border Grid.Column="1" Classes="chip" Padding="6,2" MinHeight="18"
                                                                             Background="{Binding TypeBrush}"
                                                                             IsVisible="{Binding IsRealMove}">
                                                                         <TextBlock Text="{Binding TypeName}" FontSize="9" FontWeight="SemiBold"
