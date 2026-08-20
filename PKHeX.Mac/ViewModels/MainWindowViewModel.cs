@@ -460,7 +460,6 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private string _updateBannerText = string.Empty;
 
     private SlotViewModel? _selected;
-    private bool _switchingBox;
 
     public SaveFile? SAV => _sav;
     public string? SavePath => _savPath;
@@ -527,9 +526,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
             RebuildBoxSlots();
             CurrentBox = 0;
-            _switchingBox = true;
             CurrentBoxName = BoxNames.Count > 0 ? BoxNames[0] : string.Empty;
-            _switchingBox = false;
             LoadBox(0);
             LoadParty();
             SelectSlot(null);
@@ -635,9 +632,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         if (_sav is null || !_sav.HasBox || (uint)value >= _sav.BoxCount)
             return;
-        _switchingBox = true;
         CurrentBoxName = (uint)value < BoxNames.Count ? BoxNames[value] : $"Box {value + 1}";
-        _switchingBox = false;
         LoadBox(value);
         CurrentView = "boxes"; // clicking a box in the sidebar returns to the box view
     }

@@ -340,7 +340,7 @@
                                     <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12"
                                           Margin="0,0,0,12" IsVisible="{Binding SupportsFlags}">
                                         <TextBox Grid.Column="0" Text="{Binding SearchText, Mode=TwoWay}"
-                                                 Watermark="Search by flag number…"/>
+                                                 PlaceholderText="Search by flag number…"/>
                                         <CheckBox Grid.Column="1" IsChecked="{Binding SetOnly, Mode=TwoWay}"
                                                   Content="Set only" VerticalAlignment="Center"/>
                                         <Button Grid.Column="2" Content="Clear visible" FontSize="{StaticResource FontBody}"
@@ -386,7 +386,7 @@
                                                 IsVisible="{Binding IsSupported}">
                                         <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="12">
                                             <TextBox Grid.Column="0" Text="{Binding SearchText, Mode=TwoWay}"
-                                                     Watermark="Search block name or hex key (e.g. KCurrentBox, WEVT_)…"/>
+                                                     PlaceholderText="Search block name or hex key (e.g. KCurrentBox, WEVT_)…"/>
                                             <CheckBox Grid.Column="1" IsChecked="{Binding NamedOnly, Mode=TwoWay}"
                                                       Content="Known names only" VerticalAlignment="Center"/>
                                             <CheckBox Grid.Column="2" IsChecked="{Binding EditableOnly, Mode=TwoWay}"
@@ -473,7 +473,7 @@
                                               SelectedIndex="{Binding SourceIndex, Mode=TwoWay}"/>
                                     <TextBox Grid.Column="1" Text="{Binding FolderPath, Mode=TwoWay}"
                                              IsVisible="{Binding IsFolderSource}"
-                                             Watermark="Folder containing .pk files (searched recursively)"/>
+                                             PlaceholderText="Folder containing .pk files (searched recursively)"/>
                                     <Button Grid.Column="2" Content="Choose folder…" FontSize="{StaticResource FontBody}"
                                             IsVisible="{Binding IsFolderSource}"
                                             Click="OnChooseSearchFolderClicked"/>
@@ -481,7 +481,7 @@
 
                                 <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="12" RowDefinitions="Auto,Auto" RowSpacing="8">
                                     <TextBox Grid.Row="0" Grid.Column="0" Text="{Binding Text, Mode=TwoWay}"
-                                             Watermark="Species, nickname or OT"/>
+                                             PlaceholderText="Species, nickname or OT"/>
                                     <ComboBox Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch"
                                               ItemsSource="{Binding SpeciesChoices}"
                                               SelectedValue="{Binding SpeciesValue, Mode=TwoWay}"
@@ -1016,7 +1016,7 @@
                                         <TextBlock DockPanel.Dock="Top" Classes="sectionTitle" Text="GIFTS THIS GAME ACCEPTS"
                                                    Margin="0,0,0,6"/>
                                         <TextBox DockPanel.Dock="Top" Text="{Binding CandidateFilter, Mode=TwoWay}"
-                                                 FontSize="{StaticResource FontBody}" Watermark="Search gifts…" Margin="0,0,0,6"/>
+                                                 FontSize="{StaticResource FontBody}" PlaceholderText="Search gifts…" Margin="0,0,0,6"/>
                                         <ListBox Classes="plain" ItemsSource="{Binding Candidates}"
                                                  SelectedItem="{Binding SelectedCandidate, Mode=TwoWay}">
                                             <ListBox.ItemTemplate>
@@ -1196,7 +1196,7 @@
                                                Text="The game-specific structures that have no dedicated screen here — things like the Key System, Entralink pass powers, Global Link, Battle Subway, game settings and daily counters. Values are written straight through with no validation, so treat this as a power tool."/>
                                     <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                                         <TextBox Grid.Column="0" Text="{Binding SearchText, Mode=TwoWay}"
-                                                 FontSize="{StaticResource FontBody}" Watermark="Search structures and fields…"/>
+                                                 FontSize="{StaticResource FontBody}" PlaceholderText="Search structures and fields…"/>
                                         <CheckBox Grid.Column="1" Content="With a value" FontSize="{StaticResource FontBody}"
                                                   IsChecked="{Binding NonZeroOnly, Mode=TwoWay}"
                                                   VerticalAlignment="Center"/>
@@ -1284,7 +1284,7 @@
                                                  AcceptsReturn="True" TextWrapping="NoWrap"
                                                  FontFamily="Menlo, monospace" FontSize="{StaticResource FontBody}"
                                                  VerticalContentAlignment="Top"
-                                                 Watermark=".Nature=Adamant"/>
+                                                 PlaceholderText=".Nature=Adamant"/>
                                         <Border Grid.Column="1" CornerRadius="10" Padding="12"
                                                 Background="{DynamicResource SurfaceMutedBrush}">
                                             <TextBlock Text="{Binding BatchHelp}" FontSize="{StaticResource FontBody}"
@@ -1713,7 +1713,7 @@
                                                          SelectedItem="{Binding SelectedSpecies, Mode=TwoWay}"
                                                          FilterMode="Contains" MinimumPrefixLength="1"
                                                          MaxDropDownHeight="320"
-                                                         Watermark="Which Pokémon are you breeding?">
+                                                         PlaceholderText="Which Pokémon are you breeding?">
                                             <AutoCompleteBox.ItemTemplate>
                                                 <DataTemplate x:DataType="vm:SpeciesChoice">
                                                     <StackPanel Orientation="Horizontal" Spacing="8">
@@ -1900,7 +1900,7 @@
                                     <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12"
                                           Margin="0,0,0,10">
                                         <TextBox Grid.Column="0" Text="{Binding ReportSearch, Mode=TwoWay}"
-                                                 Watermark="Search species, nickname, OT, nature, ability…"/>
+                                                 PlaceholderText="Search species, nickname, OT, nature, ability…"/>
                                         <CheckBox Grid.Column="1" IsChecked="{Binding IllegalOnly, Mode=TwoWay}"
                                                   Content="Issues only" VerticalAlignment="Center"/>
                                         <Button Grid.Column="2" Content="Copy as TSV" FontSize="{StaticResource FontBody}"
@@ -1981,7 +1981,7 @@
                             <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto"
                                   ColumnSpacing="12" Margin="0,0,0,12" IsVisible="{Binding IsSupported}">
                                 <TextBox Grid.Column="0" Text="{Binding SearchText, Mode=TwoWay}"
-                                         Watermark="Search by name or number…"/>
+                                         PlaceholderText="Search by name or number…"/>
                                 <CheckBox Grid.Column="1" IsChecked="{Binding MissingOnly, Mode=TwoWay}"
                                           Content="Missing only" VerticalAlignment="Center"/>
                                 <CheckBox Grid.Column="2" IsChecked="{Binding ShinyToo, Mode=TwoWay}"
@@ -2444,7 +2444,7 @@
                                                Text="Each record has its own ceiling and the game clamps to it, so a value that refuses to grow has hit its max."/>
                                     <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                                         <TextBox Grid.Column="0" Text="{Binding SearchText, Mode=TwoWay}"
-                                                 FontSize="{StaticResource FontBody}" Watermark="Search records…"/>
+                                                 FontSize="{StaticResource FontBody}" PlaceholderText="Search records…"/>
                                         <CheckBox Grid.Column="1" Content="With a value" FontSize="{StaticResource FontBody}"
                                                   IsChecked="{Binding NonZeroOnly, Mode=TwoWay}"
                                                   VerticalAlignment="Center"/>
@@ -2512,7 +2512,7 @@
                                                      FilterMode="Contains"
                                                      MinimumPrefixLength="1"
                                                      MaxDropDownHeight="320"
-                                                     Watermark="Start typing a species name…">
+                                                     PlaceholderText="Start typing a species name…">
                                         <AutoCompleteBox.ItemTemplate>
                                             <DataTemplate x:DataType="vm:SpeciesChoice">
                                                 <StackPanel Orientation="Horizontal" Spacing="8">
@@ -2548,7 +2548,7 @@
                             <!-- Filters -->
                             <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,10">
                                 <TextBox Text="{Binding SearchText, Mode=TwoWay}"
-                                         Watermark="Search species, event, or game…"/>
+                                         PlaceholderText="Search species, event, or game…"/>
                                 <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
                                     <ComboBox Grid.Column="0" HorizontalAlignment="Stretch" FontSize="{StaticResource FontBody}"
                                               ItemsSource="{Binding GenerationChoices}"
@@ -3244,7 +3244,7 @@
                                                                      SelectedItem="{Binding SelectedMove1, Mode=TwoWay}"
                                                                      FilterMode="Contains" MinimumPrefixLength="1"
                                                                      MaxDropDownHeight="320"
-                                                                     Watermark="Type a move name…">
+                                                                     PlaceholderText="Type a move name…">
                                                         <AutoCompleteBox.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:MoveChoice">
                                                                 <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
@@ -3297,7 +3297,7 @@
                                                                      SelectedItem="{Binding SelectedMove2, Mode=TwoWay}"
                                                                      FilterMode="Contains" MinimumPrefixLength="1"
                                                                      MaxDropDownHeight="320"
-                                                                     Watermark="Type a move name…">
+                                                                     PlaceholderText="Type a move name…">
                                                         <AutoCompleteBox.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:MoveChoice">
                                                                 <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
@@ -3350,7 +3350,7 @@
                                                                      SelectedItem="{Binding SelectedMove3, Mode=TwoWay}"
                                                                      FilterMode="Contains" MinimumPrefixLength="1"
                                                                      MaxDropDownHeight="320"
-                                                                     Watermark="Type a move name…">
+                                                                     PlaceholderText="Type a move name…">
                                                         <AutoCompleteBox.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:MoveChoice">
                                                                 <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
@@ -3403,7 +3403,7 @@
                                                                      SelectedItem="{Binding SelectedMove4, Mode=TwoWay}"
                                                                      FilterMode="Contains" MinimumPrefixLength="1"
                                                                      MaxDropDownHeight="320"
-                                                                     Watermark="Type a move name…">
+                                                                     PlaceholderText="Type a move name…">
                                                         <AutoCompleteBox.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:MoveChoice">
                                                                 <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
@@ -3459,7 +3459,7 @@
                                                                          SelectedItem="{Binding SelectedRelearn1, Mode=TwoWay}"
                                                                          FilterMode="Contains" MinimumPrefixLength="1"
                                                                          MaxDropDownHeight="320"
-                                                                         Watermark="Type a move name…">
+                                                                         PlaceholderText="Type a move name…">
                                                         <AutoCompleteBox.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:MoveChoice">
                                                                 <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
@@ -3496,7 +3496,7 @@
                                                                          SelectedItem="{Binding SelectedRelearn2, Mode=TwoWay}"
                                                                          FilterMode="Contains" MinimumPrefixLength="1"
                                                                          MaxDropDownHeight="320"
-                                                                         Watermark="Type a move name…">
+                                                                         PlaceholderText="Type a move name…">
                                                         <AutoCompleteBox.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:MoveChoice">
                                                                 <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
@@ -3533,7 +3533,7 @@
                                                                          SelectedItem="{Binding SelectedRelearn3, Mode=TwoWay}"
                                                                          FilterMode="Contains" MinimumPrefixLength="1"
                                                                          MaxDropDownHeight="320"
-                                                                         Watermark="Type a move name…">
+                                                                         PlaceholderText="Type a move name…">
                                                         <AutoCompleteBox.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:MoveChoice">
                                                                 <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
@@ -3570,7 +3570,7 @@
                                                                          SelectedItem="{Binding SelectedRelearn4, Mode=TwoWay}"
                                                                          FilterMode="Contains" MinimumPrefixLength="1"
                                                                          MaxDropDownHeight="320"
-                                                                         Watermark="Type a move name…">
+                                                                         PlaceholderText="Type a move name…">
                                                         <AutoCompleteBox.ItemTemplate>
                                                             <DataTemplate x:DataType="vm:MoveChoice">
                                                                 <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
@@ -3616,7 +3616,7 @@
                                                                    Classes="secondary" HorizontalAlignment="Right" VerticalAlignment="Center"/>
                                                     </DockPanel>
                                                     <TextBox Text="{Binding SearchText, Mode=TwoWay}" FontSize="{StaticResource FontBody}"
-                                                             Watermark="Search machine moves…"/>
+                                                             PlaceholderText="Search machine moves…"/>
                                                     <DockPanel>
                                                         <CheckBox DockPanel.Dock="Left" IsChecked="{Binding LearnedOnly, Mode=TwoWay}"
                                                                   Content="Learned only" FontSize="{StaticResource FontBody}"/>
@@ -3762,7 +3762,7 @@
                                                             <TextBlock Classes="fieldLabel" Text="HOME Tracker (16 hex digits)"/>
                                                             <TextBox Text="{Binding TrackerText, Mode=TwoWay}"
                                                                      FontFamily="Menlo, monospace" MaxLength="16"
-                                                                     Watermark="0123456789ABCDEF"/>
+                                                                     PlaceholderText="0123456789ABCDEF"/>
                                                         </StackPanel>
                                                     </StackPanel>
                                                     <StackPanel Orientation="Horizontal" Spacing="6">
@@ -3936,7 +3936,7 @@
                                                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                                                             <TextBox Grid.Column="0" Text="{Binding TrackerText, Mode=TwoWay}"
                                                                      FontFamily="Menlo, monospace" MaxLength="16"
-                                                                     Watermark="0123456789ABCDEF"/>
+                                                                     PlaceholderText="0123456789ABCDEF"/>
                                                             <Button Grid.Column="1" Content="Zero" FontSize="{StaticResource FontBody}" Padding="8,3"
                                                                     Command="{Binding ClearTrackerCommand}"/>
                                                         </Grid>
@@ -3951,7 +3951,7 @@
                                         <DockPanel DataContext="{Binding Ribbons}" x:DataType="vm:RibbonsViewModel"
                                                    Margin="2,6,6,2">
                                             <StackPanel DockPanel.Dock="Top" Spacing="8">
-                                                <TextBox Text="{Binding SearchText, Mode=TwoWay}" Watermark="Search ribbons &amp; marks…"/>
+                                                <TextBox Text="{Binding SearchText, Mode=TwoWay}" PlaceholderText="Search ribbons &amp; marks…"/>
                                                 <DockPanel>
                                                     <CheckBox DockPanel.Dock="Left" IsChecked="{Binding OwnedOnly, Mode=TwoWay}"
                                                               Content="Owned only" FontSize="{StaticResource FontBody}"/>
