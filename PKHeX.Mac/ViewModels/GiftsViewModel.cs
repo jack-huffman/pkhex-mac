@@ -35,7 +35,14 @@ public partial class GiftsViewModel : ObservableObject
         // The whole archive, every generation — not just this save's own gifts.
         _allTiles = EncounterEvent.GetAllEvents(sorted: false)
             .Where(g => g.IsEntity)
-            .Select(g => new GiftTileViewModel(g, SpeciesNameOf(g.Species), IsAddable(g, sav)))
+            .Select(g =>
+            {
+                // Actually attempt the transfer once up front (~100ms for the whole
+                // archive) so "can this save accept it" is exact rather than guessed,
+                // and the reason is ready before the user clicks.
+                TryConvert(g, sav, out _, out var reason);
+                return new GiftTileViewModel(g, SpeciesNameOf(g.Species), reason);
+            })
             .ToList();
 
         GenerationChoices = ["All generations", .. _allTiles.Select(t => t.Generation).Distinct().OrderBy(g => g).Select(g => $"Generation {g}")];
@@ -68,6 +75,9 @@ public partial class GiftsViewModel : ObservableObject
 
     /// <summary>Raised whenever the converted preview changes (or clears).</summary>
     public Action<PKM?>? PreviewReady { get; set; }
+
+    /// <summary>Raised when a gift cannot be converted, with a human-readable reason.</summary>
+    public Action<string>? Blocked { get; set; }
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
     partial void OnShinyOnlyChanged(bool value) => ApplyFilter();
@@ -185,38 +195,61 @@ public partial class GiftsViewModel : ObservableObject
     private void Convert(GiftTileViewModel tile)
     {
         Result = null;
+        if (!tile.IsAddable)
+        {
+            StatusText = tile.BlockedReason;
+            Blocked?.Invoke(tile.BlockedReason);
+            return;
+        }
+        if (!TryConvert(tile.Gift, _sav, out var pk, out var reason) || pk is null)
+        {
+            var message = reason ?? "This gift could not be converted.";
+            StatusText = message;
+            Blocked?.Invoke(message);
+            return;
+        }
+        Result = pk;
+        StatusText = tile.Description;
+        PreviewReady?.Invoke(pk);
+    }
+
+    /// <summary>
+    /// Attempts to bring a gift into the save. Returns true with the entity on
+    /// success; false with a human-readable reason otherwise.
+    /// </summary>
+    private static bool TryConvert(MysteryGift gift, SaveFile sav, out PKM? result, out string? reason)
+    {
+        result = null;
+        reason = null;
         try
         {
-            var pk = tile.Gift.ConvertToPKM(_sav);
-            if (pk.GetType() != _sav.PKMType)
+            var pk = gift.ConvertToPKM(sav);
+            if (pk.GetType() != sav.PKMType)
             {
-                pk = EntityConverter.ConvertToType(pk, _sav.PKMType, out var res);
+                pk = EntityConverter.ConvertToType(pk, sav.PKMType, out var res);
                 if (pk is null)
                 {
-                    StatusText = $"{tile.SpeciesName}: cannot be brought into {GameInfo.GetVersionName(_sav.Version)} ({res}).";
-                    PreviewReady?.Invoke(null);
-                    return;
+                    var game = GameInfo.GetVersionName(sav.Version);
+                    var name = (uint)gift.Species < GameInfo.GetStrings("en").specieslist.Length
+                        ? GameInfo.GetStrings("en").specieslist[gift.Species]
+                        : $"#{gift.Species}";
+                    reason = res == EntityConverterResult.IncompatibleSpecies
+                        ? $"This {name} comes from {gift.Version} and cannot be transferred into {game}."
+                        : $"{name} cannot be brought into {game} ({res}).";
+                    return false;
                 }
             }
             pk.Heal();
             pk.RefreshChecksum();
-            Result = pk;
-            StatusText = tile.Description;
-            PreviewReady?.Invoke(pk);
+            result = pk;
+            return true;
         }
         catch (Exception ex)
         {
-            StatusText = $"Could not convert this gift: {ex.Message}";
-            PreviewReady?.Invoke(null);
+            reason = $"Could not convert this gift: {ex.Message}";
+            return false;
         }
     }
-
-    /// <summary>
-    /// Cheap pre-check for "can this land in the loaded save": full conversion only
-    /// runs on selection, so this stays a heuristic (origin generation and dex range).
-    /// </summary>
-    private static bool IsAddable(MysteryGift gift, SaveFile sav) =>
-        gift.Generation <= sav.Generation && gift.Species <= sav.MaxSpeciesID;
 
     private string SpeciesNameOf(ushort species) =>
         (uint)species < _strings.specieslist.Length ? _strings.specieslist[species] : $"#{species}";
@@ -225,8 +258,10 @@ public partial class GiftsViewModel : ObservableObject
 /// <summary>One gift tile: sprite, species, event title, and origin.</summary>
 public partial class GiftTileViewModel : ObservableObject
 {
-    public GiftTileViewModel(MysteryGift gift, string speciesName, bool isAddable)
+    public GiftTileViewModel(MysteryGift gift, string speciesName, string? blockedReason)
     {
+        var isAddable = blockedReason is null;
+        BlockedReason = blockedReason ?? string.Empty;
         Gift = gift;
         SpeciesName = speciesName;
         CardTitle = gift.CardTitle.Replace('　', ' ').Trim();
@@ -256,6 +291,7 @@ public partial class GiftTileViewModel : ObservableObject
     public bool IsShiny { get; }
     public bool IsEgg { get; }
     public bool IsAddable { get; }
+    public string BlockedReason { get; }
     public Bitmap? Sprite { get; }
     public Bitmap? ShinyOverlay { get; }
 

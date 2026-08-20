@@ -32,12 +32,25 @@ public partial class PokemonPreviewViewModel : ObservableObject
     [ObservableProperty] private bool _isShiny;
     [ObservableProperty] private bool _isLegal;
     [ObservableProperty] private string _legalityReport = string.Empty;
+    [ObservableProperty] private bool _isBlocked;
+    [ObservableProperty] private string _blockedReason = string.Empty;
 
     public Bitmap? ShinyIcon => SpriteService.GetOverlay("rare_icon");
+
+    /// <summary>Shows why the selected entry cannot be added, instead of an empty pane.</summary>
+    public void ShowBlocked(string reason)
+    {
+        Current = null;
+        HasPokemon = false;
+        IsBlocked = true;
+        BlockedReason = reason;
+    }
 
     public void Load(PKM? pk)
     {
         Current = pk;
+        IsBlocked = false;
+        BlockedReason = string.Empty;
         if (pk is null || pk.Species == 0)
         {
             HasPokemon = false;

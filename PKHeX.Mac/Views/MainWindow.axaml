@@ -474,9 +474,22 @@
                         <Border Classes="card" IsVisible="{Binding IsDatabaseView}">
                             <Panel DataContext="{Binding Preview}" x:DataType="vm:PokemonPreviewViewModel">
                                 <StackPanel VerticalAlignment="Center" Spacing="8" IsVisible="{Binding !HasPokemon}">
-                                    <TextBlock Text="◓" FontSize="34" HorizontalAlignment="Center" Opacity="0.25"/>
+                                    <TextBlock Text="◓" FontSize="34" HorizontalAlignment="Center" Opacity="0.25"
+                                               IsVisible="{Binding !IsBlocked}"/>
                                     <TextBlock Text="Select an entry to preview" FontSize="13" Classes="secondary"
-                                               HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"/>
+                                               HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"
+                                               IsVisible="{Binding !IsBlocked}"/>
+                                    <!-- Why the selection produced nothing -->
+                                    <StackPanel Spacing="10" IsVisible="{Binding IsBlocked}">
+                                        <TextBlock Text="⚠" FontSize="30" HorizontalAlignment="Center"
+                                                   Foreground="{DynamicResource IllegalFgBrush}"/>
+                                        <Border CornerRadius="10" Padding="12,10"
+                                                Background="{DynamicResource IllegalBgBrush}">
+                                            <TextBlock Text="{Binding BlockedReason}" FontSize="12" TextWrapping="Wrap"
+                                                       TextAlignment="Center"
+                                                       Foreground="{DynamicResource IllegalFgBrush}"/>
+                                        </Border>
+                                    </StackPanel>
                                 </StackPanel>
 
                                 <DockPanel IsVisible="{Binding HasPokemon}">

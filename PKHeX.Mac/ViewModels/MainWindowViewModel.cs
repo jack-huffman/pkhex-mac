@@ -68,7 +68,11 @@ public partial class MainWindowViewModel : ViewModelBase
         if (view == "gifts" && GiftDb is null && _sav is not null)
         {
             StatusText = "Loading the Mystery Gift archive…";
-            GiftDb = new GiftsViewModel(_sav, _strings) { PreviewReady = pk => Preview.Load(pk) };
+            GiftDb = new GiftsViewModel(_sav, _strings)
+            {
+                PreviewReady = pk => Preview.Load(pk),
+                Blocked = reason => Preview.ShowBlocked(reason),
+            };
         }
         Preview.Load(null);
         CurrentView = view;
