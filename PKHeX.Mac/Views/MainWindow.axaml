@@ -1248,6 +1248,158 @@
                                 </DockPanel>
                             </TabItem>
 
+                            <TabItem Header="Team Analysis">
+                            <DockPanel DataContext="{Binding Team}" x:DataType="vm:TeamAnalysisViewModel"
+                                       Margin="2,8,2,2">
+                                <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,12">
+                                    <Grid ColumnDefinitions="180,Auto,*" ColumnSpacing="10">
+                                        <ComboBox Grid.Column="0" HorizontalAlignment="Stretch"
+                                                  ItemsSource="{Binding ScopeChoices}"
+                                                  SelectedIndex="{Binding ScopeIndex, Mode=TwoWay}"/>
+                                        <Button Grid.Column="1" Content="Refresh" FontSize="12"
+                                                Command="{Binding RefreshCommand}"/>
+                                        <TextBlock Grid.Column="2" Text="{Binding Summary}" FontSize="12"
+                                                   FontWeight="SemiBold" VerticalAlignment="Center"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </Grid>
+                                    <TextBlock Text="{Binding EraNote}" FontSize="10" Classes="secondary"
+                                               TextWrapping="Wrap"/>
+                                    <TextBlock FontSize="10" Classes="secondary" TextWrapping="Wrap"
+                                               Text="Immunity and damage-reducing abilities are applied. Held items, terrain and move-specific exceptions are not."/>
+                                </StackPanel>
+
+                                <ScrollViewer>
+                                    <StackPanel Spacing="16">
+
+                                        <!-- What to fix first -->
+                                        <StackPanel Spacing="5" IsVisible="{Binding HasFindings}">
+                                            <TextBlock Classes="sectionTitle" Text="WHAT TO FIX FIRST" Margin="0"/>
+                                            <ItemsControl ItemsSource="{Binding Findings}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding}" FontSize="12" TextWrapping="Wrap"
+                                                                   Margin="0,1"
+                                                                   Foreground="{DynamicResource IllegalFgBrush}"/>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+
+                                        <!-- The team -->
+                                        <StackPanel Spacing="5" IsVisible="{Binding HasMembers}">
+                                            <TextBlock Classes="sectionTitle" Text="THE TEAM" Margin="0"/>
+                                            <ItemsControl ItemsSource="{Binding Members}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel Orientation="Horizontal"/>
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:TeamMemberViewModel">
+                                                        <Border Classes="card" Padding="10" Margin="0,0,8,8" Width="250">
+                                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                                                <Image Grid.Column="0" Source="{Binding Sprite}"
+                                                                       Width="56" Height="48" VerticalAlignment="Top"
+                                                                       RenderOptions.BitmapInterpolationMode="None"/>
+                                                                <StackPanel Grid.Column="1" Spacing="3">
+                                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                        <TextBlock Text="{Binding SpeciesName}" FontSize="13"
+                                                                                   FontWeight="Bold"/>
+                                                                        <TextBlock Text="{Binding LevelText}" FontSize="10"
+                                                                                   Classes="secondary" VerticalAlignment="Center"/>
+                                                                    </StackPanel>
+                                                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                                                        <Image Source="{Binding Type1Icon}" Width="18" Height="18"
+                                                                               IsVisible="{Binding HasType1Icon}"
+                                                                               ToolTip.Tip="{Binding Type1Name}"/>
+                                                                        <Image Source="{Binding Type2Icon}" Width="18" Height="18"
+                                                                               IsVisible="{Binding HasType2Icon}"
+                                                                               ToolTip.Tip="{Binding Type2Name}"/>
+                                                                    </StackPanel>
+                                                                    <StackPanel Orientation="Horizontal" Spacing="5">
+                                                                        <TextBlock Text="{Binding AbilityName}" FontSize="10"
+                                                                                   Classes="secondary"
+                                                                                   TextTrimming="CharacterEllipsis"/>
+                                                                        <TextBlock Text="★" FontSize="9"
+                                                                                   IsVisible="{Binding AbilityMatters}"
+                                                                                   Foreground="{DynamicResource LegalFgBrush}"
+                                                                                   ToolTip.Tip="This ability changes incoming damage and is included in the analysis."
+                                                                                   VerticalAlignment="Center"/>
+                                                                    </StackPanel>
+                                                                    <TextBlock Text="{Binding WeakTo, StringFormat='weak to {0}'}"
+                                                                               FontSize="9" Classes="secondary"
+                                                                               TextWrapping="Wrap"/>
+                                                                </StackPanel>
+                                                            </Grid>
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+
+                                        <!-- Defensive profile -->
+                                        <StackPanel Spacing="5" IsVisible="{Binding HasMembers}">
+                                            <TextBlock Classes="sectionTitle" Text="TAKING HITS — WORST FIRST" Margin="0"/>
+                                            <ItemsControl ItemsSource="{Binding Defense}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:DefenseRowViewModel">
+                                                        <Grid ColumnDefinitions="24,80,150,*,90" ColumnSpacing="8"
+                                                              Margin="0,0,0,4">
+                                                            <Image Grid.Column="0" Source="{Binding TypeIcon}"
+                                                                   Width="18" Height="18"
+                                                                   IsVisible="{Binding HasIcon}"/>
+                                                            <TextBlock Grid.Column="1" Text="{Binding TypeName}" FontSize="12"
+                                                                       VerticalAlignment="Center"/>
+                                                            <TextBlock Grid.Column="2" Text="{Binding Detail}" FontSize="10"
+                                                                       Classes="secondary" VerticalAlignment="Center"/>
+                                                            <ProgressBar Grid.Column="3" Classes="statbar"
+                                                                         Value="{Binding BarPercent}"
+                                                                         Foreground="{Binding VerdictBrush}"
+                                                                         VerticalAlignment="Center"/>
+                                                            <TextBlock Grid.Column="4" Text="{Binding Verdict}" FontSize="10"
+                                                                       FontWeight="SemiBold" TextAlignment="Right"
+                                                                       Foreground="{Binding VerdictBrush}"
+                                                                       VerticalAlignment="Center"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+
+                                        <!-- Offensive coverage -->
+                                        <StackPanel Spacing="5" IsVisible="{Binding CoverageAvailable}">
+                                            <TextBlock Classes="sectionTitle" Text="DEALING DAMAGE — GAPS FIRST" Margin="0"/>
+                                            <TextBlock FontSize="10" Classes="secondary" TextWrapping="Wrap"
+                                                       Text="The best multiplier any damaging move on the team reaches against each type."/>
+                                            <ItemsControl ItemsSource="{Binding Coverage}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:CoverageRowViewModel">
+                                                        <Grid ColumnDefinitions="24,80,70,*,110" ColumnSpacing="8"
+                                                              Margin="0,0,0,4">
+                                                            <Image Grid.Column="0" Source="{Binding TypeIcon}"
+                                                                   Width="18" Height="18"
+                                                                   IsVisible="{Binding HasIcon}"/>
+                                                            <TextBlock Grid.Column="1" Text="{Binding TypeName}" FontSize="12"
+                                                                       VerticalAlignment="Center"/>
+                                                            <TextBlock Grid.Column="2" Text="{Binding BestText}" FontSize="11"
+                                                                       FontWeight="SemiBold" VerticalAlignment="Center"
+                                                                       Foreground="{Binding VerdictBrush}"/>
+                                                            <TextBlock Grid.Column="3" Text="{Binding Source}" FontSize="10"
+                                                                       Classes="secondary" VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                            <TextBlock Grid.Column="4" Text="{Binding Verdict}" FontSize="10"
+                                                                       TextAlignment="Right" VerticalAlignment="Center"
+                                                                       Foreground="{Binding VerdictBrush}"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </DockPanel>
+                            </TabItem>
+
                             <TabItem Header="Box Report">
                                 <DockPanel Margin="2,8,2,2">
                                     <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10"

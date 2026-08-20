@@ -13,7 +13,7 @@ namespace PKHeX.Mac.ViewModels;
 
 /// <summary>
 /// Save-wide tools: PKHeX's batch editor (bulk property edits driven by text
-/// instructions) and a box report listing every stored Pokémon.
+/// instructions), a box report listing every stored Pokémon, and team analysis.
 /// </summary>
 public partial class ToolsViewModel : ObservableObject
 {
@@ -26,8 +26,12 @@ public partial class ToolsViewModel : ObservableObject
         _sav = sav;
         _strings = strings;
         _onChanged = onChanged;
+        Team = new TeamAnalysisViewModel(sav, strings);
         BuildReport();
     }
+
+    /// <summary>Type coverage and shared weaknesses for the party or a box.</summary>
+    public TeamAnalysisViewModel Team { get; }
 
     // =====================================================================
     // Batch editor
@@ -37,6 +41,8 @@ public partial class ToolsViewModel : ObservableObject
     [ObservableProperty] private int _scopeIndex; // 0 = current box, 1 = all boxes, 2 = party
     [ObservableProperty] private string _batchResult = string.Empty;
     [ObservableProperty] private int _currentBox;
+
+    partial void OnCurrentBoxChanged(int value) => Team.SetBox(value);
 
     public IReadOnlyList<string> ScopeChoices { get; } = ["Current box", "All boxes", "Party"];
 
