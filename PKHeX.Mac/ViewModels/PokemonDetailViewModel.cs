@@ -184,6 +184,8 @@ public partial class PokemonDetailViewModel : ObservableObject
     [ObservableProperty] private double _evBudgetPercent;
     [ObservableProperty] private bool _evOverLimit;
     [ObservableProperty] private string _natureEffectText = string.Empty;
+    [ObservableProperty] private int _statTotal;
+    [ObservableProperty] private double _statTotalPercent;
 
     /// <summary>Game-legal ceiling on the sum of all EVs (510 from Gen 3 on).</summary>
     public int EvTotalLimit => EffortValues.Max510;
@@ -401,6 +403,10 @@ public partial class PokemonDetailViewModel : ObservableObject
             row.Refresh(_pk);
         RefreshEvBudget();
         RefreshNatureEffect();
+        StatTotal = 0;
+        foreach (var row in Stats)
+            StatTotal += row.Stat;
+        StatTotalPercent = Math.Min(100.0, StatTotal / 2200.0 * 100.0);
     }
 
     /// <summary>Recomputes the shared EV pool and pushes each row's remaining headroom.</summary>
@@ -1032,6 +1038,17 @@ public partial class PokemonDetailViewModel : ObservableObject
 public partial class StatEditRowViewModel : ObservableObject
 {
     private static readonly string[] Labels = ["HP", "Attack", "Defense", "Sp. Atk", "Sp. Def", "Speed"];
+    private static readonly string[] ShortLabels = ["HP", "ATK", "DEF", "SATK", "SDEF", "SPE"];
+
+    // Bars are scaled against this so the six rows stay visually comparable.
+    private const double BarScale = 500.0;
+
+    private static readonly IBrush NeutralLabel = new SolidColorBrush(Color.Parse("#8FA6B8"));
+    private static readonly IBrush RaisedLabel = new SolidColorBrush(Color.Parse("#FF8A80"));
+    private static readonly IBrush LoweredLabel = new SolidColorBrush(Color.Parse("#82B1FF"));
+    private static readonly IBrush NeutralBar = new SolidColorBrush(Color.Parse("#6FAFB8"));
+    private static readonly IBrush RaisedBar = new SolidColorBrush(Color.Parse("#E5776D"));
+    private static readonly IBrush LoweredBar = new SolidColorBrush(Color.Parse("#5E8FD0"));
 
     internal static string LabelFor(int index) => (uint)index < Labels.Length ? Labels[index] : "?";
 
@@ -1046,6 +1063,7 @@ public partial class StatEditRowViewModel : ObservableObject
     }
 
     public string Label => Labels[_index];
+    public string ShortLabel => ShortLabels[_index];
 
     [ObservableProperty] private int _iv;
     [ObservableProperty] private int _ev;
@@ -1060,7 +1078,9 @@ public partial class StatEditRowViewModel : ObservableObject
     [ObservableProperty] private string _natureBadge = string.Empty;
     [ObservableProperty] private bool _hasNatureBadge;
     [ObservableProperty] private IBrush? _natureBadgeBrush;
-    [ObservableProperty] private IBrush? _labelBrush;
+    [ObservableProperty] private IBrush _labelBrush = NeutralLabel;
+    [ObservableProperty] private IBrush _barBrush = NeutralBar;
+    [ObservableProperty] private double _statBarPercent;
 
     public void Refresh(PKM p)
     {
@@ -1077,6 +1097,7 @@ public partial class StatEditRowViewModel : ObservableObject
             _ => (p.IV_SPE, p.EV_SPE, (int)p.Stat_SPE),
         };
         _loading = false;
+        StatBarPercent = Math.Min(100.0, Stat / BarScale * 100.0);
     }
 
     /// <summary>Pushes the shared pool's remaining headroom into this row's ceiling.</summary>
@@ -1086,13 +1107,9 @@ public partial class StatEditRowViewModel : ObservableObject
     {
         HasNatureBadge = direction != 0;
         NatureBadge = direction switch { 1 => "▲", -1 => "▼", _ => string.Empty };
-        NatureBadgeBrush = direction switch
-        {
-            1 => new SolidColorBrush(Color.Parse("#FF6961")),   // raised
-            -1 => new SolidColorBrush(Color.Parse("#6AA9FF")),  // lowered
-            _ => null,
-        };
-        LabelBrush = NatureBadgeBrush;
+        NatureBadgeBrush = direction switch { 1 => RaisedLabel, -1 => LoweredLabel, _ => NeutralLabel };
+        LabelBrush = direction switch { 1 => RaisedLabel, -1 => LoweredLabel, _ => NeutralLabel };
+        BarBrush = direction switch { 1 => RaisedBar, -1 => LoweredBar, _ => NeutralBar };
     }
 
     partial void OnIvChanged(int value)

@@ -201,7 +201,7 @@
                     <Panel Grid.Column="0">
 
                     <!-- Boxes view -->
-                    <ScrollViewer IsVisible="{Binding IsBoxesView}" Padding="18,0,10,14">
+                    <ScrollViewer IsVisible="{Binding ShowBoxes}" Padding="18,0,10,14">
                         <StackPanel>
                             <!-- Empty state -->
                             <StackPanel IsVisible="{Binding !HasSave}" HorizontalAlignment="Center"
@@ -363,8 +363,12 @@
                     </Grid>
                     </DockPanel>
 
+                    </Panel>
+
+                    <!-- ══════ INSPECTOR ══════ -->
+                    <Panel Grid.Column="1" Margin="0,0,18,14">
                     <!-- ══════ Add Pokémon view ══════ -->
-                    <Border Classes="card" IsVisible="{Binding IsAddView}" Margin="18,0,10,14">
+                    <Border Classes="card" IsVisible="{Binding IsAddView}">
                         <DockPanel DataContext="{Binding AddDb}" x:DataType="vm:AddPokemonViewModel">
                             <TextBlock DockPanel.Dock="Top" Text="Add Pokémon from Encounter Database"
                                        FontSize="17" FontWeight="Bold" Margin="0,0,0,10"/>
@@ -379,6 +383,11 @@
                                 <CheckBox IsChecked="{Binding MakeShiny, Mode=TwoWay}" Content="Make Shiny ★ (if possible)"/>
                                 <TextBlock Classes="fieldLabel" Text="Legal encounters — pick one to preview"/>
                             </StackPanel>
+                            <Button DockPanel.Dock="Bottom"
+                                    Content="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).TargetSlotText}"
+                                    Classes="accent" Margin="0,8,0,0"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                    Click="OnAddPreviewClicked"/>
                             <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusText}" FontSize="12"
                                        Classes="secondary" TextWrapping="Wrap" Margin="0,8,0,0"/>
                             <ListBox Margin="0,4,0,0" ItemsSource="{Binding EncounterDescriptions}"
@@ -387,7 +396,7 @@
                     </Border>
 
                     <!-- ══════ Mystery Gifts view: sprite tile grid ══════ -->
-                    <Border Classes="card" IsVisible="{Binding IsGiftsView}" Margin="18,0,10,14">
+                    <Border Classes="card" IsVisible="{Binding IsGiftsView}">
                         <DockPanel DataContext="{Binding GiftDb}" x:DataType="vm:GiftsViewModel">
                             <DockPanel DockPanel.Dock="Top" Margin="0,0,0,10">
                                 <TextBlock DockPanel.Dock="Left" Text="Mystery Gift Database"
@@ -422,8 +431,13 @@
                             <TextBlock DockPanel.Dock="Bottom" Text="{Binding StatusText}" FontSize="12"
                                        Classes="secondary" TextWrapping="Wrap" Margin="0,8,0,0"/>
 
+                            <Button DockPanel.Dock="Bottom"
+                                    Content="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).TargetSlotText}"
+                                    Classes="accent" Margin="0,8,0,0"
+                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                    Click="OnAddPreviewClicked"/>
                             <Button DockPanel.Dock="Bottom" Content="{Binding LoadMoreLabel}"
-                                    IsVisible="{Binding HasMore}" Margin="0,10,0,0"
+                                    IsVisible="{Binding HasMore}" Margin="0,8,0,0"
                                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                                     Command="{Binding LoadNextPageCommand}"/>
 
@@ -441,9 +455,9 @@
                                                     Command="{Binding $parent[ItemsControl].((vm:GiftsViewModel)DataContext).SelectTileCommand}"
                                                     CommandParameter="{Binding}"
                                                     ToolTip.Tip="{Binding ToolTipText}">
-                                                <StackPanel Width="104" Spacing="2">
-                                                    <Panel Height="58">
-                                                        <Image Source="{Binding Sprite}" Width="68" Height="56"
+                                                <StackPanel Width="86" Spacing="1">
+                                                    <Panel Height="52">
+                                                        <Image Source="{Binding Sprite}" Width="60" Height="50"
                                                                RenderOptions.BitmapInterpolationMode="None"/>
                                                         <Image Source="{Binding ShinyOverlay}" Width="18" Height="18"
                                                                HorizontalAlignment="Left" VerticalAlignment="Top"
@@ -458,7 +472,7 @@
                                                                HorizontalAlignment="Center" Opacity="0.75"/>
                                                     <TextBlock Text="{Binding CardTitle}" FontSize="9" Classes="secondary"
                                                                HorizontalAlignment="Center" TextTrimming="CharacterEllipsis"
-                                                               MaxWidth="100"/>
+                                                               MaxWidth="84"/>
                                                 </StackPanel>
                                             </Button>
                                         </DataTemplate>
@@ -468,84 +482,62 @@
                         </DockPanel>
                     </Border>
 
-                    </Panel>
 
-                    <!-- ══════ INSPECTOR ══════ -->
-                    <Panel Grid.Column="1" Margin="0,0,18,14">
+                        <!-- Compact preview of the selected database entry -->
+                        <Border Classes="card" Padding="12" IsVisible="{Binding IsDatabaseView}"
+                                VerticalAlignment="Bottom" Margin="0,8,0,0">
+                            <StackPanel DataContext="{Binding Preview}" x:DataType="vm:PokemonPreviewViewModel"
+                                        Spacing="8">
+                                <TextBlock Text="Select an entry to preview it here" FontSize="12" Classes="secondary"
+                                           HorizontalAlignment="Center" IsVisible="{Binding !HasPokemon}"
+                                           TextWrapping="Wrap" TextAlignment="Center"/>
 
-                        <!-- Live preview while browsing the databases -->
-                        <Border Classes="card" IsVisible="{Binding IsDatabaseView}">
-                            <Panel DataContext="{Binding Preview}" x:DataType="vm:PokemonPreviewViewModel">
-                                <StackPanel VerticalAlignment="Center" Spacing="8" IsVisible="{Binding !HasPokemon}">
-                                    <TextBlock Text="◓" FontSize="34" HorizontalAlignment="Center" Opacity="0.25"
-                                               IsVisible="{Binding !IsBlocked}"/>
-                                    <TextBlock Text="Select an entry to preview" FontSize="13" Classes="secondary"
-                                               HorizontalAlignment="Center" TextWrapping="Wrap" TextAlignment="Center"
-                                               IsVisible="{Binding !IsBlocked}"/>
-                                    <!-- Why the selection produced nothing -->
-                                    <StackPanel Spacing="10" IsVisible="{Binding IsBlocked}">
-                                        <TextBlock Text="⚠" FontSize="30" HorizontalAlignment="Center"
-                                                   Foreground="{DynamicResource IllegalFgBrush}"/>
-                                        <Border CornerRadius="10" Padding="12,10"
-                                                Background="{DynamicResource IllegalBgBrush}">
-                                            <TextBlock Text="{Binding BlockedReason}" FontSize="12" TextWrapping="Wrap"
-                                                       TextAlignment="Center"
-                                                       Foreground="{DynamicResource IllegalFgBrush}"/>
-                                        </Border>
-                                    </StackPanel>
-                                </StackPanel>
+                                <!-- Blocked: explain why nothing can be added -->
+                                <Border CornerRadius="8" Padding="10,8" IsVisible="{Binding IsBlocked}"
+                                        Background="{DynamicResource IllegalBgBrush}">
+                                    <TextBlock Text="{Binding BlockedReason}" FontSize="11" TextWrapping="Wrap"
+                                               Foreground="{DynamicResource IllegalFgBrush}"/>
+                                </Border>
 
-                                <DockPanel IsVisible="{Binding HasPokemon}">
-                                    <StackPanel DockPanel.Dock="Top" Spacing="8">
-                                        <Image Source="{Binding Artwork}" Height="190"
-                                               RenderOptions.BitmapInterpolationMode="HighQuality"/>
-                                        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                            <Image Source="{Binding BallSprite}" Width="20" Height="20" VerticalAlignment="Center"/>
-                                            <TextBlock Text="{Binding SpeciesName}" FontSize="19" FontWeight="Bold" VerticalAlignment="Center"/>
-                                            <Border Classes="chip" Background="{DynamicResource SurfaceMutedBrush}" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding LevelBadge}" FontSize="10" Classes="secondary"/>
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" IsVisible="{Binding HasPokemon}">
+                                    <Image Grid.Column="0" Source="{Binding Artwork}" Width="84" Height="84"
+                                           RenderOptions.BitmapInterpolationMode="HighQuality"/>
+                                    <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <Image Source="{Binding BallSprite}" Width="16" Height="16" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding SpeciesName}" FontSize="15" FontWeight="Bold"/>
+                                            <TextBlock Text="{Binding LevelBadge}" FontSize="10" Classes="secondary"
+                                                       VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <Border Classes="chip" Padding="7,2" Background="{Binding Type1Brush}">
+                                                <TextBlock Text="{Binding Type1Name}" FontSize="9" FontWeight="SemiBold" Foreground="White"/>
+                                            </Border>
+                                            <Border Classes="chip" Padding="7,2" Background="{Binding Type2Brush}"
+                                                    IsVisible="{Binding HasType2}">
+                                                <TextBlock Text="{Binding Type2Name}" FontSize="9" FontWeight="SemiBold" Foreground="White"/>
+                                            </Border>
+                                            <Border Classes="chip" Padding="7,2" Background="{DynamicResource SurfaceMutedBrush}"
+                                                    IsVisible="{Binding IsShiny}">
+                                                <TextBlock Text="★ Shiny" FontSize="9" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextSecondaryBrush}"/>
                                             </Border>
                                         </StackPanel>
-                                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                                            <Border Classes="chip" Background="{Binding Type1Brush}">
-                                                <TextBlock Text="{Binding Type1Name}" FontSize="10" FontWeight="SemiBold" Foreground="White"/>
-                                            </Border>
-                                            <Border Classes="chip" Background="{Binding Type2Brush}" IsVisible="{Binding HasType2}">
-                                                <TextBlock Text="{Binding Type2Name}" FontSize="10" FontWeight="SemiBold" Foreground="White"/>
-                                            </Border>
-                                            <Border Classes="chip" Background="{DynamicResource SurfaceMutedBrush}" IsVisible="{Binding IsShiny}">
-                                                <StackPanel Orientation="Horizontal" Spacing="4">
-                                                    <Image Source="{Binding ShinyIcon}" Width="12" Height="12" VerticalAlignment="Center"/>
-                                                    <TextBlock Text="Shiny" FontSize="10" FontWeight="SemiBold"
-                                                               Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
-                                                </StackPanel>
-                                            </Border>
-                                        </StackPanel>
-                                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                                            <Border Classes="chip" Background="{DynamicResource LegalBgBrush}" IsVisible="{Binding IsLegal}">
-                                                <TextBlock Text="✓ Legal" FontSize="10" FontWeight="SemiBold"
+                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                            <Border Classes="chip" Padding="7,2" Background="{DynamicResource LegalBgBrush}"
+                                                    IsVisible="{Binding IsLegal}">
+                                                <TextBlock Text="✓ Legal" FontSize="9" FontWeight="SemiBold"
                                                            Foreground="{DynamicResource LegalFgBrush}"/>
                                             </Border>
-                                            <Border Classes="chip" Background="{DynamicResource IllegalBgBrush}" IsVisible="{Binding !IsLegal}">
-                                                <TextBlock Text="✕ Issues" FontSize="10" FontWeight="SemiBold"
+                                            <Border Classes="chip" Padding="7,2" Background="{DynamicResource IllegalBgBrush}"
+                                                    IsVisible="{Binding !IsLegal}">
+                                                <TextBlock Text="✕ Issues" FontSize="9" FontWeight="SemiBold"
                                                            Foreground="{DynamicResource IllegalFgBrush}"/>
                                             </Border>
                                         </StackPanel>
                                     </StackPanel>
-
-                                    <Button DockPanel.Dock="Bottom" Content="Add to Box" Classes="accent"
-                                            Margin="0,10,0,0" HorizontalAlignment="Stretch"
-                                            HorizontalContentAlignment="Center" Click="OnAddPreviewClicked"/>
-
-                                    <ScrollViewer Margin="0,10,0,0">
-                                        <Border CornerRadius="8" Padding="10,8"
-                                                Background="{DynamicResource SurfaceMutedBrush}">
-                                            <TextBlock Text="{Binding LegalityReport}" FontSize="10" TextWrapping="Wrap"
-                                                       Classes="secondary"/>
-                                        </Border>
-                                    </ScrollViewer>
-                                </DockPanel>
-                            </Panel>
+                                </Grid>
+                            </StackPanel>
                         </Border>
 
                         <Border Classes="card" IsVisible="{Binding IsBoxesView}">
@@ -779,55 +771,57 @@
 
                                                 <Separator Margin="0,6"/>
 
-                                                <!-- One block per stat: IV slider over EV slider -->
+                                                <!-- ProDex-style rows: label, value, magnitude bar; IV/EV inline -->
                                                 <ItemsControl ItemsSource="{Binding Stats}">
                                                     <ItemsControl.ItemTemplate>
                                                         <DataTemplate x:DataType="vm:StatEditRowViewModel">
-                                                            <Grid ColumnDefinitions="66,20,*,44,44" RowDefinitions="Auto,Auto"
-                                                                  ColumnSpacing="6" RowSpacing="3" Margin="0,3,0,7">
+                                                            <Grid ColumnDefinitions="46,44,*" RowDefinitions="Auto,Auto"
+                                                                  ColumnSpacing="8" RowSpacing="2" Margin="0,0,0,9">
 
-                                                                <!-- Stat name + nature arrow -->
-                                                                <StackPanel Grid.Row="0" Grid.RowSpan="2" Grid.Column="0"
-                                                                            Orientation="Horizontal" Spacing="3"
-                                                                            VerticalAlignment="Center">
-                                                                    <TextBlock Text="{Binding Label}" FontSize="12"
-                                                                               Foreground="{Binding LabelBrush}"
-                                                                               VerticalAlignment="Center"/>
+                                                                <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding ShortLabel}"
+                                                                           FontSize="12" FontWeight="Bold"
+                                                                           Foreground="{Binding LabelBrush}"
+                                                                           VerticalAlignment="Center"/>
+                                                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Stat}"
+                                                                           FontSize="13" FontWeight="SemiBold"
+                                                                           VerticalAlignment="Center"/>
+                                                                <ProgressBar Grid.Row="0" Grid.Column="2" Classes="statbar"
+                                                                             Value="{Binding StatBarPercent}"
+                                                                             Foreground="{Binding BarBrush}"
+                                                                             VerticalAlignment="Center"/>
+
+                                                                <!-- IV / EV inputs, tucked under the bar -->
+                                                                <StackPanel Grid.Row="1" Grid.Column="2" Orientation="Horizontal"
+                                                                            Spacing="6" HorizontalAlignment="Left">
+                                                                    <TextBlock Text="IV" FontSize="10" Classes="secondary" VerticalAlignment="Center"/>
+                                                                    <TextBox Classes="statNum" Text="{Binding Iv, Mode=TwoWay}"/>
+                                                                    <TextBlock Text="EV" FontSize="10" Classes="secondary"
+                                                                               VerticalAlignment="Center" Margin="6,0,0,0"/>
+                                                                    <TextBox Classes="statNum" Text="{Binding Ev, Mode=TwoWay}"/>
                                                                     <TextBlock Text="{Binding NatureBadge}" FontSize="10"
                                                                                IsVisible="{Binding HasNatureBadge}"
                                                                                Foreground="{Binding NatureBadgeBrush}"
-                                                                               VerticalAlignment="Center"/>
+                                                                               VerticalAlignment="Center" Margin="4,0,0,0"/>
                                                                 </StackPanel>
-
-                                                                <!-- IV -->
-                                                                <TextBlock Grid.Row="0" Grid.Column="1" Text="IV" FontSize="10"
-                                                                           Classes="secondary" VerticalAlignment="Center"/>
-                                                                <Slider Grid.Row="0" Grid.Column="2" Classes="stat"
-                                                                        Minimum="0" Maximum="{Binding MaxIv}"
-                                                                        Value="{Binding Iv, Mode=TwoWay}"
-                                                                        Foreground="{DynamicResource MeterIvBrush}"/>
-                                                                <TextBox Grid.Row="0" Grid.Column="3" Classes="statNum"
-                                                                         Text="{Binding Iv, Mode=TwoWay}"/>
-
-                                                                <!-- EV -->
-                                                                <TextBlock Grid.Row="1" Grid.Column="1" Text="EV" FontSize="10"
-                                                                           Classes="secondary" VerticalAlignment="Center"/>
-                                                                <Slider Grid.Row="1" Grid.Column="2" Classes="stat"
-                                                                        Minimum="0" Maximum="{Binding EvCeiling}"
-                                                                        Value="{Binding Ev, Mode=TwoWay}"
-                                                                        Foreground="{DynamicResource MeterEvBrush}"/>
-                                                                <TextBox Grid.Row="1" Grid.Column="3" Classes="statNum"
-                                                                         Text="{Binding Ev, Mode=TwoWay}"/>
-
-                                                                <!-- Resulting stat -->
-                                                                <TextBlock Grid.Row="0" Grid.RowSpan="2" Grid.Column="4"
-                                                                           Text="{Binding Stat}" FontSize="15" FontWeight="Bold"
-                                                                           VerticalAlignment="Center" HorizontalAlignment="Right"/>
                                                             </Grid>
                                                         </DataTemplate>
                                                     </ItemsControl.ItemTemplate>
                                                 </ItemsControl>
-                                                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
+
+                                                <!-- Total, matching the per-stat rows -->
+                                                <Grid ColumnDefinitions="46,44,*" ColumnSpacing="8" Margin="0,2,0,6">
+                                                    <TextBlock Grid.Column="0" Text="TOT" FontSize="12" FontWeight="Bold"
+                                                               Foreground="{DynamicResource TextSecondaryBrush}"
+                                                               VerticalAlignment="Center"/>
+                                                    <TextBlock Grid.Column="1" Text="{Binding StatTotal}" FontSize="13"
+                                                               FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                                    <ProgressBar Grid.Column="2" Classes="statbar"
+                                                                 Value="{Binding StatTotalPercent}"
+                                                                 Foreground="{DynamicResource TextSecondaryBrush}"
+                                                                 VerticalAlignment="Center"/>
+                                                </Grid>
+
+                                                                                                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
                                                     <Button Content="Max IVs" Command="{Binding MaxIVsCommand}" FontSize="12"/>
                                                     <Button Content="Clear EVs" Command="{Binding ClearEVsCommand}" FontSize="12"/>
                                                     <Button Content="Heal" Command="{Binding HealPokemonCommand}" FontSize="12"/>

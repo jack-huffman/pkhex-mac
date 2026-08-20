@@ -43,6 +43,10 @@ public partial class MainWindowViewModel : ViewModelBase
     public bool IsGiftsView => CurrentView == "gifts";
     public bool IsDatabaseView => IsAddView || IsGiftsView;
 
+    /// <summary>The box grid stays on screen while browsing a database, so a
+    /// destination slot can be picked before adding.</summary>
+    public bool ShowBoxes => IsBoxesView || IsDatabaseView;
+
     /// <summary>Dims the box list while another view is showing, so its selection
     /// does not read as the active section.</summary>
     public double BoxListOpacity => IsBoxesView ? 1.0 : 0.5;
@@ -58,6 +62,7 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(IsAddView));
         OnPropertyChanged(nameof(IsGiftsView));
         OnPropertyChanged(nameof(IsDatabaseView));
+        OnPropertyChanged(nameof(ShowBoxes));
         OnPropertyChanged(nameof(InspectorWidth));
         OnPropertyChanged(nameof(BoxListOpacity));
     }
@@ -82,8 +87,10 @@ public partial class MainWindowViewModel : ViewModelBase
                 Blocked = reason => Preview.ShowBlocked(reason),
             };
         }
-        Preview.Load(null);
+        if (!(IsDatabaseView && (view == "add" || view == "gifts")))
+            Preview.Load(null);
         CurrentView = view;
+        RefreshTargetSlotText();
     }
 
     /// <summary>Applies trainer identity and bag edits together, then returns to the boxes.</summary>
@@ -106,17 +113,43 @@ public partial class MainWindowViewModel : ViewModelBase
         StatusText = "Reverted unsaved trainer and bag changes.";
     }
 
+    /// <summary>
+    /// Writes the previewed entity into the slot the user selected, or the first
+    /// empty slot in the current box when nothing is selected.
+    /// </summary>
     public void AddPreviewToBox()
     {
+        if (_sav is null)
+            return;
         if (Preview.Current is not { } pk)
         {
             StatusText = "Nothing to add — pick an entry first.";
             return;
         }
-        if (TryAddToCurrentBox(pk.Clone(), out var message))
-            CurrentView = "boxes";
-        else
+
+        var clone = pk.Clone();
+        if (_selected is { IsParty: false } slot)
+        {
+            WriteSlot(slot, clone);
+            RefreshSlotViews();
+            var name = (uint)clone.Species < _strings.specieslist.Length ? _strings.specieslist[clone.Species] : $"#{clone.Species}";
+            StatusText = $"Placed {name} in {CurrentBoxName}, slot {slot.Slot + 1}. Remember to export the save (⌘S).";
+            RefreshTargetSlotText();
+            return;
+        }
+        if (!TryAddToCurrentBox(clone, out var message))
             StatusText = message;
+        RefreshTargetSlotText();
+    }
+
+    [ObservableProperty] private string _targetSlotText = "Add to first empty slot";
+
+    /// <summary>Describes where the next "add" will land, for the button label.</summary>
+    public void RefreshTargetSlotText()
+    {
+        TargetSlotText = _selected is { IsParty: false } s
+            ? $"Add to {CurrentBoxName}, slot {s.Slot + 1}"
+            : "Add to first empty slot";
     }
 
     public ObservableCollection<SlotViewModel> BoxSlots { get; } = [];
@@ -346,6 +379,7 @@ public partial class MainWindowViewModel : ViewModelBase
         if (slot is not null)
             slot.IsSelected = true;
         Detail.Load(slot?.Pokemon);
+        RefreshTargetSlotText();
     }
 
     [RelayCommand]
