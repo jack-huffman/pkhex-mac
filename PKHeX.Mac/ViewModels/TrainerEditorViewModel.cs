@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PKHeX.Core;
@@ -42,6 +43,16 @@ public partial class TrainerEditorViewModel : ObservableObject
     public List<BadgeRowViewModel> Badges { get; } = [];
     public bool HasBadges => Badges.Count > 0;
 
+    /// <summary>"12 of 18 cleared" — a quick read on story progress.</summary>
+    public string BadgeSummary
+    {
+        get
+        {
+            var cleared = Badges.Count(b => b.Cleared);
+            return $"{cleared} of {Badges.Count} cleared";
+        }
+    }
+
     private void BuildBadges(SaveFile sav)
     {
         var progress = new Sv9Progress(sav);
@@ -51,6 +62,8 @@ public partial class TrainerEditorViewModel : ObservableObject
                 continue;
             Badges.Add(new BadgeRowViewModel(progress, group, label, block));
         }
+        foreach (var badge in Badges)
+            badge.PropertyChanged += (_, _) => OnPropertyChanged(nameof(BadgeSummary));
     }
 
     public bool IsScarletViolet { get; }

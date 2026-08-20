@@ -66,9 +66,9 @@ public partial class TrainerStyleViewModel : ObservableObject
         if (_board is not null)
             AddPurchases(_board);
 
+        // Club perks have their own tab, so they stay out of this summary.
         HasSupportBoard = ClubPurchases.Count > 0;
-        Summary = $"{Outfit.Count} outfit slots · {Appearance.Count} appearance traits"
-                  + (HasSupportBoard ? $" · {ClubPurchases.Count} club perks" : string.Empty);
+        Summary = $"{Outfit.Count} outfit slots · {Appearance.Count} appearance traits";
     }
 
     public bool IsSupported { get; }

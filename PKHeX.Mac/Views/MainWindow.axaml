@@ -1034,37 +1034,12 @@
                                                 <NumericUpDown Grid.Column="2" Value="{Binding Seconds, Mode=TwoWay}" Minimum="0" Maximum="59" FormatString="0" Increment="1"/>
                                             </Grid>
                                         </StackPanel>
-                                        <StackPanel IsVisible="{Binding HasBadges}" Spacing="6" Margin="0,6,0,0">
-                                            <Separator/>
-                                            <TextBlock Classes="sectionTitle" Text="GYMS · TITANS · TEAM STAR"/>
-                                            <TextBlock FontSize="10" Classes="secondary" TextWrapping="Wrap"
-                                                       Text="The save records the order each was cleared in; the number shows that position."/>
-                                            <ItemsControl ItemsSource="{Binding Badges}">
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate x:DataType="vm:BadgeRowViewModel">
-                                                        <Grid ColumnDefinitions="64,*,36" ColumnSpacing="6" Margin="0,1">
-                                                            <TextBlock Grid.Column="0" Text="{Binding Group}" FontSize="9"
-                                                                       Classes="secondary" VerticalAlignment="Center"/>
-                                                            <CheckBox Grid.Column="1" Content="{Binding Label}" FontSize="11"
-                                                                      IsChecked="{Binding Cleared, Mode=TwoWay}"/>
-                                                            <TextBlock Grid.Column="2" Text="{Binding OrderText}" FontSize="10"
-                                                                       Classes="secondary" VerticalAlignment="Center"
-                                                                       TextAlignment="Right"/>
-                                                        </Grid>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </StackPanel>
-
                                         <StackPanel IsVisible="{Binding IsScarletViolet}" Spacing="6" Margin="0,6,0,0">
                                             <Separator/>
                                             <TextBlock Classes="sectionTitle" Text="PROGRESSION SHORTCUTS"/>
                                             <Button Content="Unlock all TM recipes" FontSize="11" Padding="8,3"
                                                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                                                     Command="{Binding UnlockAllTmRecipesCommand}"/>
-                                            <Button Content="Unlock all throw styles" FontSize="11" Padding="8,3"
-                                                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
-                                                    Command="{Binding UnlockAllThrowStylesCommand}"/>
                                             <Button Content="Unlock Blueberry coaches" FontSize="11" Padding="8,3"
                                                     HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
                                                     Command="{Binding UnlockAllCoachesCommand}"/>
@@ -1177,9 +1152,6 @@
                                         <Button Content="Unlock all fashion" FontSize="12"
                                                 Command="{Binding UnlockFashionCommand}"
                                                 ToolTip.Tip="Adds every clothing item for this trainer's gender to the wardrobe."/>
-                                        <Button Content="Buy all club perks" FontSize="12"
-                                                IsVisible="{Binding HasSupportBoard}"
-                                                Command="{Binding UnlockClubPerksCommand}"/>
                                     </StackPanel>
 
                                     <TextBlock Text="{Binding Status}" FontSize="11"
@@ -1231,21 +1203,70 @@
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
                                         </StackPanel>
-
-                                        <StackPanel Spacing="5" IsVisible="{Binding HasSupportBoard}">
-                                            <TextBlock Classes="sectionTitle" Text="BLUEBERRY CLUB PERKS" Margin="0"/>
-                                            <TextBlock FontSize="11" Classes="secondary" TextWrapping="Wrap"
-                                                       Text="Support-board purchases. The three baseball-club entries are what make the extra throw styles selectable."/>
-                                            <ItemsControl ItemsSource="{Binding ClubPurchases}">
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate x:DataType="vm:StyleToggleViewModel">
-                                                        <CheckBox Content="{Binding Label}" FontSize="12" Margin="0,1"
-                                                                  IsChecked="{Binding Value, Mode=TwoWay}"/>
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-                                        </StackPanel>
                                     </StackPanel>
+                                </ScrollViewer>
+                            </DockPanel>
+                            </TabItem>
+
+                            <!-- ── Gym / Titan / Team Star clears ── -->
+                            <TabItem Header="Gyms">
+                            <DockPanel DataContext="{Binding Trainer}" x:DataType="vm:TrainerEditorViewModel"
+                                       Margin="2,8,2,2">
+                                <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !HasBadges}"
+                                           FontSize="13" Classes="secondary" TextWrapping="Wrap"
+                                           Text="This save format does not record gym clears in an editable form."/>
+                                <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,12"
+                                            IsVisible="{Binding HasBadges}">
+                                    <TextBlock Text="{Binding BadgeSummary}" FontSize="12" FontWeight="SemiBold"/>
+                                    <TextBlock FontSize="11" Classes="secondary" TextWrapping="Wrap"
+                                               Text="Scarlet and Violet store the order each was cleared in rather than a plain badge flag, so the number beside each row is its position in your run. Ticking one assigns the next free position."/>
+                                </StackPanel>
+                                <ScrollViewer IsVisible="{Binding HasBadges}">
+                                    <ItemsControl ItemsSource="{Binding Badges}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:BadgeRowViewModel">
+                                                <Grid ColumnDefinitions="80,*,44" ColumnSpacing="8" Margin="0,2">
+                                                    <TextBlock Grid.Column="0" Text="{Binding Group}" FontSize="10"
+                                                               Classes="secondary" VerticalAlignment="Center"/>
+                                                    <CheckBox Grid.Column="1" Content="{Binding Label}" FontSize="12"
+                                                              IsChecked="{Binding Cleared, Mode=TwoWay}"/>
+                                                    <TextBlock Grid.Column="2" Text="{Binding OrderText}" FontSize="11"
+                                                               Classes="secondary" VerticalAlignment="Center"
+                                                               TextAlignment="Right"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </DockPanel>
+                            </TabItem>
+
+                            <!-- ── Blueberry Academy support board ── -->
+                            <TabItem Header="Blueberry Perks">
+                            <DockPanel DataContext="{Binding Style}" x:DataType="vm:TrainerStyleViewModel"
+                                       Margin="2,8,2,2">
+                                <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !HasSupportBoard}"
+                                           FontSize="13" Classes="secondary" TextWrapping="Wrap"
+                                           Text="The Blueberry Academy support board only exists in Scarlet and Violet with the Indigo Disk DLC."/>
+                                <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="0,0,0,12"
+                                            IsVisible="{Binding HasSupportBoard}">
+                                    <TextBlock FontSize="11" Classes="secondary" TextWrapping="Wrap"
+                                               Text="Everything the clubs can sell you, bought with Blueberry Points. The three baseball-club rows are what make the extra ball-throwing styles selectable; the art-club and music-club rows unlock room décor and albums."/>
+                                    <Button Content="Buy all club perks" FontSize="12" HorizontalAlignment="Left"
+                                            Command="{Binding UnlockClubPerksCommand}"/>
+                                    <TextBlock Text="{Binding Status}" FontSize="11"
+                                               Foreground="{DynamicResource LegalFgBrush}" TextWrapping="Wrap"
+                                               IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                </StackPanel>
+                                <ScrollViewer IsVisible="{Binding HasSupportBoard}">
+                                    <ItemsControl ItemsSource="{Binding ClubPurchases}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:StyleToggleViewModel">
+                                                <CheckBox Content="{Binding Label}" FontSize="12" Margin="0,1"
+                                                          IsChecked="{Binding Value, Mode=TwoWay}"/>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
                                 </ScrollViewer>
                             </DockPanel>
                             </TabItem>
