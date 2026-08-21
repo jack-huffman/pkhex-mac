@@ -29,6 +29,12 @@ public partial class MainWindowViewModel : ViewModelBase
     public MainWindowViewModel()
     {
         Detail = new PokemonDetailViewModel(_strings);
+        // Clicking a flagged Pokémon in the insights panel selects it in the grid.
+        BoxInsights.SlotRequested = slot =>
+        {
+            if ((uint)slot < BoxSlots.Count)
+                SelectSlot(BoxSlots[slot]);
+        };
         Preview = new PokemonPreviewViewModel(_strings);
         for (int i = 0; i < 30; i++)
             BoxSlots.Add(new SlotViewModel(0, i));
@@ -46,6 +52,9 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private double _slotWidth = MinSlotW;
     [ObservableProperty] private double _slotHeight = MinSlotH;
 
+    /// <summary>Facts about the current box, shown beneath the grid when there is room.</summary>
+    public BoxInsightsViewModel BoxInsights { get; } = new();
+
     /// <summary>Raised when something other than a resize changes the space available.</summary>
     public Action? LayoutChanged { get; set; }
 
@@ -62,6 +71,10 @@ public partial class MainWindowViewModel : ViewModelBase
         var width = Math.Clamp(Math.Floor(usable / 6), MinSlotW, MaxSlotW);
         SlotHeight = Math.Round(Math.Min(width * MinSlotH / MinSlotW, MaxSlotH));
         SlotWidth = Math.Round(Math.Min(SlotHeight * MinSlotW / MinSlotH, width));
+
+        // Party card, box header, padding and status line, plus the grid itself.
+        var used = 150 + (HasParty ? SlotHeight + 44 : 0) + (SlotHeight * 5) + 60;
+        BoxInsights.HasRoom = contentHeight - used >= 170;
     }
 
     /// <summary>Whether the in-memory save differs from the file on disk.</summary>
@@ -681,6 +694,7 @@ public partial class MainWindowViewModel : ViewModelBase
             BoxSlots[i].Box = box;
             BoxSlots[i].Update(pk, _strings);
         }
+        _ = BoxInsights.RefreshAsync(_sav, box, _strings);
         RefreshSelectionHighlight(box);
     }
 

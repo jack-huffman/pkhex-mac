@@ -350,6 +350,72 @@
                                     </StackPanel>
                                 </Border>
 
+
+                                <!-- What this box holds. All of it is otherwise only
+                                     knowable by opening thirty slots one at a time. -->
+                                <StackPanel Spacing="6" IsVisible="{Binding BoxInsights.IsVisible}">
+                                    <TextBlock Classes="sectionTitle" Text="THIS BOX" Margin="4,0,0,0"/>
+                                    <Border Classes="card" Padding="14"
+                                            DataContext="{Binding BoxInsights}"
+                                            x:DataType="vm:BoxInsightsViewModel">
+                                        <StackPanel Spacing="8">
+                                            <StackPanel Orientation="Horizontal" Spacing="16">
+                                                <TextBlock Text="{Binding FillText}"
+                                                           FontSize="{StaticResource FontBody}" FontWeight="SemiBold"/>
+                                                <StackPanel Orientation="Horizontal" Spacing="4"
+                                                            IsVisible="{Binding HasShiny}">
+                                                    <TextBlock Text="✦" FontSize="{StaticResource FontBody}"
+                                                               Foreground="{DynamicResource MeterEvBrush}"/>
+                                                    <TextBlock Text="{Binding ShinyCount, StringFormat='{}{0} shiny'}"
+                                                               FontSize="{StaticResource FontBody}"/>
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding LevelText}"
+                                                           FontSize="{StaticResource FontBody}" Classes="secondary"/>
+                                            </StackPanel>
+
+                                            <TextBlock Text="{Binding OriginText}"
+                                                       FontSize="{StaticResource FontMicro}" Classes="secondary"
+                                                       TextTrimming="CharacterEllipsis"/>
+
+                                            <Separator/>
+
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <TextBlock Text="Checking legality…"
+                                                           FontSize="{StaticResource FontMicro}" Classes="secondary"
+                                                           IsVisible="{Binding IsChecking}"/>
+                                                <TextBlock Text="{Binding Verdict}"
+                                                           FontSize="{StaticResource FontBody}" FontWeight="SemiBold"
+                                                           IsVisible="{Binding !IsChecking}"/>
+                                            </StackPanel>
+
+                                            <ItemsControl ItemsSource="{Binding Problems}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:BoxProblemViewModel">
+                                                        <Button Classes="plain" Padding="6,4" Margin="0,0,0,2"
+                                                                HorizontalAlignment="Stretch"
+                                                                HorizontalContentAlignment="Left"
+                                                                Click="OnBoxProblemClicked"
+                                                                ToolTip.Tip="{Binding Issue}">
+                                                            <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="8">
+                                                                <Image Grid.Column="0" Source="{Binding Sprite}"
+                                                                       Width="34" Height="28"
+                                                                       RenderOptions.BitmapInterpolationMode="None"/>
+                                                                <TextBlock Grid.Column="1" Text="{Binding Species}"
+                                                                           FontSize="{StaticResource FontBody}"
+                                                                           FontWeight="SemiBold"
+                                                                           VerticalAlignment="Center"/>
+                                                                <TextBlock Grid.Column="2" Text="{Binding SlotText}"
+                                                                           FontSize="{StaticResource FontMicro}"
+                                                                           Classes="secondary"
+                                                                           VerticalAlignment="Center"/>
+                                                            </Grid>
+                                                        </Button>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
+                                </StackPanel>
                             </StackPanel>
                         </StackPanel>
                     </ScrollViewer>

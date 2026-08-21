@@ -77,6 +77,13 @@ public partial class MainWindow : Window
             VM.UpdateBoxLayout(width, height);
     }
 
+    /// <summary>Jumps to a Pokémon the insights panel flagged.</summary>
+    public void OnBoxProblemClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Button { DataContext: BoxProblemViewModel problem })
+            problem.Select();
+    }
+
     // ---- Closing with unsaved edits ----
 
     /// <summary>Set once the user has decided, so the second close attempt goes through.</summary>
