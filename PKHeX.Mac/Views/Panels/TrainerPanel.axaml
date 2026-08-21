@@ -209,8 +209,7 @@
                                                        VerticalAlignment="Center"/>
                                             <TextBox Grid.Column="1" Text="{Binding HexText, Mode=TwoWay}"
                                                      FontSize="{StaticResource FontBody}" FontFamily="{Binding FieldFont}"/>
-                                            <TextBlock Grid.Column="2" Text="{Binding Error}" FontSize="{StaticResource FontMicro}"
-                                                       Foreground="{DynamicResource IllegalFgBrush}"
+                                            <TextBlock Grid.Column="2" Text="{Binding Error}" Classes="error"
                                                        VerticalAlignment="Center"/>
                                         </Grid>
                                     </DataTemplate>
@@ -230,8 +229,7 @@
                                                        VerticalAlignment="Center"/>
                                             <TextBox Grid.Column="1" Text="{Binding HexText, Mode=TwoWay}"
                                                      FontSize="{StaticResource FontBody}" FontFamily="{Binding FieldFont}"/>
-                                            <TextBlock Grid.Column="2" Text="{Binding Error}" FontSize="{StaticResource FontMicro}"
-                                                       Foreground="{DynamicResource IllegalFgBrush}"
+                                            <TextBlock Grid.Column="2" Text="{Binding Error}" Classes="error"
                                                        VerticalAlignment="Center"/>
                                         </Grid>
                                     </DataTemplate>

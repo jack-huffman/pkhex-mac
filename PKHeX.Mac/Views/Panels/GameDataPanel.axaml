@@ -390,8 +390,7 @@
                                                                 VerticalAlignment="Center">
                                                         <TextBlock Text="{Binding TypeName}" FontSize="{StaticResource FontMicro}"
                                                                    Classes="secondary"/>
-                                                        <TextBlock Text="{Binding Error}" FontSize="{StaticResource FontMicro}"
-                                                                   Foreground="{DynamicResource IllegalFgBrush}"
+                                                        <TextBlock Text="{Binding Error}" Classes="error"
                                                                    TextTrimming="CharacterEllipsis"/>
                                                     </StackPanel>
                                                 </Grid>

@@ -340,6 +340,11 @@ public partial class DenRowViewModel : ObservableObject
     [ObservableProperty] private bool _claimedLeaguePoints;
     [ObservableProperty] private string _error = string.Empty;
 
+    /// <summary>Drives the field's error styling; the text itself goes in a tooltip.</summary>
+    public bool HasError => Error.Length > 0;
+
+    partial void OnErrorChanged(string value) => OnPropertyChanged(nameof(HasError));
+
     /// <summary>Refreshes the displayed values from the underlying save data.</summary>
     internal void Reload()
     {
@@ -639,6 +644,11 @@ public partial class NestRowViewModel : ObservableObject
     [ObservableProperty] private bool _wattsHarvested;
     [ObservableProperty] private string _seedText = string.Empty;
     [ObservableProperty] private string _error = string.Empty;
+
+    /// <summary>Drives the field's error styling; the text itself goes in a tooltip.</summary>
+    public bool HasError => Error.Length > 0;
+
+    partial void OnErrorChanged(string value) => OnPropertyChanged(nameof(HasError));
 
     internal void Reload()
     {

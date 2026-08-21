@@ -91,6 +91,7 @@
                                                                       VerticalAlignment="Center"/>
                                                             <TextBox Grid.Column="5" Text="{Binding SeedText, Mode=TwoWay}"
                                                                      FontSize="{StaticResource FontBody}" FontFamily="Menlo, monospace"
+                                                                     Classes.error="{Binding HasError}"
                                                                      ToolTip.Tip="Raid seed (64-bit hex)"/>
                                                             <CheckBox Grid.Column="6" Content="Watts" FontSize="{StaticResource FontBody}"
                                                                       IsChecked="{Binding WattsHarvested, Mode=TwoWay}"
@@ -180,6 +181,7 @@
                                                                       SelectedIndex="{Binding ContentIndex, Mode=TwoWay}"/>
                                                             <TextBox Grid.Column="4" Text="{Binding SeedText, Mode=TwoWay}"
                                                                      FontSize="{StaticResource FontBody}" FontFamily="Menlo, monospace"
+                                                                     Classes.error="{Binding HasError}"
                                                                      ToolTip.Tip="Raid seed (32-bit hex)"/>
                                                             <CheckBox Grid.Column="5" Content="LP taken" FontSize="{StaticResource FontBody}"
                                                                       IsChecked="{Binding ClaimedLeaguePoints, Mode=TwoWay}"

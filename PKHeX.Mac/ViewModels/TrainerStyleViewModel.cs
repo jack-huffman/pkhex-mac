@@ -198,6 +198,11 @@ public partial class StyleFieldViewModel : ObservableObject
     [ObservableProperty] private string _hexText = string.Empty;
     [ObservableProperty] private string _error = string.Empty;
 
+    /// <summary>Drives the field's error styling; the text itself goes in a tooltip.</summary>
+    public bool HasError => Error.Length > 0;
+
+    partial void OnErrorChanged(string value) => OnPropertyChanged(nameof(HasError));
+
     private ulong RawValue() => _is64 ? (ulong)_prop.GetValue(_owner)! : (uint)_prop.GetValue(_owner)!;
 
     private string Read()

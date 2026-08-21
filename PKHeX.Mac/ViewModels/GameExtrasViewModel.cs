@@ -284,6 +284,11 @@ public partial class ExtrasFieldViewModel : ObservableObject
     [ObservableProperty] private int _enumIndex;
     [ObservableProperty] private string _error = string.Empty;
 
+    /// <summary>Drives the field's error styling; the text itself goes in a tooltip.</summary>
+    public bool HasError => Error.Length > 0;
+
+    partial void OnErrorChanged(string value) => OnPropertyChanged(nameof(HasError));
+
     internal static ExtrasFieldKind Classify(Type type)
     {
         if (type.IsEnum)

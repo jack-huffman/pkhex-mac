@@ -113,9 +113,8 @@
                                     <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontBody}"
                                                    TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Text="{Binding Error}" FontSize="{StaticResource FontMicro}"
-                                                   Foreground="{DynamicResource IllegalFgBrush}"
-                                                   IsVisible="{Binding Error, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                        <TextBlock Text="{Binding Error}" Classes="error"
+                                                   IsVisible="{Binding HasError}"/>
                                     </StackPanel>
                                     <TextBlock Grid.Column="1" Text="{Binding KeyText}" FontSize="{StaticResource FontMicro}"
                                                FontFamily="Menlo, monospace" Classes="secondary"

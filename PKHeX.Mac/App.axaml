@@ -80,26 +80,31 @@
         <Style Selector="Button">
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="12,6"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
         </Style>
         <Style Selector="TextBox">
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="MinHeight" Value="30"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
         </Style>
         <Style Selector="ComboBox">
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="MinHeight" Value="30"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
             <Setter Property="Padding" Value="10,0,0,0"/>
         </Style>
+        <!-- The control has a wide intrinsic minimum and its spinner buttons will crush
+             the text portion inside a narrow cell, which caused two visible layout bugs.
+             A floor here fixes it once for all 39 of them; sites needing more room still
+             set a larger MinWidth. Digits are right-aligned so columns line up. -->
         <Style Selector="NumericUpDown">
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="MinHeight" Value="30"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="MinWidth" Value="100"/>
+            <Setter Property="HorizontalContentAlignment" Value="Right"/>
         </Style>
         <Style Selector="CheckBox">
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
         </Style>
         <Style Selector="ListBox">
             <Setter Property="Background" Value="Transparent"/>
@@ -108,10 +113,10 @@
             <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="10,6"/>
             <Setter Property="Margin" Value="0,1"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
         </Style>
         <Style Selector="TabItem">
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="MinHeight" Value="32"/>
             <Setter Property="Padding" Value="7,4"/>
@@ -177,17 +182,6 @@
             <Setter Property="Minimum" Value="0"/>
             <Setter Property="Maximum" Value="100"/>
         </Style>
-        <!-- Numeric fields. The control has a wide intrinsic minimum and the spinner
-             buttons will crush the text portion inside a narrow cell, which has caused
-             two visible layout bugs. A floor here fixes it once for all 39 of them;
-             sites needing more room still set their own larger MinWidth. Numbers are
-             right-aligned so digits line up column to column. -->
-        <Style Selector="NumericUpDown">
-            <Setter Property="MinWidth" Value="100"/>
-            <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
-            <Setter Property="HorizontalContentAlignment" Value="Right"/>
-        </Style>
-
         <Style Selector="TextBox.statNum">
             <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
             <Setter Property="MinHeight" Value="22"/>
@@ -219,7 +213,7 @@
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Padding" Value="4,0"/>
-            <Setter Property="FontSize" Value="10"/>
+            <Setter Property="FontSize" Value="{StaticResource FontMicro}"/>
             <Setter Property="Width" Value="22"/>
             <Setter Property="Content" Value="▶"/>
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
@@ -235,7 +229,7 @@
             <Setter Property="HorizontalContentAlignment" Value="Left"/>
             <Setter Property="Padding" Value="10,6"/>
             <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontSize" Value="{StaticResource FontBody}"/>
         </Style>
         <Style Selector="Button.nav.selected">
             <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>

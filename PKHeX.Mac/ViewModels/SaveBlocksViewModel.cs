@@ -193,6 +193,11 @@ public partial class ScBlockRowViewModel : ObservableObject
     [ObservableProperty] private string _textValue = string.Empty;
     [ObservableProperty] private string _error = string.Empty;
 
+    /// <summary>Drives the field's error styling; the text itself goes in a tooltip.</summary>
+    public bool HasError => Error.Length > 0;
+
+    partial void OnErrorChanged(string value) => OnPropertyChanged(nameof(HasError));
+
     /// <summary>A copy of the block's raw bytes.</summary>
     internal byte[] RawBytes() => _block.Data.ToArray();
 
