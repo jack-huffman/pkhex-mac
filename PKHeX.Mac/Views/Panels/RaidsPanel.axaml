@@ -19,7 +19,7 @@
                            Text="Raid data only exists in Sword/Shield and Scarlet/Violet."/>
             </Border>
 
-            <TabControl IsVisible="{Binding IsSupported}" Padding="0,6,0,0">
+            <TabControl SelectedIndex="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).RaidsTab, Mode=TwoWay}" IsVisible="{Binding IsSupported}" Padding="0,6,0,0">
 
                 <!-- ── Sword/Shield Max Raid nests ── -->
                 <TabItem Header="Max Raid Dens" IsVisible="{Binding IsSwsh}">

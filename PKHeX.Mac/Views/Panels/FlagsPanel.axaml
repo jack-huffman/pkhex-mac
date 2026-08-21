@@ -7,7 +7,7 @@
              x:DataType="vm:MainWindowViewModel">
 
     <Border Classes="card" IsVisible="{Binding IsFlagsView}" Margin="18,14,18,14">
-        <TabControl Padding="0,10,0,0">
+        <TabControl SelectedIndex="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).FlagsTab, Mode=TwoWay}" Padding="0,10,0,0">
 
             <!-- Gen 2-5 style flat event flag array -->
             <TabItem Header="Event Flags">

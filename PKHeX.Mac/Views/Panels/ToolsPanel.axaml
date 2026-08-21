@@ -7,7 +7,7 @@
              x:DataType="vm:MainWindowViewModel">
 
     <Border Classes="card" IsVisible="{Binding IsToolsView}" Margin="18,14,18,14">
-        <TabControl DataContext="{Binding Tools}" x:DataType="vm:ToolsViewModel" Padding="0,10,0,0">
+        <TabControl SelectedIndex="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ToolsTab, Mode=TwoWay}" DataContext="{Binding Tools}" x:DataType="vm:ToolsViewModel" Padding="0,10,0,0">
 
             <TabItem Header="Batch Edit">
                 <DockPanel Margin="2,8,2,2">

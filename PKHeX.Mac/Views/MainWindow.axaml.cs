@@ -9,6 +9,7 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
+using Avalonia.Threading;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
 using PKHeX.Mac.ViewModels;
@@ -42,6 +43,7 @@ public partial class MainWindow : Window
     {
         // DataContext is assigned after construction, so this cannot be set up earlier.
         VM.LayoutChanged = RefreshBoxLayout;
+        VM.ExportRequested = () => _ = ExportAsync();
         RefreshBoxLayout();
         _ = VM.CheckForUpstreamUpdateAsync();
     }
@@ -82,6 +84,57 @@ public partial class MainWindow : Window
     {
         if (sender is Button { DataContext: BoxProblemViewModel problem })
             problem.Select();
+    }
+
+    // ---- Command palette ----
+
+    public void OnPaletteOpenClicked(object? sender, EventArgs e) => OpenPalette();
+
+    private void OpenPalette()
+    {
+        VM.Palette.Open();
+        // Focus has to wait for the overlay to be realised before it can take it.
+        Dispatcher.UIThread.Post(() => this.FindControl<TextBox>("PaletteBox")?.Focus());
+    }
+
+    private void OnPaletteActivate(object? sender, TappedEventArgs e) => VM.Palette.Activate();
+
+    /// <summary>
+    /// Drives the palette from the keyboard. Handled here rather than on the overlay so
+    /// the shortcut works from anywhere, including while a text field has focus.
+    /// </summary>
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        var palette = VM.Palette;
+        if (e.Key == Key.K && e.KeyModifiers.HasFlag(KeyModifiers.Meta))
+        {
+            OpenPalette();
+            e.Handled = true;
+            return;
+        }
+        if (palette.IsOpen)
+        {
+            switch (e.Key)
+            {
+                case Key.Escape:
+                    palette.Close();
+                    e.Handled = true;
+                    return;
+                case Key.Down:
+                    palette.MoveSelection(1);
+                    e.Handled = true;
+                    return;
+                case Key.Up:
+                    palette.MoveSelection(-1);
+                    e.Handled = true;
+                    return;
+                case Key.Enter:
+                    palette.Activate();
+                    e.Handled = true;
+                    return;
+            }
+        }
+        base.OnKeyDown(e);
     }
 
     // ---- Closing with unsaved edits ----

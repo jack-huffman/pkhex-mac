@@ -95,7 +95,7 @@
 
         <!-- Bag and the trainer's look share the right column -->
         <Border Grid.Column="1" Classes="card">
-            <TabControl Padding="0,4,0,0">
+            <TabControl SelectedIndex="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).TrainerTab, Mode=TwoWay}" Padding="0,4,0,0">
             <TabItem Header="Bag">
             <DockPanel DataContext="{Binding Bag}" x:DataType="vm:BagViewModel" Margin="2,8,2,2">
                 <TextBlock DockPanel.Dock="Top" Classes="fieldLabel" IsVisible="{Binding !HasPouches}"

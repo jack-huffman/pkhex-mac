@@ -6,7 +6,7 @@
              x:DataType="vm:MainWindowViewModel">
 
     <Border Classes="card" Margin="18,14,18,14">
-        <TabControl Padding="0,6,0,0">
+        <TabControl SelectedIndex="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).GameDataTab, Mode=TwoWay}" Padding="0,6,0,0">
 
             <!-- ── Daycare ── -->
             <TabItem Header="Daycare">

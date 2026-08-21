@@ -23,6 +23,8 @@
         <NativeMenu>
             <NativeMenuItem Header="File">
                 <NativeMenu>
+                    <NativeMenuItem Header="Go to…" Gesture="Cmd+K" Click="OnPaletteOpenClicked"/>
+                    <NativeMenuItemSeparator/>
                     <NativeMenuItem Header="Open Save File…" Gesture="Cmd+O" Click="OnOpenClicked"/>
                     <NativeMenuItem Header="Export Save As…" Gesture="Cmd+S" Click="OnExportClicked"/>
                     <NativeMenuItem Header="Revert to Saved File…" Click="OnRevertAllMenuClicked"/>
@@ -1811,6 +1813,39 @@
                             <Button Content="Revert" Classes="accent" Command="{Binding RevertCommand}"/>
                         </StackPanel>
                     </StackPanel>
+                </Border>
+            </Border>
+
+            <!-- ══════ Command palette ══════ -->
+            <Border IsVisible="{Binding Palette.IsOpen}" Background="#90000000">
+                <Border Classes="card" Width="560" Padding="0" Margin="0,90,0,0"
+                        HorizontalAlignment="Center" VerticalAlignment="Top">
+                    <DockPanel DataContext="{Binding Palette}" x:DataType="vm:CommandPaletteViewModel">
+                        <TextBox DockPanel.Dock="Top" x:Name="PaletteBox" Margin="14,14,14,10"
+                                 Text="{Binding Query, Mode=TwoWay}"
+                                 FontSize="{StaticResource FontHeading}"
+                                 PlaceholderText="Go to…  try a pane, an action, or a box"/>
+                        <TextBlock DockPanel.Dock="Bottom" Margin="14,8,14,12"
+                                   FontSize="{StaticResource FontMicro}" Classes="secondary"
+                                   Text="↑ ↓ to move · return to go · esc to close"/>
+                        <ListBox Classes="plain" MaxHeight="360" Margin="6,0,6,0"
+                                 ItemsSource="{Binding Results}"
+                                 SelectedIndex="{Binding SelectedIndex, Mode=TwoWay}"
+                                 DoubleTapped="OnPaletteActivate">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:PaletteEntry">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="4,3">
+                                        <TextBlock Grid.Column="0" Text="{Binding Title}"
+                                                   FontSize="{StaticResource FontBody}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Grid.Column="1" Text="{Binding Group}"
+                                                   FontSize="{StaticResource FontMicro}"
+                                                   Classes="secondary"/>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
                 </Border>
             </Border>
 

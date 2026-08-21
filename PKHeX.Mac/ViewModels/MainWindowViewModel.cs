@@ -105,6 +105,100 @@ public partial class MainWindowViewModel : ViewModelBase
     public BoxInsightsViewModel BoxInsights { get; } = new();
 
 
+    // ---- Command palette ----
+
+    /// <summary>Type-to-go navigation; see <see cref="BuildPaletteEntries"/>.</summary>
+    public CommandPaletteViewModel Palette { get; } = new();
+
+    // Bound to each panel's TabControl so the palette can land on a specific tab
+    // rather than only the view that contains it.
+    [ObservableProperty] private int _trainerTab;
+    [ObservableProperty] private int _toolsTab;
+    [ObservableProperty] private int _gameDataTab;
+    [ObservableProperty] private int _raidsTab;
+    [ObservableProperty] private int _flagsTab;
+
+    /// <summary>Jumps to a view, optionally selecting one of its tabs.</summary>
+    private void GoTo(string view, Action? tab = null)
+    {
+        tab?.Invoke();
+        SetView(view);
+    }
+
+    /// <summary>
+    /// Everything the palette can reach. Rebuilt when a save opens, because the boxes
+    /// and several destinations only exist once there is one.
+    /// </summary>
+    private void BuildPaletteEntries()
+    {
+        var entries = new List<PaletteEntry>
+        {
+            new("Boxes", "Navigate", () => GoTo("boxes")),
+            new("Trainer & Bag", "Navigate", () => GoTo("save")),
+            new("Pokédex", "Navigate", () => GoTo("dex")),
+            new("Tools", "Navigate", () => GoTo("tools")),
+            new("Event Flags & Save Blocks", "Navigate", () => GoTo("flags")),
+            new("Tera Raids", "Navigate", () => GoTo("raids")),
+            new("Game Data", "Navigate", () => GoTo("gamedata")),
+            new("Search & Database", "Navigate", () => GoTo("search")),
+        };
+
+        void Tab(string title, string group, string view, Action select) =>
+            entries.Add(new PaletteEntry(title, group, () => GoTo(view, select)));
+
+        Tab("Bag / Items", "Trainer & Bag", "save", () => TrainerTab = 0);
+        Tab("Appearance & Style", "Trainer & Bag", "save", () => TrainerTab = 1);
+        Tab("Ride abilities", "Trainer & Bag", "save", () => TrainerTab = 2);
+        Tab("Gyms, Titans & Team Star", "Trainer & Bag", "save", () => TrainerTab = 3);
+        Tab("Badges", "Trainer & Bag", "save", () => TrainerTab = 3);
+        Tab("Blueberry Perks", "Trainer & Bag", "save", () => TrainerTab = 4);
+        Tab("Trainer Records", "Trainer & Bag", "save", () => TrainerTab = 5);
+
+        Tab("Batch Edit", "Tools", "tools", () => ToolsTab = 0);
+        Tab("Team Analysis", "Tools", "tools", () => ToolsTab = 1);
+        Tab("Type coverage", "Tools", "tools", () => ToolsTab = 1);
+        Tab("Breeding planner", "Tools", "tools", () => ToolsTab = 2);
+        Tab("Egg moves", "Tools", "tools", () => ToolsTab = 2);
+        Tab("Integrity audit", "Tools", "tools", () => ToolsTab = 3);
+        Tab("Box Report", "Tools", "tools", () => ToolsTab = 4);
+
+        Tab("Daycare", "Game Data", "gamedata", () => GameDataTab = 0);
+        Tab("Gift Album", "Game Data", "gamedata", () => GameDataTab = 1);
+        Tab("Fusions", "Game Data", "gamedata", () => GameDataTab = 2);
+        Tab("Hall of Fame", "Game Data", "gamedata", () => GameDataTab = 3);
+        Tab("Mail", "Game Data", "gamedata", () => GameDataTab = 4);
+        Tab("Extras", "Game Data", "gamedata", () => GameDataTab = 5);
+
+        Tab("Active raid dens", "Tera Raids", "raids", () => RaidsTab = 0);
+        Tab("Event raid records", "Tera Raids", "raids", () => RaidsTab = 1);
+        Tab("Raid progression", "Tera Raids", "raids", () => RaidsTab = 2);
+
+        Tab("Event Flags", "Flags", "flags", () => FlagsTab = 0);
+        Tab("Save Blocks", "Flags", "flags", () => FlagsTab = 1);
+
+        entries.Add(new PaletteEntry("Export save", "Action", () => ExportRequested?.Invoke()));
+        entries.Add(new PaletteEntry("Revert to saved file", "Action", RequestRevert));
+
+        if (_sav is { HasBox: true })
+        {
+            for (int i = 0; i < _sav.BoxCount; i++)
+            {
+                var index = i;
+                var name = (uint)i < BoxNames.Count ? BoxNames[i] : $"Box {i + 1}";
+                entries.Add(new PaletteEntry(name, "Boxes", () =>
+                {
+                    CurrentBox = index;
+                    SetView("boxes");
+                }));
+            }
+        }
+
+        Palette.SetEntries(entries);
+    }
+
+    /// <summary>Raised when the palette asks for an export, which needs a file dialog.</summary>
+    public Action? ExportRequested { get; set; }
+
     /// <summary>Whether the in-memory save differs from the file on disk.</summary>
     public SaveStateViewModel SaveState { get; } = new();
 
@@ -649,6 +743,7 @@ public partial class MainWindowViewModel : ViewModelBase
             GiftDb = null;
             Preview.Load(null);
             LoadRideSlot();
+            BuildPaletteEntries();
             CurrentView = "boxes";
             return true;
         }
