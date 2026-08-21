@@ -29,6 +29,8 @@ public partial class MainWindowViewModel : ViewModelBase
     public MainWindowViewModel()
     {
         Detail = new PokemonDetailViewModel(_strings);
+        Review = new ExportReviewViewModel(() => (_sav, _pristine), _strings);
+        Review.ExportRequested = () => ExportRequested?.Invoke();
         // Clicking a flagged Pokémon in the insights panel selects it in the grid.
         BoxInsights.SlotRequested = slot =>
         {
@@ -104,6 +106,9 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>Facts about the current box, shown beneath the grid when there is room.</summary>
     public BoxInsightsViewModel BoxInsights { get; } = new();
 
+
+    /// <summary>What is about to be written, compared against the file on disk.</summary>
+    public ExportReviewViewModel Review { get; }
 
     // ---- Command palette ----
 
@@ -204,6 +209,8 @@ public partial class MainWindowViewModel : ViewModelBase
         Tab("Event Flags", "Flags", "flags", () => FlagsTab = 0, EventFlags?.IsSupported ?? false);
         Tab("Save Blocks", "Flags", "flags", () => FlagsTab = 1, _sav is ISCBlockArray);
 
+        entries.Add(new PaletteEntry("Review changes before export", "Action",
+            () => _ = Review.OpenAsync()));
         entries.Add(new PaletteEntry("Export save", "Action", () => ExportRequested?.Invoke()));
         entries.Add(new PaletteEntry("Revert to saved file", "Action", RequestRevert));
 

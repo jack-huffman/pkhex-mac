@@ -189,6 +189,8 @@
                                     <Button Content="Export…" Classes="accent"
                                             FontSize="{StaticResource FontMicro}" Padding="8,3"
                                             Click="OnExportButtonClicked"/>
+                                    <Button Content="Review" FontSize="{StaticResource FontMicro}" Padding="8,3"
+                                            Command="{Binding Review.OpenCommand}"/>
                                     <Button Content="History" FontSize="{StaticResource FontMicro}" Padding="8,3"
                                             Command="{Binding SaveState.ToggleLogCommand}"/>
                                     <Button Content="Revert All" FontSize="{StaticResource FontMicro}" Padding="8,4"
@@ -1813,6 +1815,65 @@
                             <Button Content="Revert" Classes="accent" Command="{Binding RevertCommand}"/>
                         </StackPanel>
                     </StackPanel>
+                </Border>
+            </Border>
+
+            <!-- ══════ Review before export ══════ -->
+            <Border IsVisible="{Binding Review.IsOpen}" Background="#B0000000">
+                <Border Classes="card" Width="620" MaxHeight="560" Padding="20"
+                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <DockPanel DataContext="{Binding Review}" x:DataType="vm:ExportReviewViewModel">
+                        <TextBlock DockPanel.Dock="Top" Text="About to write"
+                                   FontSize="{StaticResource FontHeading}" FontWeight="Bold"/>
+                        <TextBlock DockPanel.Dock="Top" Text="{Binding Summary}" Margin="0,6,0,0"
+                                   FontSize="{StaticResource FontBody}" Classes="secondary"
+                                   TextWrapping="Wrap"/>
+                        <TextBlock DockPanel.Dock="Top" Text="Comparing with the file on disk…"
+                                   Margin="0,8,0,0" IsVisible="{Binding IsBusy}"
+                                   FontSize="{StaticResource FontBody}" Classes="secondary"/>
+
+                        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8"
+                                    HorizontalAlignment="Right" Margin="0,14,0,0">
+                            <Button Content="Cancel" Command="{Binding CloseCommand}"/>
+                            <Button Content="Export…" Classes="accent"
+                                    IsEnabled="{Binding HasChanges}"
+                                    Command="{Binding ExportCommand}"/>
+                        </StackPanel>
+
+                        <ScrollViewer Margin="0,12,0,0">
+                            <ItemsControl ItemsSource="{Binding Groups}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:ChangeGroupViewModel">
+                                        <StackPanel Spacing="4" Margin="0,0,0,14">
+                                            <TextBlock Text="{Binding Title}" Classes="sectionTitle" Margin="0"/>
+                                            <ItemsControl ItemsSource="{Binding Rows}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:ChangeRowViewModel">
+                                                        <Grid ColumnDefinitions="Auto,190,*" ColumnSpacing="8"
+                                                              Margin="0,0,0,3">
+                                                            <Image Grid.Column="0" Source="{Binding Sprite}"
+                                                                   Width="30" Height="26"
+                                                                   IsVisible="{Binding HasSprite}"
+                                                                   RenderOptions.BitmapInterpolationMode="None"/>
+                                                            <TextBlock Grid.Column="1" Text="{Binding Where}"
+                                                                       FontSize="{StaticResource FontBody}"
+                                                                       VerticalAlignment="Center"
+                                                                       TextTrimming="CharacterEllipsis"/>
+                                                            <TextBlock Grid.Column="2" Text="{Binding Description}"
+                                                                       FontSize="{StaticResource FontBody}"
+                                                                       Classes="secondary"
+                                                                       VerticalAlignment="Center"
+                                                                       TextWrapping="Wrap"/>
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </DockPanel>
                 </Border>
             </Border>
 
