@@ -134,6 +134,25 @@ public sealed class Sv9Progress
         ("Team Star", "Fighting · Caph", "WEVT_DAN_KAKUTOU_CLEAR"),
     ];
 
+    /// <summary>
+    /// The ride legendary's abilities. Koraidon in Scarlet, Miraidon in Violet; the
+    /// blocks are shared, since a save only ever has one of them.
+    /// </summary>
+    /// <remarks>
+    /// PKHeX keeps these keys private but names the game-side blocks in comments, and
+    /// each name hashes to the documented key — verified for all seven.
+    /// </remarks>
+    public static readonly (string Label, string Block)[] RideUpgrades =
+    [
+        ("Ride the legendary", "FSYS_RIDE_ENABLE"),
+        ("Dash", "FSYS_RIDE_DASH_ENABLE"),
+        ("Swim", "FSYS_RIDE_SWIM_ENABLE"),
+        ("Glide", "FSYS_RIDE_GLIDE_ENABLE"),
+        ("Climb", "FSYS_RIDE_CLIMB_ENABLE"),
+        ("High jump", "FSYS_RIDE_HIJUMP_ENABLE"),
+        ("Flight", "FSYS_RIDE_FLIGHT_ENABLE"),
+    ];
+
     /// <summary>Raid tier unlocks. Difficulty N maps to the (N+1)-star tier.</summary>
     public static readonly (string Label, string Block)[] RaidUnlocks =
     [

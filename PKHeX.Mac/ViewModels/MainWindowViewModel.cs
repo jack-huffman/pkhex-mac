@@ -420,7 +420,7 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         if (_sav is null)
             return;
-        Trainer = new TrainerEditorViewModel(_sav);
+        Trainer = new TrainerEditorViewModel(_sav, () => NoteChange("Trainer progression updated"));
         Bag = new BagViewModel(_sav, _strings);
         StatusText = "Reverted unsaved trainer and bag changes.";
     }
@@ -574,7 +574,7 @@ public partial class MainWindowViewModel : ViewModelBase
             SelectSlot(null);
 
             // In-window editor views for this save.
-            Trainer = new TrainerEditorViewModel(sav);
+            Trainer = new TrainerEditorViewModel(sav, () => NoteChange("Trainer progression updated"));
             Bag = new BagViewModel(sav, _strings);
             Style = new TrainerStyleViewModel(sav, () =>
                 NoteChange("Trainer appearance updated"));

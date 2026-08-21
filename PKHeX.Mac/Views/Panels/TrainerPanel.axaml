@@ -241,6 +241,38 @@
             </DockPanel>
             </TabItem>
 
+            <!-- ── The ride legendary's abilities ── -->
+            <TabItem Header="Ride">
+            <DockPanel DataContext="{Binding Trainer}" x:DataType="vm:TrainerEditorViewModel"
+                       Margin="2,8,2,2">
+                <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !HasRideUpgrades}"
+                           FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                           Text="Only Scarlet and Violet have a ride legendary."/>
+
+                <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,12"
+                            IsVisible="{Binding HasRideUpgrades}">
+                    <TextBlock Text="{Binding RideName}"
+                               FontSize="{StaticResource FontHeading}" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding RideSummary}"
+                               FontSize="{StaticResource FontBody}" FontWeight="SemiBold"/>
+                    <TextBlock FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                               Text="Traversal abilities earned along the Path of Legends. Turning one off takes the ability away in the overworld, so the story can be replayed from any point."/>
+                </StackPanel>
+
+                <ScrollViewer IsVisible="{Binding HasRideUpgrades}">
+                    <ItemsControl ItemsSource="{Binding RideUpgrades}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ProgressFlagViewModel">
+                                <CheckBox Content="{Binding Label}"
+                                          FontSize="{StaticResource FontBody}" Margin="0,2"
+                                          IsChecked="{Binding Value, Mode=TwoWay}"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+            </TabItem>
+
             <!-- ── Gym / Titan / Team Star clears ── -->
             <TabItem Header="Gyms">
             <DockPanel DataContext="{Binding Trainer}" x:DataType="vm:TrainerEditorViewModel"

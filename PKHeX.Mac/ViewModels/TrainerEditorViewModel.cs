@@ -12,10 +12,17 @@ namespace PKHeX.Mac.ViewModels;
 public partial class TrainerEditorViewModel : ObservableObject
 {
     private readonly SaveFile _sav;
+    private readonly Action? _onChanged;
 
-    public TrainerEditorViewModel(SaveFile sav)
+    /// <param name="onChanged">
+    /// Called when a toggle writes directly into the save. Badges and ride abilities do
+    /// not wait for Apply, so without this the save would be modified while the
+    /// unsaved-changes indicator still read clean.
+    /// </param>
+    public TrainerEditorViewModel(SaveFile sav, Action? onChanged = null)
     {
         _sav = sav;
+        _onChanged = onChanged;
         OtName = sav.OT;
         GenderIndex = sav.Gender;
         Tid = sav.DisplayTID;
@@ -36,11 +43,24 @@ public partial class TrainerEditorViewModel : ObservableObject
             LeaguePoints = sv.LeaguePoints;
             BlueberryPoints = sv.BlueberryPoints;
             BuildBadges(sav);
+            BuildRideUpgrades(sav);
         }
     }
 
     /// <summary>Gym, Titan and Team Star clears, grouped for display.</summary>
     public List<BadgeRowViewModel> Badges { get; } = [];
+
+    /// <summary>The ride legendary's unlocked abilities.</summary>
+    public List<ProgressFlagViewModel> RideUpgrades { get; } = [];
+
+    public bool HasRideUpgrades => RideUpgrades.Count > 0;
+
+    /// <summary>Scarlet rides Koraidon, Violet rides Miraidon.</summary>
+    public string RideName { get; private set; } = string.Empty;
+
+    public string RideSummary => RideUpgrades.Count == 0
+        ? string.Empty
+        : $"{RideUpgrades.Count(u => u.Value)} of {RideUpgrades.Count} unlocked";
     public bool HasBadges => Badges.Count > 0;
 
     /// <summary>"12 of 18 cleared" — a quick read on story progress.</summary>
@@ -50,6 +70,24 @@ public partial class TrainerEditorViewModel : ObservableObject
         {
             var cleared = Badges.Count(b => b.Cleared);
             return $"{cleared} of {Badges.Count} cleared";
+        }
+    }
+
+    private void BuildRideUpgrades(SaveFile sav)
+    {
+        if (sav is not SAV9SV sv)
+            return;
+        RideName = sv.Version switch
+        {
+            GameVersion.SL => "Koraidon",
+            GameVersion.VL => "Miraidon",
+            _ => "Ride legendary",
+        };
+        var progress = new Sv9Progress(sav);
+        foreach (var (label, block) in Sv9Progress.RideUpgrades)
+        {
+            if (progress.Exists(block))
+                RideUpgrades.Add(new ProgressFlagViewModel(progress, label, block, _onChanged));
         }
     }
 
@@ -165,12 +203,15 @@ public partial class BadgeRowViewModel : ObservableObject
 {
     private readonly Sv9Progress _progress;
     private readonly string _block;
+    private readonly Action? _onChanged;
     private bool _loading;
 
-    public BadgeRowViewModel(Sv9Progress progress, string group, string label, string block)
+    public BadgeRowViewModel(Sv9Progress progress, string group, string label, string block,
+                            Action? onChanged = null)
     {
         _progress = progress;
         _block = block;
+        _onChanged = onChanged;
         Group = group;
         Label = label;
         _loading = true;
@@ -205,5 +246,41 @@ public partial class BadgeRowViewModel : ObservableObject
         }
         _progress.SetInt(_block, Order);
         OnPropertyChanged(nameof(OrderText));
+        _onChanged?.Invoke();
+    }
+}
+
+/// <summary>
+/// A boolean progress flag written straight into the save, used for the ride
+/// legendary's abilities.
+/// </summary>
+public partial class ProgressFlagViewModel : ObservableObject
+{
+    private readonly Sv9Progress _progress;
+    private readonly string _block;
+    private readonly Action? _onChanged;
+    private bool _loading;
+
+    public ProgressFlagViewModel(Sv9Progress progress, string label, string block, Action? onChanged)
+    {
+        _progress = progress;
+        _block = block;
+        _onChanged = onChanged;
+        Label = label;
+        _loading = true;
+        Value = progress.GetFlag(block);
+        _loading = false;
+    }
+
+    public string Label { get; }
+
+    [ObservableProperty] private bool _value;
+
+    partial void OnValueChanged(bool value)
+    {
+        if (_loading)
+            return;
+        _progress.SetFlag(_block, value);
+        _onChanged?.Invoke();
     }
 }
