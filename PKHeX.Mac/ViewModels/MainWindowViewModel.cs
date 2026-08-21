@@ -648,6 +648,7 @@ public partial class MainWindowViewModel : ViewModelBase
             // so loading a save stays instant.
             GiftDb = null;
             Preview.Load(null);
+            LoadRideSlot();
             CurrentView = "boxes";
             return true;
         }
