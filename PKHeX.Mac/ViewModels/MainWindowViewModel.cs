@@ -163,7 +163,7 @@ public partial class MainWindowViewModel : ViewModelBase
             new("Trainer & Bag", "Navigate", () => GoTo("save")),
             new("Pokédex", "Navigate", () => GoTo("dex")),
             new("Tools", "Navigate", () => GoTo("tools")),
-            new("Event Flags & Save Blocks", "Navigate", () => GoTo("flags")),
+            new("Raw Save Blocks", "Navigate", () => GoTo("flags")),
             new("Tera Raids", "Navigate", () => GoTo("raids")),
             new("Game Data", "Navigate", () => GoTo("gamedata")),
             new("Search & Database", "Navigate", () => GoTo("search")),
@@ -206,8 +206,8 @@ public partial class MainWindowViewModel : ViewModelBase
         Tab("Event raid records", "Tera Raids", "raids", () => RaidsTab = 1, isSv);
         Tab("Raid progression", "Tera Raids", "raids", () => RaidsTab = 2, isSv);
 
-        Tab("Event Flags", "Flags", "flags", () => FlagsTab = 0, EventFlags?.IsSupported ?? false);
-        Tab("Save Blocks", "Flags", "flags", () => FlagsTab = 1, _sav is ISCBlockArray);
+        Tab("Event Flags", "Raw Save Blocks", "flags", () => FlagsTab = 0, EventFlags?.IsSupported ?? false);
+        Tab("Save Blocks", "Raw Save Blocks", "flags", () => FlagsTab = 1, _sav is ISCBlockArray);
 
         entries.Add(new PaletteEntry("Review changes before export", "Action",
             () => _ = Review.OpenAsync()));

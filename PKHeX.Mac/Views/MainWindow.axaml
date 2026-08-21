@@ -225,27 +225,27 @@
                         <!-- Navigation -->
                         <StackPanel Spacing="2" IsVisible="{Binding HasSave}">
                             <TextBlock Classes="sectionTitle" Text="SAVE" Margin="6,4,0,4"/>
+                            <Button Classes="nav" Classes.selected="{Binding IsSearchView}"
+                                    Command="{Binding SetViewCommand}" CommandParameter="search"
+                                    Content="Search"/>
                             <Button Classes="nav" Classes.selected="{Binding IsSaveView}"
                                     Command="{Binding SetViewCommand}" CommandParameter="save"
                                     Content="Trainer &amp; Bag"/>
                             <Button Classes="nav" Classes.selected="{Binding IsDexView}"
                                     Command="{Binding SetViewCommand}" CommandParameter="dex"
                                     Content="Pokédex"/>
-                            <Button Classes="nav" Classes.selected="{Binding IsSearchView}"
-                                    Command="{Binding SetViewCommand}" CommandParameter="search"
-                                    Content="Search"/>
-                            <Button Classes="nav" Classes.selected="{Binding IsToolsView}"
-                                    Command="{Binding SetViewCommand}" CommandParameter="tools"
-                                    Content="Tools"/>
-                            <Button Classes="nav" Classes.selected="{Binding IsFlagsView}"
-                                    Command="{Binding SetViewCommand}" CommandParameter="flags"
-                                    Content="Flags &amp; Blocks"/>
                             <Button Classes="nav" Classes.selected="{Binding IsRaidsView}"
                                     Command="{Binding SetViewCommand}" CommandParameter="raids"
                                     Content="Raids"/>
                             <Button Classes="nav" Classes.selected="{Binding IsGameDataView}"
                                     Command="{Binding SetViewCommand}" CommandParameter="gamedata"
                                     Content="Game Data"/>
+                            <Button Classes="nav" Classes.selected="{Binding IsToolsView}"
+                                    Command="{Binding SetViewCommand}" CommandParameter="tools"
+                                    Content="Tools"/>
+                            <Button Classes="nav" Classes.selected="{Binding IsFlagsView}"
+                                    Command="{Binding SetViewCommand}" CommandParameter="flags"
+                                    Content="Raw Save Blocks"/>
 
                         </StackPanel>
 
