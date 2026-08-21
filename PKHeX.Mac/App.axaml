@@ -134,6 +134,52 @@
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="Padding" Value="14"/>
         </Style>
+        <!-- Browser-style tabs: the strip carries a hairline along its base, and the
+             active tab sits on top of it, joined to the content below rather than
+             floating above it. -->
+        <Style Selector="Border.tabstrip">
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="Padding" Value="10,6,10,0"/>
+        </Style>
+        <Style Selector="Border.tab">
+            <Setter Property="CornerRadius" Value="9,9,0,0"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="MinWidth" Value="164"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="1,1,1,0"/>
+            <!-- Covers the strip's hairline when active. -->
+            <Setter Property="Margin" Value="0,0,0,-1"/>
+        </Style>
+        <Style Selector="Border.tab:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SurfaceHoverBrush}"/>
+        </Style>
+        <Style Selector="Border.tab.selected">
+            <Setter Property="Background" Value="{DynamicResource SurfaceCardBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineBrush}"/>
+        </Style>
+        <Style Selector="Border.tab TextBlock.tabtitle">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        </Style>
+        <Style Selector="Border.tab.selected TextBlock.tabtitle">
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
+        </Style>
+        <!-- The close control only appears on the tab under the pointer, or the active
+             one, so a row of tabs is not a row of buttons. -->
+        <Style Selector="Border.tab Button.tabclose">
+            <Setter Property="Opacity" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="4,0"/>
+        </Style>
+        <Style Selector="Border.tab:pointerover Button.tabclose">
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
+        <Style Selector="Border.tab.selected Button.tabclose">
+            <Setter Property="Opacity" Value="1"/>
+        </Style>
+
         <Style Selector="Border.chip">
             <Setter Property="CornerRadius" Value="999"/>
             <Setter Property="Padding" Value="10,3"/>
