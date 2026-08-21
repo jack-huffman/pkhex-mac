@@ -126,6 +126,27 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     /// <summary>
+    /// Builds the editors whose availability can only be known by looking.
+    /// </summary>
+    /// <remarks>
+    /// Most of these report support as "did I find anything" rather than a type check,
+    /// so nothing can say whether a save has mail or a daycare without building the
+    /// editor. Doing it at load costs about 17ms and lets tabs and the palette hide
+    /// what this save does not have, instead of offering a pane that explains itself
+    /// away. The genuinely expensive ones stay lazy: the block editor builds ten
+    /// thousand rows, and the Pokédex and gift archive are heavier still.
+    /// </remarks>
+    private void BuildOptionalEditors(SaveFile sav)
+    {
+        Daycare = BuildDaycare(sav);
+        Fusions = BuildFusions(sav);
+        Extras = new GameExtrasViewModel(sav, () => NoteChange("Game data updated"));
+        Mail = new MailViewModel(sav, _strings, () => NoteChange("Mail updated"));
+        HallOfFame = new HallOfFameViewModel(sav, _strings, () => NoteChange("Hall of Fame updated"));
+        EventFlags = new EventFlagsViewModel(sav, () => NoteChange("Event flags updated"));
+    }
+
+    /// <summary>
     /// Everything the palette can reach. Rebuilt when a save opens, because the boxes
     /// and several destinations only exist once there is one.
     /// </summary>
@@ -143,16 +164,21 @@ public partial class MainWindowViewModel : ViewModelBase
             new("Search & Database", "Navigate", () => GoTo("search")),
         };
 
-        void Tab(string title, string group, string view, Action select) =>
-            entries.Add(new PaletteEntry(title, group, () => GoTo(view, select)));
+        // A destination the save cannot offer is worse than a missing one: it promises
+        // something and then explains itself away.
+        void Tab(string title, string group, string view, Action select, bool available = true)
+        {
+            if (available)
+                entries.Add(new PaletteEntry(title, group, () => GoTo(view, select)));
+        }
 
-        Tab("Bag / Items", "Trainer & Bag", "save", () => TrainerTab = 0);
-        Tab("Appearance & Style", "Trainer & Bag", "save", () => TrainerTab = 1);
-        Tab("Ride abilities", "Trainer & Bag", "save", () => TrainerTab = 2);
-        Tab("Gyms, Titans & Team Star", "Trainer & Bag", "save", () => TrainerTab = 3);
-        Tab("Badges", "Trainer & Bag", "save", () => TrainerTab = 3);
-        Tab("Blueberry Perks", "Trainer & Bag", "save", () => TrainerTab = 4);
-        Tab("Trainer Records", "Trainer & Bag", "save", () => TrainerTab = 5);
+        Tab("Bag / Items", "Trainer & Bag", "save", () => TrainerTab = 0, Bag?.HasPouches ?? false);
+        Tab("Appearance & Style", "Trainer & Bag", "save", () => TrainerTab = 1, Style?.IsSupported ?? false);
+        Tab("Ride abilities", "Trainer & Bag", "save", () => TrainerTab = 2, Trainer?.HasRideUpgrades ?? false);
+        Tab("Gyms, Titans & Team Star", "Trainer & Bag", "save", () => TrainerTab = 3, Trainer?.HasBadges ?? false);
+        Tab("Badges", "Trainer & Bag", "save", () => TrainerTab = 3, Trainer?.HasBadges ?? false);
+        Tab("Blueberry Perks", "Trainer & Bag", "save", () => TrainerTab = 4, Blueberry?.IsSupported ?? false);
+        Tab("Trainer Records", "Trainer & Bag", "save", () => TrainerTab = 5, Records?.IsSupported ?? false);
 
         Tab("Batch Edit", "Tools", "tools", () => ToolsTab = 0);
         Tab("Team Analysis", "Tools", "tools", () => ToolsTab = 1);
@@ -162,19 +188,21 @@ public partial class MainWindowViewModel : ViewModelBase
         Tab("Integrity audit", "Tools", "tools", () => ToolsTab = 3);
         Tab("Box Report", "Tools", "tools", () => ToolsTab = 4);
 
-        Tab("Daycare", "Game Data", "gamedata", () => GameDataTab = 0);
-        Tab("Gift Album", "Game Data", "gamedata", () => GameDataTab = 1);
-        Tab("Fusions", "Game Data", "gamedata", () => GameDataTab = 2);
-        Tab("Hall of Fame", "Game Data", "gamedata", () => GameDataTab = 3);
-        Tab("Mail", "Game Data", "gamedata", () => GameDataTab = 4);
-        Tab("Extras", "Game Data", "gamedata", () => GameDataTab = 5);
+        Tab("Daycare", "Game Data", "gamedata", () => GameDataTab = 0, Daycare?.IsSupported ?? false);
+        Tab("Gift Album", "Game Data", "gamedata", () => GameDataTab = 1, GiftAlbum?.IsSupported ?? false);
+        Tab("Fusions", "Game Data", "gamedata", () => GameDataTab = 2, Fusions?.IsSupported ?? false);
+        Tab("Hall of Fame", "Game Data", "gamedata", () => GameDataTab = 3, HallOfFame?.IsSupported ?? false);
+        Tab("Mail", "Game Data", "gamedata", () => GameDataTab = 4, Mail?.IsSupported ?? false);
+        Tab("Extras", "Game Data", "gamedata", () => GameDataTab = 5, Extras?.IsSupported ?? false);
 
-        Tab("Active raid dens", "Tera Raids", "raids", () => RaidsTab = 0);
-        Tab("Event raid records", "Tera Raids", "raids", () => RaidsTab = 1);
-        Tab("Raid progression", "Tera Raids", "raids", () => RaidsTab = 2);
+        var isSv = _sav is SAV9SV;
+        Tab("Max Raid dens", "Raids", "raids", () => RaidsTab = 0, _sav is SAV8SWSH);
+        Tab("Active raid dens", "Tera Raids", "raids", () => RaidsTab = 0, isSv);
+        Tab("Event raid records", "Tera Raids", "raids", () => RaidsTab = 1, isSv);
+        Tab("Raid progression", "Tera Raids", "raids", () => RaidsTab = 2, isSv);
 
-        Tab("Event Flags", "Flags", "flags", () => FlagsTab = 0);
-        Tab("Save Blocks", "Flags", "flags", () => FlagsTab = 1);
+        Tab("Event Flags", "Flags", "flags", () => FlagsTab = 0, EventFlags?.IsSupported ?? false);
+        Tab("Save Blocks", "Flags", "flags", () => FlagsTab = 1, _sav is ISCBlockArray);
 
         entries.Add(new PaletteEntry("Export save", "Action", () => ExportRequested?.Invoke()));
         entries.Add(new PaletteEntry("Revert to saved file", "Action", RequestRevert));
@@ -743,6 +771,7 @@ public partial class MainWindowViewModel : ViewModelBase
             GiftDb = null;
             Preview.Load(null);
             LoadRideSlot();
+            BuildOptionalEditors(sav);
             BuildPaletteEntries();
             CurrentView = "boxes";
             return true;

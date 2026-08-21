@@ -96,7 +96,7 @@
         <!-- Bag and the trainer's look share the right column -->
         <Border Grid.Column="1" Classes="card">
             <TabControl SelectedIndex="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).TrainerTab, Mode=TwoWay}" Padding="0,4,0,0">
-            <TabItem Header="Bag">
+            <TabItem Header="Bag" IsVisible="{Binding Bag.HasPouches}">
             <DockPanel DataContext="{Binding Bag}" x:DataType="vm:BagViewModel" Margin="2,8,2,2">
                 <TextBlock DockPanel.Dock="Top" Classes="fieldLabel" IsVisible="{Binding !HasPouches}"
                            Text="This save format does not expose an editable inventory."/>
@@ -160,7 +160,7 @@
             </TabItem>
 
             <!-- ── Trainer look: throw style, outfit, appearance, club perks ── -->
-            <TabItem Header="Appearance &amp; Style">
+            <TabItem Header="Appearance &amp; Style" IsVisible="{Binding Style.IsSupported}">
             <DockPanel DataContext="{Binding Style}" x:DataType="vm:TrainerStyleViewModel"
                        Margin="2,8,2,2">
                 <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}"
@@ -242,7 +242,7 @@
             </TabItem>
 
             <!-- ── The ride legendary's abilities ── -->
-            <TabItem Header="Ride">
+            <TabItem Header="Ride" IsVisible="{Binding Trainer.HasRideUpgrades}">
             <DockPanel DataContext="{Binding Trainer}" x:DataType="vm:TrainerEditorViewModel"
                        Margin="2,8,2,2">
                 <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !HasRideUpgrades}"
@@ -274,7 +274,7 @@
             </TabItem>
 
             <!-- ── Gym / Titan / Team Star clears ── -->
-            <TabItem Header="Gyms">
+            <TabItem Header="Gyms" IsVisible="{Binding Trainer.HasBadges}">
             <DockPanel DataContext="{Binding Trainer}" x:DataType="vm:TrainerEditorViewModel"
                        Margin="2,8,2,2">
                 <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !HasBadges}"
@@ -307,7 +307,7 @@
             </TabItem>
 
             <!-- ── Blueberry Academy: club perks and quest tallies ── -->
-            <TabItem Header="Blueberry Perks">
+            <TabItem Header="Blueberry Perks" IsVisible="{Binding Blueberry.IsSupported}">
             <DockPanel DataContext="{Binding Blueberry}" x:DataType="vm:BlueberryViewModel"
                        Margin="2,8,2,2">
                 <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}"
@@ -352,7 +352,7 @@
             </TabItem>
 
             <!-- ── Lifetime trainer stat records ── -->
-            <TabItem Header="Records">
+            <TabItem Header="Records" IsVisible="{Binding Records.IsSupported}">
             <DockPanel DataContext="{Binding Records}" x:DataType="vm:TrainerRecordsViewModel"
                        Margin="2,8,2,2">
                 <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}"

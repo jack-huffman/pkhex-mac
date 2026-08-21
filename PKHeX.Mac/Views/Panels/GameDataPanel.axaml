@@ -9,7 +9,7 @@
         <TabControl SelectedIndex="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).GameDataTab, Mode=TwoWay}" Padding="0,6,0,0">
 
             <!-- ── Daycare ── -->
-            <TabItem Header="Daycare">
+            <TabItem Header="Daycare" IsVisible="{Binding Daycare.IsSupported}">
             <DockPanel DataContext="{Binding Daycare}" x:DataType="vm:DaycareViewModel"
                        Margin="2,8,2,2">
                 <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}"
@@ -111,7 +111,7 @@
 
             <!-- ── Mystery Gift album ── -->
             <!-- ── Pokémon parked by an active fusion ── -->
-            <TabItem Header="Fusions">
+            <TabItem Header="Fusions" IsVisible="{Binding Fusions.IsSupported}">
             <DockPanel DataContext="{Binding Fusions}" x:DataType="vm:FusionViewModel" Margin="2,8,2,2">
                 <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}"
                            FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
@@ -163,7 +163,7 @@
             </DockPanel>
             </TabItem>
 
-            <TabItem Header="Gift Album">
+            <TabItem Header="Gift Album" IsVisible="{Binding GiftAlbum.IsSupported}">
             <DockPanel DataContext="{Binding GiftAlbum}" x:DataType="vm:GiftAlbumViewModel"
                        Margin="2,8,2,2">
                 <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}"
@@ -240,7 +240,7 @@
             </TabItem>
 
             <!-- ── Hall of Fame ── -->
-            <TabItem Header="Hall of Fame">
+            <TabItem Header="Hall of Fame" IsVisible="{Binding HallOfFame.IsSupported}">
             <DockPanel DataContext="{Binding HallOfFame}" x:DataType="vm:HallOfFameViewModel"
                        Margin="2,8,2,2">
                 <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}"
@@ -306,7 +306,7 @@
             </TabItem>
 
             <!-- ── Mail ── -->
-            <TabItem Header="Mail">
+            <TabItem Header="Mail" IsVisible="{Binding Mail.IsSupported}">
             <DockPanel DataContext="{Binding Mail}" x:DataType="vm:MailViewModel"
                        Margin="2,8,2,2">
                 <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}"
@@ -386,7 +386,7 @@
             </TabItem>
 
             <!-- ── Generic per-generation structures ── -->
-            <TabItem Header="Extras">
+            <TabItem Header="Extras" IsVisible="{Binding Extras.IsSupported}">
             <DockPanel DataContext="{Binding Extras}" x:DataType="vm:GameExtrasViewModel"
                        Margin="2,8,2,2">
                 <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}"
