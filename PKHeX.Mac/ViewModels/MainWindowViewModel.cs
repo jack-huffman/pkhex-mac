@@ -245,6 +245,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private BlueberryViewModel? _blueberry;
     [ObservableProperty] private TrainerRecordsViewModel? _records;
     [ObservableProperty] private DaycareViewModel? _daycare;
+    [ObservableProperty] private FusionViewModel? _fusions;
     [ObservableProperty] private GiftAlbumViewModel? _giftAlbum;
     [ObservableProperty] private GameExtrasViewModel? _extras;
     [ObservableProperty] private MailViewModel? _mail;
@@ -325,6 +326,7 @@ public partial class MainWindowViewModel : ViewModelBase
         if (view == "gamedata" && _sav is not null)
         {
             Daycare ??= BuildDaycare(_sav);
+            Fusions ??= BuildFusions(_sav);
             if (GiftAlbum is null)
             {
                 StatusText = "Reading the Mystery Gift album…";
@@ -382,6 +384,23 @@ public partial class MainWindowViewModel : ViewModelBase
             Preview.Load(null);
         CurrentView = view;
         RefreshTargetSlotText();
+    }
+
+    /// <summary>
+    /// Builds the fusion-slot view, wiring extraction to the selected box slot so a
+    /// parked donor can be recovered without unfusing in-game.
+    /// </summary>
+    private FusionViewModel BuildFusions(SaveFile sav)
+    {
+        var vm = new FusionViewModel(sav, _strings, message => NoteChange(message));
+        vm.WriteSelectedSlot = pk =>
+        {
+            if (_selected is null)
+                return;
+            WriteSlot(_selected, pk);
+            RefreshSlotViews();
+        };
+        return vm;
     }
 
     /// <summary>

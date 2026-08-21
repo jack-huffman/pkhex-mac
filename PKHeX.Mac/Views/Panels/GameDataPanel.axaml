@@ -110,6 +110,59 @@
             </TabItem>
 
             <!-- ── Mystery Gift album ── -->
+            <!-- ── Pokémon parked by an active fusion ── -->
+            <TabItem Header="Fusions">
+            <DockPanel DataContext="{Binding Fusions}" x:DataType="vm:FusionViewModel" Margin="2,8,2,2">
+                <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !IsSupported}"
+                           FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                           Text="This save format has no fusion slots."/>
+
+                <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,12"
+                            IsVisible="{Binding IsSupported}">
+                    <TextBlock Text="{Binding Summary}"
+                               FontSize="{StaticResource FontBody}" FontWeight="SemiBold"/>
+                    <TextBlock FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                               Text="Fusing parks the donor Pokémon in its own block rather than a box, where nothing else can see it. Copying it out leaves the fusion intact — clearing the slot while the fused form still exists would strand it."/>
+                    <TextBlock Text="{Binding Status}" Classes="error"
+                               IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                </StackPanel>
+
+                <ScrollViewer IsVisible="{Binding IsSupported}">
+                    <ItemsControl ItemsSource="{Binding Slots}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:FusionSlotViewModel">
+                                <Border Classes="card" Padding="12" Margin="0,0,0,8">
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                        <Image Grid.Column="0" Source="{Binding Sprite}"
+                                               Width="68" Height="56"
+                                               RenderOptions.BitmapInterpolationMode="None"/>
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Label}"
+                                                       FontSize="{StaticResource FontMicro}" Classes="secondary"/>
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <TextBlock Text="{Binding SpeciesName}"
+                                                           FontSize="{StaticResource FontBody}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="✦" FontSize="{StaticResource FontBody}"
+                                                           IsVisible="{Binding IsShiny}"
+                                                           Foreground="{DynamicResource MeterEvBrush}"/>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding DetailText}"
+                                                       FontSize="{StaticResource FontMicro}" Classes="secondary"/>
+                                        </StackPanel>
+                                        <Button Grid.Column="2" Content="Copy to selected slot"
+                                                FontSize="{StaticResource FontBody}"
+                                                VerticalAlignment="Center"
+                                                IsEnabled="{Binding !IsEmpty}"
+                                                Command="{Binding CopyToBoxCommand}"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+            </TabItem>
+
             <TabItem Header="Gift Album">
             <DockPanel DataContext="{Binding GiftAlbum}" x:DataType="vm:GiftAlbumViewModel"
                        Margin="2,8,2,2">
