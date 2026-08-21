@@ -110,6 +110,12 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>What is about to be written, compared against the file on disk.</summary>
     public ExportReviewViewModel Review { get; }
 
+    /// <summary>Persisted preferences, owned by the window and shared for recording.</summary>
+    public AppSettings? Settings { get; set; }
+
+    /// <summary>Asks the window to flush settings after something worth remembering.</summary>
+    public Action? SettingsChanged { get; set; }
+
     // ---- Command palette ----
 
     /// <summary>Type-to-go navigation; see <see cref="BuildPaletteEntries"/>.</summary>
@@ -777,6 +783,16 @@ public partial class MainWindowViewModel : ViewModelBase
             Preview.Load(null);
             LoadRideSlot();
             BuildOptionalEditors(sav);
+            if (Settings is { } settings)
+            {
+                settings.NoteOpened(path);
+                // Only restore the box if this is the same save it was recorded against.
+                if (string.Equals(settings.LastSavePath, path, StringComparison.OrdinalIgnoreCase)
+                    && (uint)settings.LastBox < sav.BoxCount)
+                    CurrentBox = settings.LastBox;
+                settings.LastSavePath = path;
+                SettingsChanged?.Invoke();
+            }
             BuildPaletteEntries();
             CurrentView = "boxes";
             return true;
@@ -865,6 +881,11 @@ public partial class MainWindowViewModel : ViewModelBase
         CurrentBoxName = (uint)value < BoxNames.Count ? BoxNames[value] : $"Box {value + 1}";
         LoadBox(value);
         CurrentView = "boxes"; // clicking a box in the sidebar returns to the box view
+        if (Settings is { } settings)
+        {
+            settings.LastBox = value;
+            SettingsChanged?.Invoke();
+        }
     }
 
     private void LoadBox(int box)

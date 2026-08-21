@@ -12,6 +12,7 @@ using Avalonia.Interactivity;
 using Avalonia.Threading;
 using Avalonia.Platform.Storage;
 using Avalonia.VisualTree;
+using PKHeX.Mac.Services;
 using PKHeX.Mac.ViewModels;
 
 namespace PKHeX.Mac.Views;
@@ -39,11 +40,18 @@ public partial class MainWindow : Window
         SizeChanged += (_, _) => RefreshBoxLayout();
     }
 
+    /// <summary>Window bounds, last view and recent saves, kept between launches.</summary>
+    private readonly AppSettings _settings = AppSettings.Load();
+
     private void OnWindowLoaded(object? sender, RoutedEventArgs e)
     {
         // DataContext is assigned after construction, so this cannot be set up earlier.
         VM.LayoutChanged = RefreshBoxLayout;
         VM.ExportRequested = () => _ = ExportAsync();
+        RestoreWindow();
+        VM.Settings = _settings;
+        VM.SettingsChanged = () => _settings.Save();
+        RebuildRecentMenu();
         RefreshBoxLayout();
         _ = VM.CheckForUpstreamUpdateAsync();
     }
@@ -84,6 +92,112 @@ public partial class MainWindow : Window
     {
         if (sender is Button { DataContext: BoxProblemViewModel problem })
             problem.Select();
+    }
+
+    /// <summary>Opens a save by path, used by the Open Recent menu.</summary>
+    private async void OpenPath(string path)
+    {
+        try
+        {
+            if (!VM.LoadSave(path, out var error))
+            {
+                await ShowError("Could Not Open Save", error);
+                // A file that no longer opens should stop being offered.
+                _settings.Recent.Remove(path);
+                _settings.Save();
+            }
+            RebuildRecentMenu();
+        }
+        catch (Exception ex)
+        {
+            await ShowError("Error", ex.Message);
+        }
+    }
+
+    // ---- Remembering where you were ----
+
+    private void RestoreWindow()
+    {
+        if (!_settings.HasWindowBounds)
+            return;
+        // Only restore a position that still lands on a screen; an external display
+        // that is no longer attached would otherwise put the window out of reach.
+        if (!double.IsNaN(_settings.WindowX) && !double.IsNaN(_settings.WindowY)
+            && IsOnAScreen(_settings.WindowX, _settings.WindowY))
+        {
+            Position = new PixelPoint((int)_settings.WindowX, (int)_settings.WindowY);
+        }
+        Width = _settings.WindowWidth;
+        Height = _settings.WindowHeight;
+        if (_settings.WindowMaximized)
+            WindowState = WindowState.Maximized;
+    }
+
+    private bool IsOnAScreen(double x, double y)
+    {
+        foreach (var screen in Screens.All)
+        {
+            if (screen.Bounds.Contains(new PixelPoint((int)x, (int)y)))
+                return true;
+        }
+        return false;
+    }
+
+    private void RememberWindow()
+    {
+        _settings.WindowMaximized = WindowState == WindowState.Maximized;
+        if (WindowState == WindowState.Normal)
+        {
+            _settings.WindowWidth = Width;
+            _settings.WindowHeight = Height;
+            _settings.WindowX = Position.X;
+            _settings.WindowY = Position.Y;
+        }
+        _settings.LastView = VM.CurrentView;
+        _settings.Save();
+    }
+
+    /// <summary>Fills the Open Recent submenu from the saves that have been opened.</summary>
+    private void RebuildRecentMenu()
+    {
+        var menu = NativeMenu.GetMenu(this);
+        var recentItem = FindRecentMenuItem(menu);
+        if (recentItem?.Menu is not { } submenu)
+            return;
+
+        submenu.Items.Clear();
+        _settings.PruneMissing();
+        if (_settings.Recent.Count == 0)
+        {
+            submenu.Items.Add(new NativeMenuItem("No recent saves") { IsEnabled = false });
+            return;
+        }
+        foreach (var path in _settings.Recent)
+        {
+            var item = new NativeMenuItem(Path.GetFileName(path))
+            {
+                ToolTip = path,
+            };
+            var target = path;
+            item.Click += (_, _) => OpenPath(target);
+            submenu.Items.Add(item);
+        }
+    }
+
+    private static NativeMenuItem? FindRecentMenuItem(NativeMenu? menu)
+    {
+        if (menu is null)
+            return null;
+        foreach (var item in menu.Items)
+        {
+            if (item is not NativeMenuItem entry)
+                continue;
+            if (entry.Header == "Open Recent")
+                return entry;
+            if (FindRecentMenuItem(entry.Menu) is { } found)
+                return found;
+        }
+        return null;
     }
 
     // ---- Command palette ----
@@ -144,6 +258,9 @@ public partial class MainWindow : Window
 
     protected override void OnClosing(WindowClosingEventArgs e)
     {
+        // Recorded before the unsaved-changes guard, so the window is remembered even
+        // when the close is then cancelled.
+        RememberWindow();
         if (!_closeConfirmed && VM.HasPendingWork)
         {
             // Editing happens against a copy in memory, so closing would silently
@@ -166,6 +283,9 @@ public partial class MainWindow : Window
             return;
         life.ShutdownRequested += (_, e) =>
         {
+            // Cmd+Q never reaches OnClosing, so the window state has to be recorded here
+            // as well or quitting the usual way would forget it.
+            RememberWindow();
             if (_closeConfirmed || !VM.HasPendingWork)
                 return;
             e.Cancel = true;
@@ -272,6 +392,8 @@ public partial class MainWindow : Window
                 return;
             if (!VM.LoadSave(path, out var error))
                 await ShowError("Could Not Open Save", error);
+            else
+                RebuildRecentMenu();
         }
         catch (Exception ex)
         {

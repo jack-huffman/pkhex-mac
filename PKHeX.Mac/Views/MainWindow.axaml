@@ -26,6 +26,9 @@
                     <NativeMenuItem Header="Go to…" Gesture="Cmd+K" Click="OnPaletteOpenClicked"/>
                     <NativeMenuItemSeparator/>
                     <NativeMenuItem Header="Open Save File…" Gesture="Cmd+O" Click="OnOpenClicked"/>
+                    <NativeMenuItem Header="Open Recent">
+                        <NativeMenu/>
+                    </NativeMenuItem>
                     <NativeMenuItem Header="Export Save As…" Gesture="Cmd+S" Click="OnExportClicked"/>
                     <NativeMenuItem Header="Revert to Saved File…" Click="OnRevertAllMenuClicked"/>
                     <NativeMenuItemSeparator/>

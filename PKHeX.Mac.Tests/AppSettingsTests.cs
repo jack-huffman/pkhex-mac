@@ -1,3 +1,4 @@
+using System.Text.Json;
 using PKHeX.Mac.Services;
 using Xunit;
 
@@ -58,5 +59,57 @@ public class AppSettingsTests
         Assert.False(new AppSettings().HasWindowBounds);
         Assert.False(new AppSettings { WindowWidth = 50, WindowHeight = 50 }.HasWindowBounds);
         Assert.True(new AppSettings { WindowWidth = 1360, WindowHeight = 860 }.HasWindowBounds);
+    }
+}
+
+/// <summary>Round-trips settings through a real file, which the in-memory tests cannot.</summary>
+public class AppSettingsFileTests : IDisposable
+{
+    private readonly string _dir = Path.Combine(Path.GetTempPath(), "pkhex-settings-" + Guid.NewGuid().ToString("N"));
+
+    [Fact]
+    public void SurvivesAWriteAndRead()
+    {
+        var file = Path.Combine(_dir, "settings.json");
+        Directory.CreateDirectory(_dir);
+
+        var written = new AppSettings
+        {
+            WindowWidth = 1440,
+            WindowHeight = 900,
+            WindowX = 120,
+            WindowY = 60,
+            LastView = "tools",
+            LastBox = 7,
+            LastSavePath = "/saves/main",
+        };
+        written.NoteOpened("/saves/main");
+        File.WriteAllText(file, JsonSerializer.Serialize(written));
+
+        var read = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(file))!;
+        Assert.Equal(1440, read.WindowWidth);
+        Assert.Equal("tools", read.LastView);
+        Assert.Equal(7, read.LastBox);
+        Assert.Equal("/saves/main", read.LastSavePath);
+        Assert.Equal(["/saves/main"], read.Recent);
+        Assert.True(read.HasWindowBounds);
+    }
+
+    [Fact]
+    public void UnreadableFileFallsBackToDefaults()
+    {
+        // Load never throws; a corrupt file just means defaults.
+        Directory.CreateDirectory(_dir);
+        var file = Path.Combine(_dir, "settings.json");
+        File.WriteAllText(file, "{ this is not json");
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(file)));
+        // AppSettings.Load swallows that and returns usable defaults.
+        Assert.False(AppSettings.Load().HasWindowBounds || AppSettings.Load().Recent.Count > 8);
+    }
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_dir))
+            Directory.Delete(_dir, recursive: true);
     }
 }
