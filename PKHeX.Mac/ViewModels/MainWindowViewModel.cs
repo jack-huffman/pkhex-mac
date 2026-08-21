@@ -42,40 +42,35 @@ public partial class MainWindowViewModel : ViewModelBase
             PartySlots.Add(new SlotViewModel(-1, i));
     }
 
-    // ---- Box grid sizing ----
-
-    // 94x82 is the floor; 136x112 the ceiling, because that is the size sprites are
-    // rendered at and past it they would only be upscaled. They were being displayed
-    // at the floor regardless of how much room there was.
-    private const double MinSlotW = 94, MinSlotH = 82, MaxSlotW = 136, MaxSlotH = 112;
-
-    [ObservableProperty] private double _slotWidth = MinSlotW;
-    [ObservableProperty] private double _slotHeight = MinSlotH;
-
-    /// <summary>Facts about the current box, shown beneath the grid when there is room.</summary>
-    public BoxInsightsViewModel BoxInsights { get; } = new();
+    // ---- Box grid layout ----
 
     /// <summary>Raised when something other than a resize changes the space available.</summary>
     public Action? LayoutChanged { get; set; }
 
     /// <summary>
-    /// Sizes the box grid to the width available. Height is deliberately left alone:
-    /// the grid takes the width it can get, and the vertical room left over belongs to
-    /// whatever sits beneath it.
+    /// Works out whether the insights panel fits beneath the grid.
     /// </summary>
+    /// <remarks>
+    /// Slot size is deliberately fixed. The pixel sprites are authored at exactly 68x56,
+    /// which is the sprite box in a 94x82 slot, so they draw 1:1 and stay crisp. Growing
+    /// the slot would either upscale that art with visible blockiness or leave it at
+    /// native size while the Gen 9 species -- which only exist as 512x512 renders --
+    /// filled the larger box, so the two families would disagree in size. The art
+    /// decides the slot, not the window.
+    /// </remarks>
     public void UpdateBoxLayout(double contentWidth, double contentHeight)
     {
-        var usable = contentWidth - 28 - 24;      // scroll-view and card padding
-        if (usable <= 0)
+        if (contentHeight <= 0)
             return;
-        var width = Math.Clamp(Math.Floor(usable / 6), MinSlotW, MaxSlotW);
-        SlotHeight = Math.Round(Math.Min(width * MinSlotH / MinSlotW, MaxSlotH));
-        SlotWidth = Math.Round(Math.Min(SlotHeight * MinSlotW / MinSlotH, width));
-
-        // Party card, box header, padding and status line, plus the grid itself.
-        var used = 150 + (HasParty ? SlotHeight + 44 : 0) + (SlotHeight * 5) + 60;
+        // Party card, box header, padding, status line, and the five rows of slots.
+        const double slotHeight = 82;
+        var used = 150 + (HasParty ? slotHeight + 44 : 0) + (slotHeight * 5) + 60;
         BoxInsights.HasRoom = contentHeight - used >= 170;
     }
+
+    /// <summary>Facts about the current box, shown beneath the grid when there is room.</summary>
+    public BoxInsightsViewModel BoxInsights { get; } = new();
+
 
     /// <summary>Whether the in-memory save differs from the file on disk.</summary>
     public SaveStateViewModel SaveState { get; } = new();

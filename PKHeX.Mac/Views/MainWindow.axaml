@@ -95,8 +95,7 @@
         <DataTemplate x:Key="SlotTemplate" x:DataType="vm:SlotViewModel">
             <Border Classes="slot" Classes.selected="{Binding IsSelected}"
                     Classes.dragover="{Binding IsDragOver}"
-                    Width="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).SlotWidth}"
-                    Height="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).SlotHeight}"
+                    Width="94" Height="82"
                     PointerPressed="OnSlotPressed"
                     PointerMoved="OnSlotPointerMoved"
                     PointerReleased="OnSlotPointerReleased"
@@ -116,6 +115,7 @@
                     </ContextMenu>
                 </Border.ContextMenu>
                 <Panel>
+                    <!-- 68x56 is the native size of the pixel art, so it draws 1:1. -->
                     <Image Source="{Binding Sprite}" Width="68" Height="56" Margin="0,2,0,0"
                            VerticalAlignment="Top" HorizontalAlignment="Center"
                            RenderOptions.BitmapInterpolationMode="None"/>

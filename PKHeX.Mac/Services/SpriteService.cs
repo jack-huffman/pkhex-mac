@@ -362,11 +362,49 @@ public static class SpriteService
 
     private static Bitmap? HiResScaledToSlot(ushort species, byte form, EntityContext context, bool shiny)
     {
+        // A render re-framed to the pixel-art convention needs no scaling and frames
+        // identically to the pixel sprites beside it. See scripts/normalize-slot-sprites.py:
+        // raw renders fill anywhere from 38% to 96% of their canvas, so fitting them into
+        // a slot made them disagree in size with each other and with the pixel art.
+        if (PrefersFormArtwork(species, form) is false && LoadSlotRender(species, shiny) is { } framed)
+            return framed;
+
         // For alternate forms only a correctly-mapped form render is acceptable;
         // base-species art would show the wrong appearance in the box.
         var full = LoadHiResForm(species, form, context, shiny)
             ?? (PrefersFormArtwork(species, form) ? null : LoadHiRes(species, shiny));
         return ScaleToSlot(full, $"hr:{species}:{form}:{shiny}");
+    }
+
+    /// <summary>A render already re-framed to the 68x56 slot convention, if one exists.</summary>
+    private static Bitmap? LoadSlotRender(ushort species, bool shiny)
+    {
+        if (HiResDir.Value is not { } dir)
+            return null;
+        var key = $"slot:{species}:{shiny}";
+        if (Cache.TryGetValue(key, out var cached))
+            return cached;
+
+        var path = shiny
+            ? System.IO.Path.Combine(dir, "slot", "shiny", $"{species}.png")
+            : System.IO.Path.Combine(dir, "slot", $"{species}.png");
+        if (!System.IO.File.Exists(path) && shiny)
+            path = System.IO.Path.Combine(dir, "slot", $"{species}.png");
+
+        Bitmap? bmp = null;
+        if (System.IO.File.Exists(path))
+        {
+            try
+            {
+                bmp = new Bitmap(path);
+            }
+            catch
+            {
+                bmp = null;
+            }
+        }
+        Cache[key] = bmp;
+        return bmp;
     }
 
     public static Bitmap? GetBallSprite(byte ball) =>
