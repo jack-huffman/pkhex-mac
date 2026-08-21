@@ -68,6 +68,39 @@ public partial class MainWindowViewModel : ViewModelBase
         BoxInsights.HasRoom = contentHeight - used >= 170;
     }
 
+    /// <summary>
+    /// The ride legendary, presented as an ordinary slot beneath the boxes.
+    /// </summary>
+    /// <remarks>
+    /// It is universal to Scarlet and Violet and always present once obtained, so it
+    /// belongs on the storage screen rather than behind a tab. Treating it as a slot
+    /// rather than a card means clicking it loads the inspector and Apply writes it
+    /// back, with no copying in and out.
+    /// </remarks>
+    public ObservableCollection<SlotViewModel> RideSlots { get; } = [];
+
+    [ObservableProperty] private bool _hasRideSlot;
+    [ObservableProperty] private string _rideLabel = string.Empty;
+
+    private void LoadRideSlot()
+    {
+        RideSlots.Clear();
+        HasRideSlot = _sav is not null && RideLegendary.IsSupported(_sav);
+        if (!HasRideSlot || _sav is null)
+            return;
+
+        RideLabel = _sav.Version switch
+        {
+            GameVersion.SL => "KORAIDON · YOUR RIDE",
+            GameVersion.VL => "MIRAIDON · YOUR RIDE",
+            _ => "YOUR RIDE",
+        };
+        // Box index one past the last reachable box marks it as the reserved slot.
+        var slot = new SlotViewModel(_sav.BoxCount, 0);
+        slot.Update(RideLegendary.Read(_sav), _strings);
+        RideSlots.Add(slot);
+    }
+
     /// <summary>Facts about the current box, shown beneath the grid when there is room.</summary>
     public BoxInsightsViewModel BoxInsights { get; } = new();
 
@@ -160,7 +193,13 @@ public partial class MainWindowViewModel : ViewModelBase
         PKM original;
         try
         {
-            if (!slot.IsParty)
+            if (IsRideSlot(slot))
+            {
+                // The reserved slot is past the last box, so read it the same way we
+                // read the live one.
+                original = RideLegendary.Read(_pristine) ?? _pristine.BlankPKM;
+            }
+            else if (!slot.IsParty)
             {
                 original = _pristine.GetBoxSlotAtIndex(slot.Box, slot.Slot);
             }
@@ -246,7 +285,6 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private TrainerRecordsViewModel? _records;
     [ObservableProperty] private DaycareViewModel? _daycare;
     [ObservableProperty] private FusionViewModel? _fusions;
-    [ObservableProperty] private RideLegendaryViewModel? _ride;
     [ObservableProperty] private GiftAlbumViewModel? _giftAlbum;
     [ObservableProperty] private GameExtrasViewModel? _extras;
     [ObservableProperty] private MailViewModel? _mail;
@@ -328,7 +366,6 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             Daycare ??= BuildDaycare(_sav);
             Fusions ??= BuildFusions(_sav);
-            Ride ??= BuildRide(_sav);
             if (GiftAlbum is null)
             {
                 StatusText = "Reading the Mystery Gift album…";
@@ -386,24 +423,6 @@ public partial class MainWindowViewModel : ViewModelBase
             Preview.Load(null);
         CurrentView = view;
         RefreshTargetSlotText();
-    }
-
-    /// <summary>
-    /// Builds the ride-legendary view, wiring both directions of box transfer so the
-    /// stored Pokémon can be edited with the full inspector and put back.
-    /// </summary>
-    private RideLegendaryViewModel BuildRide(SaveFile sav)
-    {
-        var vm = new RideLegendaryViewModel(sav, _strings, NoteChange);
-        vm.ReadSelectedSlot = () => _selected?.Pokemon;
-        vm.WriteSelectedSlot = pk =>
-        {
-            if (_selected is null)
-                return;
-            WriteSlot(_selected, pk);
-            RefreshSlotViews();
-        };
-        return vm;
     }
 
     /// <summary>
@@ -741,6 +760,9 @@ public partial class MainWindowViewModel : ViewModelBase
         var selectedSlot = _selected is { IsParty: false } && _selectedBox == box ? _selected.Slot : -1;
         for (int i = 0; i < BoxSlots.Count; i++)
             BoxSlots[i].IsSelected = i == selectedSlot;
+        // The ride is not in any box, so a box change never owns its highlight.
+        foreach (var ride in RideSlots)
+            ride.IsSelected = ReferenceEquals(_selected, ride);
     }
 
     private void LoadParty()
@@ -758,6 +780,15 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         LoadBox(CurrentBox);
         LoadParty();
+        RefreshRideSlot();
+    }
+
+    /// <summary>Re-reads the reserved slot without rebuilding it, so selection survives.</summary>
+    private void RefreshRideSlot()
+    {
+        if (_sav is null || RideSlots.Count == 0)
+            return;
+        RideSlots[0].Update(RideLegendary.Read(_sav), _strings);
     }
 
     /// <summary>Reads the current contents of a slot from the save.</summary>
@@ -767,6 +798,10 @@ public partial class MainWindowViewModel : ViewModelBase
             return null;
         if (slot.IsParty)
             return slot.Slot < _sav.PartyCount ? _sav.GetPartySlotAtIndex(slot.Slot) : null;
+        // The ride legendary sits one box past the last the player can open, so the
+        // normal box accessor cannot reach it.
+        if (IsRideSlot(slot))
+            return RideLegendary.Read(_sav);
         return _sav.GetBoxSlotAtIndex(slot.Box, slot.Slot);
     }
 
@@ -781,11 +816,19 @@ public partial class MainWindowViewModel : ViewModelBase
             var index = Math.Min(slot.Slot, _sav.PartyCount);
             _sav.SetPartySlotAtIndex(pk, index);
         }
+        else if (IsRideSlot(slot))
+        {
+            RideLegendary.Write(_sav, pk);
+        }
         else
         {
             _sav.SetBoxSlotAtIndex(pk, slot.Box, slot.Slot);
         }
     }
+
+    /// <summary>True for the reserved slot holding the ride legendary.</summary>
+    private bool IsRideSlot(SlotViewModel slot) =>
+        _sav is not null && !slot.IsParty && slot.Box == _sav.BoxCount;
 
     // =====================================================================
     // Slot operations
@@ -797,7 +840,7 @@ public partial class MainWindowViewModel : ViewModelBase
         if (_selected is not null)
             _selected.IsSelected = false;
         _selected = slot;
-        _selectedBox = slot is null || slot.IsParty ? -1 : CurrentBox;
+        _selectedBox = slot is null || slot.IsParty ? -1 : slot.Box;
         if (slot is not null)
             slot.IsSelected = true;
         Detail.Load(slot?.Pokemon);
@@ -838,7 +881,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         else
         {
-            _sav.SetBoxSlotAtIndex(_sav.BlankPKM, slot.Box, slot.Slot);
+            WriteSlot(slot, _sav.BlankPKM);
         }
         RefreshSlotViews();
         if (_selected == slot)
@@ -895,7 +938,7 @@ public partial class MainWindowViewModel : ViewModelBase
             if (from.IsParty)
                 DeleteSlot(from);
             else
-                _sav.SetBoxSlotAtIndex(_sav.BlankPKM, from.Box, from.Slot);
+                WriteSlot(from, _sav.BlankPKM);
         }
         RefreshSlotViews();
         SelectSlot(to.IsParty ? PartySlots[to.Slot] : BoxSlots[to.Slot]);
@@ -1166,7 +1209,7 @@ public partial class MainWindowViewModel : ViewModelBase
         if (from.IsParty)
             DeleteSlot(from);
         else
-            _sav.SetBoxSlotAtIndex(_sav.BlankPKM, from.Box, from.Slot);
+            WriteSlot(from, _sav.BlankPKM);
         RefreshSlotViews();
         var name = (uint)moved.Species < _strings.specieslist.Length ? _strings.specieslist[moved.Species] : $"#{moved.Species}";
         StatusText = $"Moved {name} to {boxName}, slot {empty + 1}.";

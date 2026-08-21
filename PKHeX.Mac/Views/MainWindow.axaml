@@ -351,6 +351,24 @@
                                 </Border>
 
 
+                                <!-- The ride legendary. Universal to Scarlet and Violet
+                                     and kept in a box the game will not open, so it
+                                     lives here rather than behind a tab. It behaves like
+                                     any other slot: click it to edit in the inspector. -->
+                                <StackPanel Spacing="6" IsVisible="{Binding HasRideSlot}">
+                                    <TextBlock Classes="sectionTitle" Text="{Binding RideLabel}" Margin="4,0,0,0"/>
+                                    <Border Classes="card" Padding="12">
+                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                            <ItemsControl Grid.Column="0" ItemsSource="{Binding RideSlots}"
+                                                          ItemTemplate="{StaticResource SlotTemplate}"/>
+                                            <TextBlock Grid.Column="1" VerticalAlignment="Center"
+                                                       FontSize="{StaticResource FontMicro}" Classes="secondary"
+                                                       TextWrapping="Wrap"
+                                                       Text="Your ride, stored in a box the game keeps hidden. Select it to edit it like any other Pokémon; its traversal abilities live under Trainer &amp; Bag → Ride."/>
+                                        </Grid>
+                                    </Border>
+                                </StackPanel>
+
                                 <!-- What this box holds. All of it is otherwise only
                                      knowable by opening thirty slots one at a time. -->
                                 <StackPanel Spacing="6" IsVisible="{Binding BoxInsights.IsVisible}">
