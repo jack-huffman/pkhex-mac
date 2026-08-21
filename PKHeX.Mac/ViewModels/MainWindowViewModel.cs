@@ -185,13 +185,12 @@ public partial class MainWindowViewModel : ViewModelBase
         Tab("Blueberry Perks", "Trainer & Bag", "save", () => TrainerTab = 4, Blueberry?.IsSupported ?? false);
         Tab("Trainer Records", "Trainer & Bag", "save", () => TrainerTab = 5, Records?.IsSupported ?? false);
 
-        Tab("Batch Edit", "Tools", "tools", () => ToolsTab = 0);
-        Tab("Team Analysis", "Tools", "tools", () => ToolsTab = 1);
-        Tab("Type coverage", "Tools", "tools", () => ToolsTab = 1);
+        Tab("Integrity audit", "Tools", "tools", () => ToolsTab = 0);
+        Tab("Box Report", "Tools", "tools", () => ToolsTab = 1);
         Tab("Breeding planner", "Tools", "tools", () => ToolsTab = 2);
         Tab("Egg moves", "Tools", "tools", () => ToolsTab = 2);
-        Tab("Integrity audit", "Tools", "tools", () => ToolsTab = 3);
-        Tab("Box Report", "Tools", "tools", () => ToolsTab = 4);
+        Tab("Team Analysis", "Tools", "tools", () => ToolsTab = 3);
+        Tab("Type coverage", "Tools", "tools", () => ToolsTab = 3);
 
         Tab("Daycare", "Game Data", "gamedata", () => GameDataTab = 0, Daycare?.IsSupported ?? false);
         Tab("Gift Album", "Game Data", "gamedata", () => GameDataTab = 1, GiftAlbum?.IsSupported ?? false);
@@ -531,7 +530,6 @@ public partial class MainWindowViewModel : ViewModelBase
                 RefreshSlotViews();
                 NoteChange("Batch changes applied.");
             });
-            Tools.CurrentBox = CurrentBox;
         }
         if (view == "dex" && Dex is null && _sav is not null)
         {
