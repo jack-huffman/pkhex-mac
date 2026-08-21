@@ -10,7 +10,12 @@ namespace PKHeX.Mac.ViewModels;
 /// </summary>
 public partial class SlotViewModel : ObservableObject
 {
-    public int Box { get; }      // -1 for party
+    /// <summary>
+    /// Which box this slot belongs to; -1 for the party. Settable because a second box
+    /// can be shown below the first, so a slot's box is no longer implied by whichever
+    /// box is currently selected.
+    /// </summary>
+    public int Box { get; internal set; }      // -1 for party
     public int Slot { get; }
     public bool IsParty => Box < 0;
 

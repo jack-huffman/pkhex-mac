@@ -33,10 +33,16 @@ public partial class MainWindow : Window
         AddHandler(DragDrop.DropEvent, OnDrop);
         Loaded += OnWindowLoaded;
         HookShutdownRequest();
+        // The box grid sizes itself to the window, and the second box appears once
+        // there is room for it, so both need recomputing on every resize.
+        SizeChanged += (_, _) => RefreshBoxLayout();
     }
 
     private void OnWindowLoaded(object? sender, RoutedEventArgs e)
     {
+        // DataContext is assigned after construction, so this cannot be set up earlier.
+        VM.LayoutChanged = RefreshBoxLayout;
+        RefreshBoxLayout();
         _ = VM.CheckForUpstreamUpdateAsync();
     }
 
@@ -58,6 +64,18 @@ public partial class MainWindow : Window
     public void OnOpenButtonClicked(object? sender, RoutedEventArgs e) => _ = OpenAsync();
 
     public void OnExportClicked(object? sender, EventArgs e) => _ = ExportAsync();
+
+    /// <summary>
+    /// Hands the boxes column's dimensions to the view model. The inspector is a fixed
+    /// column, so subtracting it and the sidebar gives the space the grid actually has.
+    /// </summary>
+    private void RefreshBoxLayout()
+    {
+        var width = Bounds.Width - 238 - VM.InspectorWidth.Value;
+        var height = Bounds.Height - 46 - 26;      // drag strip and status line
+        if (width > 0 && height > 0)
+            VM.UpdateBoxLayout(width, height);
+    }
 
     // ---- Closing with unsaved edits ----
 

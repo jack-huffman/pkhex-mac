@@ -95,7 +95,8 @@
         <DataTemplate x:Key="SlotTemplate" x:DataType="vm:SlotViewModel">
             <Border Classes="slot" Classes.selected="{Binding IsSelected}"
                     Classes.dragover="{Binding IsDragOver}"
-                    Width="94" Height="82"
+                    Width="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).SlotWidth}"
+                    Height="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).SlotHeight}"
                     PointerPressed="OnSlotPressed"
                     PointerMoved="OnSlotPointerMoved"
                     PointerReleased="OnSlotPointerReleased"
@@ -348,6 +349,7 @@
                                         </ItemsControl>
                                     </StackPanel>
                                 </Border>
+
                             </StackPanel>
                         </StackPanel>
                     </ScrollViewer>

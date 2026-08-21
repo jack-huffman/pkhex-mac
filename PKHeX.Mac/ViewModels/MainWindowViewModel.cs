@@ -36,6 +36,34 @@ public partial class MainWindowViewModel : ViewModelBase
             PartySlots.Add(new SlotViewModel(-1, i));
     }
 
+    // ---- Box grid sizing ----
+
+    // 94x82 is the floor; 136x112 the ceiling, because that is the size sprites are
+    // rendered at and past it they would only be upscaled. They were being displayed
+    // at the floor regardless of how much room there was.
+    private const double MinSlotW = 94, MinSlotH = 82, MaxSlotW = 136, MaxSlotH = 112;
+
+    [ObservableProperty] private double _slotWidth = MinSlotW;
+    [ObservableProperty] private double _slotHeight = MinSlotH;
+
+    /// <summary>Raised when something other than a resize changes the space available.</summary>
+    public Action? LayoutChanged { get; set; }
+
+    /// <summary>
+    /// Sizes the box grid to the width available. Height is deliberately left alone:
+    /// the grid takes the width it can get, and the vertical room left over belongs to
+    /// whatever sits beneath it.
+    /// </summary>
+    public void UpdateBoxLayout(double contentWidth, double contentHeight)
+    {
+        var usable = contentWidth - 28 - 24;      // scroll-view and card padding
+        if (usable <= 0)
+            return;
+        var width = Math.Clamp(Math.Floor(usable / 6), MinSlotW, MaxSlotW);
+        SlotHeight = Math.Round(Math.Min(width * MinSlotH / MinSlotW, MaxSlotH));
+        SlotWidth = Math.Round(Math.Min(SlotHeight * MinSlotW / MinSlotH, width));
+    }
+
     /// <summary>Whether the in-memory save differs from the file on disk.</summary>
     public SaveStateViewModel SaveState { get; } = new();
 
@@ -126,7 +154,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             if (!slot.IsParty)
             {
-                original = _pristine.GetBoxSlotAtIndex(CurrentBox, slot.Slot);
+                original = _pristine.GetBoxSlotAtIndex(slot.Box, slot.Slot);
             }
             else if (slot.Slot < _pristine.PartyCount)
             {
@@ -265,6 +293,7 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(ShowBoxes));
         OnPropertyChanged(nameof(InspectorWidth));
         OnPropertyChanged(nameof(BoxListOpacity));
+        LayoutChanged?.Invoke();
     }
 
     [RelayCommand]
@@ -649,6 +678,7 @@ public partial class MainWindowViewModel : ViewModelBase
         for (int i = 0; i < BoxSlots.Count; i++)
         {
             var pk = _sav.GetBoxSlotAtIndex(box, i);
+            BoxSlots[i].Box = box;
             BoxSlots[i].Update(pk, _strings);
         }
         RefreshSelectionHighlight(box);
@@ -689,7 +719,7 @@ public partial class MainWindowViewModel : ViewModelBase
             return null;
         if (slot.IsParty)
             return slot.Slot < _sav.PartyCount ? _sav.GetPartySlotAtIndex(slot.Slot) : null;
-        return _sav.GetBoxSlotAtIndex(CurrentBox, slot.Slot);
+        return _sav.GetBoxSlotAtIndex(slot.Box, slot.Slot);
     }
 
     /// <summary>Writes a PKM into a slot (party writes are compacted).</summary>
@@ -705,7 +735,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         else
         {
-            _sav.SetBoxSlotAtIndex(pk, CurrentBox, slot.Slot);
+            _sav.SetBoxSlotAtIndex(pk, slot.Box, slot.Slot);
         }
     }
 
@@ -760,7 +790,7 @@ public partial class MainWindowViewModel : ViewModelBase
         }
         else
         {
-            _sav.SetBoxSlotAtIndex(_sav.BlankPKM, CurrentBox, slot.Slot);
+            _sav.SetBoxSlotAtIndex(_sav.BlankPKM, slot.Box, slot.Slot);
         }
         RefreshSlotViews();
         if (_selected == slot)
@@ -817,7 +847,7 @@ public partial class MainWindowViewModel : ViewModelBase
             if (from.IsParty)
                 DeleteSlot(from);
             else
-                _sav.SetBoxSlotAtIndex(_sav.BlankPKM, CurrentBox, from.Slot);
+                _sav.SetBoxSlotAtIndex(_sav.BlankPKM, from.Box, from.Slot);
         }
         RefreshSlotViews();
         SelectSlot(to.IsParty ? PartySlots[to.Slot] : BoxSlots[to.Slot]);
@@ -1063,7 +1093,7 @@ public partial class MainWindowViewModel : ViewModelBase
         var pk = ReadSlot(from);
         if (pk is null || pk.Species == 0)
             return;
-        if (!from.IsParty && targetBox == CurrentBox)
+        if (!from.IsParty && targetBox == from.Box)
             return; // same box: the grid drag already handles this
 
         int empty = -1;
@@ -1088,7 +1118,7 @@ public partial class MainWindowViewModel : ViewModelBase
         if (from.IsParty)
             DeleteSlot(from);
         else
-            _sav.SetBoxSlotAtIndex(_sav.BlankPKM, CurrentBox, from.Slot);
+            _sav.SetBoxSlotAtIndex(_sav.BlankPKM, from.Box, from.Slot);
         RefreshSlotViews();
         var name = (uint)moved.Species < _strings.specieslist.Length ? _strings.specieslist[moved.Species] : $"#{moved.Species}";
         StatusText = $"Moved {name} to {boxName}, slot {empty + 1}.";
