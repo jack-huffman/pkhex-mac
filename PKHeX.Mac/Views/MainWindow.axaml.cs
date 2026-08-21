@@ -285,7 +285,6 @@ public partial class MainWindow : Window
         session.ExportRequested = () => _ = ExportAsync();
         session.Settings = _settings;
         session.SettingsChanged = () => _settings.Save();
-        session.AttachPresets(_settings, () => _settings.Save());
         session.SaveState.PropertyChanged += (_, _) => _activeTab?.Refresh();
         session.OtherSaves = () => OtherSavesFor(session);
         session.AttachTransfer();

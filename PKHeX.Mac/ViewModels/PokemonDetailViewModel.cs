@@ -523,12 +523,6 @@ public partial class PokemonDetailViewModel : ObservableObject
     private static string Name(IReadOnlyList<string> list, int index) =>
         (uint)index < list.Count ? list[index] : $"#{index}";
 
-    /// <summary>
-    /// Marks the working copy edited after a preset wrote to it directly. Load() clears
-    /// the flag, so it has to be set again afterwards.
-    /// </summary>
-    public void MarkDirtyFromPreset() => IsDirty = true;
-
     internal void MarkDirty()
     {
         if (_pk is null || _loading)

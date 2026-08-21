@@ -159,22 +159,6 @@ public partial class MainWindowViewModel : ViewModelBase
             BuildPaletteEntries();
     }
 
-    /// <summary>Saved stat spreads, applied to whatever the inspector is showing.</summary>
-    [ObservableProperty] private PresetsViewModel? _presets;
-
-    /// <summary>Built once settings arrive, since the presets live in them.</summary>
-    public void AttachPresets(AppSettings settings, Action persist)
-    {
-        Presets = new PresetsViewModel(settings, persist,
-            () => Detail.Pokemon,
-            () =>
-            {
-                // Reload so every field and the legality chip reflect the new values.
-                Detail.Load(Detail.Pokemon);
-                Detail.MarkDirtyFromPreset();
-            });
-    }
-
     /// <summary>Asks the window to flush settings after something worth remembering.</summary>
     public Action? SettingsChanged { get; set; }
 
