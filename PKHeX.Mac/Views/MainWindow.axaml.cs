@@ -173,10 +173,31 @@ public partial class MainWindow : Window
     }
     public void OnExportButtonClicked(object? sender, RoutedEventArgs e) => _ = ExportAsync();
 
-    private void OnHeaderPressed(object? sender, PointerPressedEventArgs e)
+    /// <summary>
+    /// Height of the title-bar band, matching ExtendClientAreaTitleBarHeightHint.
+    /// </summary>
+    private const double TitleBarHeight = 46;
+
+    /// <summary>
+    /// Lets the whole width of the title-bar band drag the window, not just the strips
+    /// the sidebar and inspector happen to reserve.
+    /// </summary>
+    /// <remarks>
+    /// The client area is extended to the window edge so content can reach the top,
+    /// which left the band above the party and the inspector inert — the window could
+    /// only be moved by grabbing the sidebar. This runs only for presses no control
+    /// consumed, so tabs, buttons and slots in that band keep working; anything that
+    /// reaches here is background.
+    /// </remarks>
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
-        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
-            BeginMoveDrag(e);
+        base.OnPointerPressed(e);
+        if (e.Handled)
+            return;
+        var point = e.GetCurrentPoint(this);
+        if (!point.Properties.IsLeftButtonPressed || point.Position.Y > TitleBarHeight)
+            return;
+        BeginMoveDrag(e);
     }
 
     private async Task OpenAsync()
@@ -247,6 +268,9 @@ public partial class MainWindow : Window
     {
         if (SlotOf(sender) is not { } slot)
             return;
+        // A slot press is ours. Saying so stops the window-drag fallback treating it as
+        // a click on empty chrome, which would fight the slot's own drag.
+        e.Handled = true;
         var point = e.GetCurrentPoint(this);
         if (point.Properties.IsLeftButtonPressed)
         {
