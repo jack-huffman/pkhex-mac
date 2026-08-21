@@ -40,6 +40,8 @@ public partial class MainWindow : Window
         // The box grid sizes itself to the window, and the second box appears once
         // there is room for it, so both need recomputing on every resize.
         SizeChanged += (_, _) => RefreshBoxLayout();
+        // Tunnels, so the wheel is intercepted before a dropdown or spinner can act on it.
+        AddHandler(PointerWheelChangedEvent, OnWheelBeforeControls, RoutingStrategies.Tunnel);
     }
 
     /// <summary>Window bounds, last view and recent saves, kept between launches.</summary>
@@ -154,6 +156,46 @@ public partial class MainWindow : Window
     /// <summary>True when a text field has focus, so its keys are its own.</summary>
     private bool IsTypingSomewhere() =>
         FocusManager?.GetFocusedElement() is TextBox or AutoCompleteBox or NumericUpDown;
+
+    /// <summary>
+    /// Stops the scroll wheel changing values, and scrolls the page instead.
+    /// </summary>
+    /// <remarks>
+    /// A combo box changes its selection on wheel and a spinner increments, so scrolling
+    /// down a dense panel silently rewrote whatever the pointer passed over — an ability,
+    /// a nature, a ball. In a save editor that is data loss disguised as navigation, and
+    /// with 97 such controls it has to be handled once rather than per control.
+    ///
+    /// An open dropdown keeps the wheel, because there the scroll means its list.
+    /// </remarks>
+    private void OnWheelBeforeControls(object? sender, PointerWheelEventArgs e)
+    {
+        if (e.Source is not Control source)
+            return;
+
+        var combo = source.FindAncestorOfType<ComboBox>();
+        if (combo is { IsDropDownOpen: true })
+            return;
+
+        Control? guarded = combo;
+        guarded ??= source.FindAncestorOfType<NumericUpDown>();
+        if (guarded is null)
+            return;
+
+        e.Handled = true;
+        ScrollAround(guarded, e.Delta.Y != 0 ? e.Delta.Y : e.Delta.X);
+    }
+
+    /// <summary>Applies the wheel to the nearest scrollable ancestor.</summary>
+    private static void ScrollAround(Control from, double delta)
+    {
+        if (delta == 0 || from.FindAncestorOfType<ScrollViewer>() is not { } viewer)
+            return;
+        // Roughly three lines per notch, matching the default scroll step.
+        var target = viewer.Offset.Y - (delta * 50);
+        var limit = Math.Max(0, viewer.Extent.Height - viewer.Viewport.Height);
+        viewer.Offset = viewer.Offset.WithY(Math.Clamp(target, 0, limit));
+    }
 
     // ---- Open saves, one per tab ----
 
