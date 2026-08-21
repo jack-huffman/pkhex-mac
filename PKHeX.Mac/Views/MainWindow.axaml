@@ -1249,6 +1249,32 @@
                                                     </StackPanel>
                                                 </StackPanel>
 
+                                                <!-- Dynamax and Gigantamax (Sword/Shield) -->
+                                                <StackPanel IsVisible="{Binding SupportsDynamax}" Spacing="8" Margin="0,10,0,0">
+                                                    <Separator/>
+                                                    <TextBlock Classes="sectionTitle" Text="DYNAMAX"/>
+                                                    <Grid ColumnDefinitions="*,110" ColumnSpacing="10">
+                                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                            <TextBlock Classes="fieldLabel" Text="Dynamax Level"/>
+                                                            <TextBlock Text="Raised with Dynamax Candy; ten is the maximum."
+                                                                       FontSize="{StaticResource FontMicro}"
+                                                                       Classes="secondary" TextWrapping="Wrap"/>
+                                                        </StackPanel>
+                                                        <NumericUpDown Grid.Column="1" VerticalAlignment="Top"
+                                                                       Value="{Binding DynamaxLevel, Mode=TwoWay}"
+                                                                       Minimum="0" Maximum="10"
+                                                                       FormatString="0" Increment="1"/>
+                                                    </Grid>
+                                                    <CheckBox IsChecked="{Binding CanGigantamax, Mode=TwoWay}"
+                                                              IsVisible="{Binding SupportsGigantamax}"
+                                                              FontSize="{StaticResource FontBody}"
+                                                              Content="Gigantamax Factor"/>
+                                                    <TextBlock IsVisible="{Binding SupportsGigantamax}"
+                                                               FontSize="{StaticResource FontMicro}" Classes="secondary"
+                                                               TextWrapping="Wrap"
+                                                               Text="Only species with a Gigantamax form can use this, and the factor is what lets them take it."/>
+                                                </StackPanel>
+
                                                 <!-- Tera type (Scarlet/Violet) -->
                                                 <StackPanel IsVisible="{Binding SupportsTeraType}" Spacing="8" Margin="0,10,0,0">
                                                     <Separator/>

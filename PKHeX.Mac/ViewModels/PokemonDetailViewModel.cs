@@ -131,6 +131,30 @@ public partial class PokemonDetailViewModel : ObservableObject
     [ObservableProperty] private int _teraTypeOverrideValue;
 
     // ---- Hyper training ----
+    // ---- Dynamax and Gigantamax ----
+
+    [ObservableProperty] private bool _supportsGigantamax;
+    [ObservableProperty] private bool _canGigantamax;
+    [ObservableProperty] private bool _supportsDynamax;
+    [ObservableProperty] private int _dynamaxLevel;
+
+    partial void OnCanGigantamaxChanged(bool value)
+    {
+        if (_loading || _pk is not IGigantamax gmax)
+            return;
+        gmax.CanGigantamax = value;
+        MarkDirty();
+    }
+
+    partial void OnDynamaxLevelChanged(int value)
+    {
+        if (_loading || _pk is not IDynamaxLevel dmax)
+            return;
+        // Ten is the cap; candies past that are wasted rather than rejected.
+        dmax.DynamaxLevel = (byte)Math.Clamp(value, 0, 10);
+        MarkDirty();
+    }
+
     [ObservableProperty] private bool _supportsHyperTraining;
     [ObservableProperty] private bool _htHp;
     [ObservableProperty] private bool _htAtk;
@@ -345,6 +369,14 @@ public partial class PokemonDetailViewModel : ObservableObject
             TeraTypeOriginalValue = (int)tera.TeraTypeOriginal;
             TeraTypeOverrideValue = (int)tera.TeraTypeOverride;
         }
+
+        // Dynamax and Gigantamax (Sword/Shield and the other Gen 8 formats).
+        SupportsGigantamax = p is IGigantamax;
+        if (p is IGigantamax gmax)
+            CanGigantamax = gmax.CanGigantamax;
+        SupportsDynamax = p is IDynamaxLevel;
+        if (p is IDynamaxLevel dmax)
+            DynamaxLevel = dmax.DynamaxLevel;
 
         // Hyper training (bottle caps).
         SupportsHyperTraining = p is IHyperTrain;
