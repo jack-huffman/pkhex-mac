@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -46,12 +48,12 @@ public partial class MainWindow : Window
     private void OnWindowLoaded(object? sender, RoutedEventArgs e)
     {
         // DataContext is assigned after construction, so this cannot be set up earlier.
-        VM.LayoutChanged = RefreshBoxLayout;
-        VM.ExportRequested = () => _ = ExportAsync();
         RestoreWindow();
-        VM.Settings = _settings;
-        VM.SettingsChanged = () => _settings.Save();
-        VM.AttachPresets(_settings, () => _settings.Save());
+        var first = new SaveTabViewModel(VM);
+        Tabs.Add(first);
+        _activeTab = first;
+        first.IsActive = true;
+        WireSession(VM);
         RebuildRecentMenu();
         RefreshBoxLayout();
         _ = VM.CheckForUpstreamUpdateAsync();
@@ -100,7 +102,7 @@ public partial class MainWindow : Window
     {
         try
         {
-            if (!VM.LoadSave(path, out var error))
+            if (!OpenInTab(path, out var error))
             {
                 await ShowError("Could Not Open Save", error);
                 // A file that no longer opens should stop being offered.
@@ -152,6 +154,113 @@ public partial class MainWindow : Window
     /// <summary>True when a text field has focus, so its keys are its own.</summary>
     private bool IsTypingSomewhere() =>
         FocusManager?.GetFocusedElement() is TextBox or AutoCompleteBox or NumericUpDown;
+
+    // ---- Open saves, one per tab ----
+
+    /// <summary>
+    /// Whether to show the tab strip. A styled property so the view can bind to it;
+    /// a plain field would never notify.
+    /// </summary>
+    public static readonly StyledProperty<bool> ShowTabStripProperty =
+        AvaloniaProperty.Register<MainWindow, bool>(nameof(ShowTabStrip));
+
+    public bool ShowTabStrip
+    {
+        get => GetValue(ShowTabStripProperty);
+        set => SetValue(ShowTabStripProperty, value);
+    }
+
+    /// <summary>
+    /// Every open save. The window's DataContext is always the active session, so the
+    /// rest of the interface is unaware that more than one exists.
+    /// </summary>
+    public ObservableCollection<SaveTabViewModel> Tabs { get; } = [];
+
+    private SaveTabViewModel? _activeTab;
+
+    /// <summary>Switches the whole interface to another open save.</summary>
+    public void Activate(SaveTabViewModel tab)
+    {
+        if (ReferenceEquals(_activeTab, tab))
+            return;
+        if (_activeTab is not null)
+            _activeTab.IsActive = false;
+        _activeTab = tab;
+        tab.IsActive = true;
+        DataContext = tab.Session;
+        WireSession(tab.Session);
+        RefreshBoxLayout();
+    }
+
+    /// <summary>Opens a save in a new tab, reusing the current one if it is empty.</summary>
+    private bool OpenInTab(string path, out string error)
+    {
+        // An untouched empty tab is a placeholder, not a document worth keeping.
+        if (_activeTab is { Session.SAV: null } empty)
+        {
+            var ok = empty.Session.LoadSave(path, out error);
+            if (ok)
+                empty.Refresh();
+            return ok;
+        }
+
+        var session = new MainWindowViewModel();
+        if (!session.LoadSave(path, out error))
+            return false;
+
+        var tab = new SaveTabViewModel(session);
+        Tabs.Add(tab);
+        ShowTabStrip = Tabs.Count > 1;
+        Activate(tab);
+        return true;
+    }
+
+    /// <summary>Closes a tab, keeping at least one open so the window is never blank.</summary>
+    public void CloseTab(SaveTabViewModel tab)
+    {
+        var index = Tabs.IndexOf(tab);
+        if (index < 0)
+            return;
+        Tabs.Remove(tab);
+        ShowTabStrip = Tabs.Count > 1;
+        if (Tabs.Count == 0)
+        {
+            var session = new MainWindowViewModel();
+            var replacement = new SaveTabViewModel(session);
+            Tabs.Add(replacement);
+            _activeTab = null;
+            Activate(replacement);
+            return;
+        }
+        if (ReferenceEquals(_activeTab, tab))
+        {
+            _activeTab = null;
+            Activate(Tabs[Math.Min(index, Tabs.Count - 1)]);
+        }
+    }
+
+    public void OnTabClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Control { DataContext: SaveTabViewModel tab })
+            Activate(tab);
+    }
+
+    public void OnTabCloseClicked(object? sender, RoutedEventArgs e)
+    {
+        if (sender is Control { DataContext: SaveTabViewModel tab })
+            CloseTab(tab);
+    }
+
+    /// <summary>Connects a session to the window-level services it needs.</summary>
+    private void WireSession(MainWindowViewModel session)
+    {
+        session.LayoutChanged = RefreshBoxLayout;
+        session.ExportRequested = () => _ = ExportAsync();
+        session.Settings = _settings;
+        session.SettingsChanged = () => _settings.Save();
+        session.AttachPresets(_settings, () => _settings.Save());
+        session.SaveState.PropertyChanged += (_, _) => _activeTab?.Refresh();
+    }
 
     // ---- Remembering where you were ----
 
@@ -305,7 +414,7 @@ public partial class MainWindow : Window
         // Recorded before the unsaved-changes guard, so the window is remembered even
         // when the close is then cancelled.
         RememberWindow();
-        if (!_closeConfirmed && VM.HasPendingWork)
+        if (!_closeConfirmed && AnyTabHasPendingWork())
         {
             // Editing happens against a copy in memory, so closing would silently
             // discard it. Hold the window open and ask.
@@ -330,18 +439,53 @@ public partial class MainWindow : Window
             // Cmd+Q never reaches OnClosing, so the window state has to be recorded here
             // as well or quitting the usual way would forget it.
             RememberWindow();
-            if (_closeConfirmed || !VM.HasPendingWork)
+            if (_closeConfirmed || !AnyTabHasPendingWork())
                 return;
             e.Cancel = true;
             PromptBeforeLeaving();
         };
     }
 
+    /// <summary>
+    /// True when any open save has unwritten edits. Checking only the visible tab would
+    /// let a background one be discarded in silence, which is the exact failure the
+    /// guard exists to prevent.
+    /// </summary>
+    private bool AnyTabHasPendingWork()
+    {
+        foreach (var tab in Tabs)
+        {
+            if (tab.Session.HasPendingWork)
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>Names the tabs with unsaved work, so the prompt is specific.</summary>
+    private string DescribePendingTabs()
+    {
+        var names = new List<string>();
+        foreach (var tab in Tabs)
+        {
+            if (tab.Session.HasPendingWork)
+                names.Add(tab.Title);
+        }
+        return names.Count switch
+        {
+            0 => string.Empty,
+            1 => string.Empty,      // the usual case; the existing wording covers it
+            _ => $"Unsaved in {names.Count} open saves: {string.Join(", ", names)}.",
+        };
+    }
+
     private void PromptBeforeLeaving()
     {
-        VM.ClosePromptNote = VM.Detail.IsDirty
-            ? "A Pokémon in the inspector also has edits that were never applied to its slot."
-            : string.Empty;
+        var multi = DescribePendingTabs();
+        VM.ClosePromptNote = multi.Length > 0
+            ? multi
+            : VM.Detail.IsDirty
+                ? "A Pokémon in the inspector also has edits that were never applied to its slot."
+                : string.Empty;
         VM.IsClosePromptOpen = true;
     }
 
@@ -434,7 +578,7 @@ public partial class MainWindow : Window
             var path = files[0].TryGetLocalPath();
             if (path is null)
                 return;
-            if (!VM.LoadSave(path, out var error))
+            if (!OpenInTab(path, out var error))
                 await ShowError("Could Not Open Save", error);
             else
                 RebuildRecentMenu();
@@ -653,8 +797,10 @@ public partial class MainWindow : Window
         }
         else
         {
-            if (!VM.LoadSave(path, out var error))
+            if (!OpenInTab(path, out var error))
                 await ShowError("Could Not Open File", error);
+            else
+                RebuildRecentMenu();
         }
     }
 

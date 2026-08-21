@@ -14,6 +14,14 @@ namespace PKHeX.Mac.ViewModels;
 public partial class MainWindowViewModel : ViewModelBase
 {
     private readonly GameStrings _strings = GameInfo.GetStrings("en");
+
+    /// <summary>
+    /// This save's own dropdown data. PKHeX exposes it as a global that is replaced
+    /// whenever a save loads, which is fine for one save and wrong for several: the
+    /// second would silently take the first's species and move lists. Each session
+    /// keeps the sources it was built with.
+    /// </summary>
+    private FilteredGameDataSource _sources = GameInfo.FilteredSources;
     private SaveFile? _sav;
 
     /// <summary>
@@ -558,7 +566,7 @@ public partial class MainWindowViewModel : ViewModelBase
             return;
         }
         if (view == "search" && _sav is not null)
-            Search ??= new SearchViewModel(_sav, _strings, GameInfo.FilteredSources);
+            Search ??= new SearchViewModel(_sav, _strings, _sources);
         if (view == "gamedata" && _sav is not null)
         {
             Daycare ??= BuildDaycare(_sav);
@@ -800,8 +808,10 @@ public partial class MainWindowViewModel : ViewModelBase
             _savPath = path;
             SaveState.Reset();          // a different save: previous edits are moot
             sav.Metadata.SetExtraInfo(path);
-            GameInfo.FilteredSources = new FilteredGameDataSource(sav, GameInfo.Sources);
-            Detail.SetContext(sav, GameInfo.FilteredSources);
+            _sources = new FilteredGameDataSource(sav, GameInfo.Sources);
+            // Still set the global, because parts of PKHeX.Core consult it.
+            GameInfo.FilteredSources = _sources;
+            Detail.SetContext(sav, _sources);
             HasSave = true;
             HasParty = sav.HasParty;
 
@@ -838,7 +848,7 @@ public partial class MainWindowViewModel : ViewModelBase
             Style.BoardChanged = () => Blueberry?.Reload();
             Records = new TrainerRecordsViewModel(sav, () =>
                 NoteChange("Trainer records updated"));
-            AddDb = new AddPokemonViewModel(sav, GameInfo.FilteredSources, _strings);
+            AddDb = new AddPokemonViewModel(sav, _sources, _strings);
             AddDb.PreviewReady = pk => Preview.Load(pk);
             // The gift archive is ~2.6k entries with sprites; build it on first open
             // so loading a save stays instant.
