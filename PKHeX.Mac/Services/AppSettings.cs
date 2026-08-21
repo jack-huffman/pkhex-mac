@@ -38,6 +38,12 @@ public sealed class AppSettings
     /// <summary>Most recently opened saves, newest first.</summary>
     public List<string> Recent { get; set; } = [];
 
+    /// <summary>Saved stat spreads. Seeded on first run and edited by the user.</summary>
+    public List<SpreadPreset> Presets { get; set; } = [];
+
+    /// <summary>Whether the built-in spreads have been offered, so removals stick.</summary>
+    public bool SeededPresets { get; set; }
+
     [JsonIgnore]
     public bool HasWindowBounds => WindowWidth > 200 && WindowHeight > 200;
 
@@ -66,13 +72,26 @@ public sealed class AppSettings
         try
         {
             if (File.Exists(Path))
-                return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(Path)) ?? new AppSettings();
+            {
+                var loaded = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(Path));
+                if (loaded is not null)
+                {
+                    // Seed the built-in spreads the first time, but never re-add them
+                    // afterwards: deleting one should stick.
+                    if (loaded.Presets.Count == 0 && !loaded.SeededPresets)
+                    {
+                        loaded.Presets = SpreadPreset.Defaults();
+                        loaded.SeededPresets = true;
+                    }
+                    return loaded;
+                }
+            }
         }
         catch
         {
             // A corrupt or unreadable file is not worth reporting; defaults are fine.
         }
-        return new AppSettings();
+        return new AppSettings { Presets = SpreadPreset.Defaults(), SeededPresets = true };
     }
 
     public void Save()

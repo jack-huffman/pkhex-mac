@@ -113,8 +113,71 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>Persisted preferences, owned by the window and shared for recording.</summary>
     public AppSettings? Settings { get; set; }
 
+    /// <summary>Saved stat spreads, applied to whatever the inspector is showing.</summary>
+    [ObservableProperty] private PresetsViewModel? _presets;
+
+    /// <summary>Built once settings arrive, since the presets live in them.</summary>
+    public void AttachPresets(AppSettings settings, Action persist)
+    {
+        Presets = new PresetsViewModel(settings, persist,
+            () => Detail.Pokemon,
+            () =>
+            {
+                // Reload so every field and the legality chip reflect the new values.
+                Detail.Load(Detail.Pokemon);
+                Detail.MarkDirtyFromPreset();
+            });
+    }
+
     /// <summary>Asks the window to flush settings after something worth remembering.</summary>
     public Action? SettingsChanged { get; set; }
+
+    // ---- Keyboard navigation of the grids ----
+
+    /// <summary>
+    /// Moves the selection by a step within whichever grid holds it.
+    /// </summary>
+    /// <remarks>
+    /// The party is one row of six and a box is six across, so a vertical step is a
+    /// row's width in the box and does nothing in the party. Moving off the left or
+    /// right edge of a box carries on into the neighbouring box, which is how the
+    /// grids are read anyway.
+    /// </remarks>
+    public void MoveSelection(int columns, int rows)
+    {
+        if (_sav is null || _selected is null)
+            return;
+
+        if (_selected.IsParty)
+        {
+            if (rows != 0)
+                return;
+            var next = Math.Clamp(_selected.Slot + columns, 0, PartySlots.Count - 1);
+            SelectSlot(PartySlots[next]);
+            return;
+        }
+        if (IsRideSlot(_selected))
+            return;
+
+        const int width = 6;
+        var index = (_selected.Slot + columns) + (rows * width);
+        if (index < 0)
+        {
+            // Off the top or the left: step back a box and land on the mirror slot.
+            if (CurrentBox == 0)
+                return;
+            CurrentBox--;
+            index += BoxSlots.Count;
+        }
+        else if (index >= BoxSlots.Count)
+        {
+            if (CurrentBox >= _sav.BoxCount - 1)
+                return;
+            CurrentBox++;
+            index -= BoxSlots.Count;
+        }
+        SelectSlot(BoxSlots[Math.Clamp(index, 0, BoxSlots.Count - 1)]);
+    }
 
     // ---- Command palette ----
 

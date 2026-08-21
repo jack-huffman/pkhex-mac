@@ -51,6 +51,7 @@ public partial class MainWindow : Window
         RestoreWindow();
         VM.Settings = _settings;
         VM.SettingsChanged = () => _settings.Save();
+        VM.AttachPresets(_settings, () => _settings.Save());
         RebuildRecentMenu();
         RefreshBoxLayout();
         _ = VM.CheckForUpstreamUpdateAsync();
@@ -113,6 +114,44 @@ public partial class MainWindow : Window
             await ShowError("Error", ex.Message);
         }
     }
+
+    /// <summary>
+    /// Arrow keys, delete and clipboard shortcuts over the box and party grids.
+    /// </summary>
+    /// <remarks>
+    /// Only acts when a slot is selected and the focus is not in a field, so typing a
+    /// nickname or a seed is never intercepted.
+    /// </remarks>
+    private bool HandleGridKey(KeyEventArgs e)
+    {
+        if (!VM.ShowBoxes || VM.SelectedSlot is not { } slot || IsTypingSomewhere())
+            return false;
+
+        var command = e.KeyModifiers.HasFlag(KeyModifiers.Meta);
+        switch (e.Key)
+        {
+            case Key.Left:  VM.MoveSelection(-1, 0); return true;
+            case Key.Right: VM.MoveSelection(1, 0); return true;
+            case Key.Up:    VM.MoveSelection(0, -1); return true;
+            case Key.Down:  VM.MoveSelection(0, 1); return true;
+
+            case Key.Delete or Key.Back:
+                VM.DeleteSlot(slot);
+                return true;
+
+            case Key.C when command:
+                VM.CopySlot(slot);
+                return true;
+            case Key.V when command:
+                VM.PasteSlot(slot);
+                return true;
+        }
+        return false;
+    }
+
+    /// <summary>True when a text field has focus, so its keys are its own.</summary>
+    private bool IsTypingSomewhere() =>
+        FocusManager?.GetFocusedElement() is TextBox or AutoCompleteBox or NumericUpDown;
 
     // ---- Remembering where you were ----
 
@@ -223,6 +262,11 @@ public partial class MainWindow : Window
         if (e.Key == Key.K && e.KeyModifiers.HasFlag(KeyModifiers.Meta))
         {
             OpenPalette();
+            e.Handled = true;
+            return;
+        }
+        if (!palette.IsOpen && HandleGridKey(e))
+        {
             e.Handled = true;
             return;
         }

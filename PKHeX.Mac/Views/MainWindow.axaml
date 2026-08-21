@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:PKHeX.Mac.ViewModels"
         xmlns:core="using:PKHeX.Core"
+        xmlns:svc="using:PKHeX.Mac.Services"
         xmlns:ctrl="using:PKHeX.Mac.Controls"
         xmlns:panels="using:PKHeX.Mac.Views.Panels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -873,6 +874,58 @@
                                     <TextBlock Text="{Binding SuggestionResult}" FontSize="{StaticResource FontMicro}" Classes="secondary"
                                                TextWrapping="Wrap" IsVisible="{Binding SuggestionResult, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                                 </StackPanel>
+
+                                <!-- Saved spreads. Writes into the working copy, so it
+                                     is reviewed and committed like any other edit. -->
+                                <Expander DockPanel.Dock="Bottom" Header="Spread presets"
+                                          Margin="0,10,0,0"
+                                          IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).Presets,
+                                                      Converter={x:Static ObjectConverters.IsNotNull}}">
+                                    <StackPanel Spacing="6" Margin="0,8,0,0"
+                                                DataContext="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).Presets}"
+                                                x:DataType="vm:PresetsViewModel">
+                                        <ComboBox HorizontalAlignment="Stretch"
+                                                  ItemsSource="{Binding Presets}"
+                                                  SelectedItem="{Binding Selected, Mode=TwoWay}">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate x:DataType="svc:SpreadPreset">
+                                                    <StackPanel Spacing="0">
+                                                        <TextBlock Text="{Binding Name}"
+                                                                   FontSize="{StaticResource FontBody}"/>
+                                                        <TextBlock Text="{Binding Summary}"
+                                                                   FontSize="{StaticResource FontMicro}"
+                                                                   Classes="secondary"/>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <Button Content="Apply to this Pokémon" Classes="accent"
+                                                    FontSize="{StaticResource FontMicro}" Padding="8,3"
+                                                    IsEnabled="{Binding HasSelection}"
+                                                    Command="{Binding ApplyCommand}"/>
+                                            <Button Content="Delete" FontSize="{StaticResource FontMicro}"
+                                                    Padding="8,3"
+                                                    IsEnabled="{Binding HasSelection}"
+                                                    Command="{Binding DeleteCommand}"/>
+                                        </StackPanel>
+
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                                            <TextBox Grid.Column="0" Text="{Binding NewName, Mode=TwoWay}"
+                                                     FontSize="{StaticResource FontMicro}"
+                                                     PlaceholderText="Name a new preset…"/>
+                                            <Button Grid.Column="1" Content="Save current"
+                                                    FontSize="{StaticResource FontMicro}" Padding="8,3"
+                                                    Command="{Binding SaveCurrentCommand}"/>
+                                        </Grid>
+
+                                        <TextBlock Text="{Binding Status}"
+                                                   FontSize="{StaticResource FontMicro}" Classes="secondary"
+                                                   TextWrapping="Wrap"
+                                                   IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                    </StackPanel>
+                                </Expander>
 
                                 <!-- Apply -->
                                 <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto"

@@ -96,15 +96,22 @@ public class AppSettingsFileTests : IDisposable
     }
 
     [Fact]
-    public void UnreadableFileFallsBackToDefaults()
+    public void CorruptContentDoesNotYieldSettings()
     {
-        // Load never throws; a corrupt file just means defaults.
-        Directory.CreateDirectory(_dir);
-        var file = Path.Combine(_dir, "settings.json");
-        File.WriteAllText(file, "{ this is not json");
-        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(file)));
-        // AppSettings.Load swallows that and returns usable defaults.
-        Assert.False(AppSettings.Load().HasWindowBounds || AppSettings.Load().Recent.Count > 8);
+        // Load() swallows this and returns defaults. The test deliberately does not call
+        // Load(), because that reads the real user file and would depend on the machine
+        // it runs on -- which is exactly how this test failed the first time.
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<AppSettings>("{ not json"));
+    }
+
+    [Fact]
+    public void FreshSettingsAreSane()
+    {
+        var s = new AppSettings();
+        Assert.False(s.HasWindowBounds);
+        Assert.Empty(s.Recent);
+        Assert.Null(s.LastView);
+        Assert.Equal(0, s.LastBox);
     }
 
     public void Dispose()
