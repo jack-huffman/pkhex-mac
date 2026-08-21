@@ -9,6 +9,68 @@
     <Border Classes="card" IsVisible="{Binding IsToolsView}" Margin="18,14,18,14">
         <TabControl SelectedIndex="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ToolsTab, Mode=TwoWay}" DataContext="{Binding Tools}" x:DataType="vm:ToolsViewModel" Padding="0,10,0,0">
 
+            <!-- Only reachable with a second save open; see TransferViewModel. -->
+            <TabItem Header="Transfer" IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).CanTransfer}">
+            <DockPanel DataContext="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).Transfer}" x:DataType="vm:TransferViewModel"
+                       Margin="2,8,2,2">
+                <StackPanel DockPanel.Dock="Top" Spacing="10">
+                    <TextBlock FontSize="{StaticResource FontBody}" Classes="secondary" TextWrapping="Wrap"
+                               Text="Sends the selected Pokémon to another open save, converting it on the way. It is copied, not moved, and nothing is written until you send."/>
+
+                    <Border Classes="card" Padding="12">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                            <Image Grid.Column="0" Source="{Binding SourceSprite}"
+                                   Width="68" Height="56" VerticalAlignment="Top"
+                                   RenderOptions.BitmapInterpolationMode="None"/>
+                            <StackPanel Grid.Column="1" Spacing="4">
+                                <TextBlock Text="{Binding Verdict}"
+                                           FontSize="{StaticResource FontBody}" FontWeight="SemiBold"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding Detail}"
+                                           FontSize="{StaticResource FontMicro}" Classes="secondary"
+                                           TextWrapping="Wrap"/>
+                                <Border Classes="chip" Padding="6,1" HorizontalAlignment="Left"
+                                        IsVisible="{Binding IsLegal}"
+                                        Background="{DynamicResource LegalBgBrush}">
+                                    <TextBlock Text="Legal on arrival" FontSize="{StaticResource FontMicro}"
+                                               Foreground="{DynamicResource LegalFgBrush}"/>
+                                </Border>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <Grid ColumnDefinitions="Auto,*,Auto,110" ColumnSpacing="10">
+                        <TextBlock Grid.Column="0" Text="Send to" VerticalAlignment="Center"
+                                   FontSize="{StaticResource FontBody}" Classes="secondary"/>
+                        <ComboBox Grid.Column="1" HorizontalAlignment="Stretch"
+                                  ItemsSource="{Binding Targets}"
+                                  SelectedItem="{Binding Target, Mode=TwoWay}"/>
+                        <TextBlock Grid.Column="2" Text="Box" VerticalAlignment="Center"
+                                   FontSize="{StaticResource FontBody}" Classes="secondary"/>
+                        <NumericUpDown Grid.Column="3" Value="{Binding DestinationBox, Mode=TwoWay}"
+                                       Minimum="0" Maximum="31" FormatString="0" Increment="1"/>
+                    </Grid>
+
+                    <CheckBox IsChecked="{Binding AssignHomeTracker, Mode=TwoWay}"
+                              FontSize="{StaticResource FontBody}"
+                              Content="Give it a Pokémon HOME tracker"/>
+                    <TextBlock FontSize="{StaticResource FontMicro}" Classes="secondary" TextWrapping="Wrap"
+                               Text="Anything that has genuinely crossed games carries one, and the destination calls a Pokémon without it illegal. The value is generated here rather than issued by HOME, which is why it is a choice."/>
+
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="Send" Classes="accent"
+                                IsEnabled="{Binding CanSend}"
+                                Command="{Binding SendCommand}"/>
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding Status}" FontSize="{StaticResource FontBody}"
+                               TextWrapping="Wrap"
+                               IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                </StackPanel>
+                <Panel/>
+            </DockPanel>
+            </TabItem>
+
             <TabItem Header="Integrity">
             <DockPanel DataContext="{Binding Integrity}" x:DataType="vm:IntegrityAuditViewModel"
                        Margin="2,8,2,2">

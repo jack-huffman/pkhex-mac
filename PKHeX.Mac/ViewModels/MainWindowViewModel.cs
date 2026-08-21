@@ -121,6 +121,44 @@ public partial class MainWindowViewModel : ViewModelBase
     /// <summary>Persisted preferences, owned by the window and shared for recording.</summary>
     public AppSettings? Settings { get; set; }
 
+    /// <summary>
+    /// Records a change made to this save from elsewhere, such as another tab sending a
+    /// Pokémon here. The receiving save has unsaved work even though nobody edited it.
+    /// </summary>
+    public void NoteExternalChange(string description)
+    {
+        NoteChange(description);
+        RefreshSlotViews();
+    }
+
+    /// <summary>Sends the selected Pokémon to another open save.</summary>
+    [ObservableProperty] private TransferViewModel? _transfer;
+
+    /// <summary>Supplied by the window: the other saves currently open.</summary>
+    public Func<IReadOnlyList<TransferTarget>>? OtherSaves { get; set; }
+
+    /// <summary>True once a second save is open, which is when transferring is possible.</summary>
+    [ObservableProperty] private bool _canTransfer;
+
+    /// <summary>Built by the window once it can enumerate the other tabs.</summary>
+    public void AttachTransfer()
+    {
+        Transfer = new TransferViewModel(_strings,
+            () => _selected?.Pokemon,
+            () => OtherSaves?.Invoke() ?? [],
+            NoteChange);
+        RefreshTransferTargets();
+    }
+
+    /// <summary>Re-reads the destination list, after a tab opens or closes.</summary>
+    public void RefreshTransferTargets()
+    {
+        Transfer?.Reload();
+        CanTransfer = Transfer?.HasTargets ?? false;
+        if (_sav is not null)
+            BuildPaletteEntries();
+    }
+
     /// <summary>Saved stat spreads, applied to whatever the inspector is showing.</summary>
     [ObservableProperty] private PresetsViewModel? _presets;
 
@@ -262,12 +300,16 @@ public partial class MainWindowViewModel : ViewModelBase
         Tab("Blueberry Perks", "Trainer & Bag", "save", () => TrainerTab = 4, Blueberry?.IsSupported ?? false);
         Tab("Trainer Records", "Trainer & Bag", "save", () => TrainerTab = 5, Records?.IsSupported ?? false);
 
-        Tab("Integrity audit", "Tools", "tools", () => ToolsTab = 0);
-        Tab("Box Report", "Tools", "tools", () => ToolsTab = 1);
-        Tab("Breeding planner", "Tools", "tools", () => ToolsTab = 2);
-        Tab("Egg moves", "Tools", "tools", () => ToolsTab = 2);
-        Tab("Team Analysis", "Tools", "tools", () => ToolsTab = 3);
-        Tab("Type coverage", "Tools", "tools", () => ToolsTab = 3);
+        // The transfer tab only exists with a second save open, so everything after it
+        // shifts by one.
+        var send = CanTransfer ? 1 : 0;
+        Tab("Send to another save", "Tools", "tools", () => ToolsTab = 0, CanTransfer);
+        Tab("Integrity audit", "Tools", "tools", () => ToolsTab = send);
+        Tab("Box Report", "Tools", "tools", () => ToolsTab = send + 1);
+        Tab("Breeding planner", "Tools", "tools", () => ToolsTab = send + 2);
+        Tab("Egg moves", "Tools", "tools", () => ToolsTab = send + 2);
+        Tab("Team Analysis", "Tools", "tools", () => ToolsTab = send + 3);
+        Tab("Type coverage", "Tools", "tools", () => ToolsTab = send + 3);
 
         Tab("Daycare", "Game Data", "gamedata", () => GameDataTab = 0, Daycare?.IsSupported ?? false);
         Tab("Gift Album", "Game Data", "gamedata", () => GameDataTab = 1, GiftAlbum?.IsSupported ?? false);
@@ -1068,6 +1110,7 @@ public partial class MainWindowViewModel : ViewModelBase
         if (slot is not null)
             slot.IsSelected = true;
         Detail.Load(slot?.Pokemon);
+        Transfer?.Refresh();
         RefreshTargetSlotText();
         OnPropertyChanged(nameof(CanUseDatabases));
         if (IsDatabaseView && !CanUseDatabases)

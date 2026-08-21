@@ -178,6 +178,28 @@ public partial class MainWindow : Window
 
     private SaveTabViewModel? _activeTab;
 
+    /// <summary>Every open save except the one asking, as transfer destinations.</summary>
+    private List<TransferTarget> OtherSavesFor(MainWindowViewModel asking)
+    {
+        var targets = new List<TransferTarget>();
+        foreach (var tab in Tabs)
+        {
+            if (ReferenceEquals(tab.Session, asking) || tab.Session.SAV is not { } sav)
+                continue;
+            var session = tab.Session;
+            targets.Add(new TransferTarget($"{tab.Title} · {tab.Subtitle}", sav,
+                note => session.NoteExternalChange(note)));
+        }
+        return targets;
+    }
+
+    /// <summary>Tells every tab that the set of open saves changed.</summary>
+    private void RefreshAllTransferTargets()
+    {
+        foreach (var tab in Tabs)
+            tab.Session.RefreshTransferTargets();
+    }
+
     /// <summary>Switches the whole interface to another open save.</summary>
     public void Activate(SaveTabViewModel tab)
     {
@@ -200,7 +222,10 @@ public partial class MainWindow : Window
         {
             var ok = empty.Session.LoadSave(path, out error);
             if (ok)
+            {
                 empty.Refresh();
+                RefreshAllTransferTargets();
+            }
             return ok;
         }
 
@@ -212,6 +237,7 @@ public partial class MainWindow : Window
         Tabs.Add(tab);
         ShowTabStrip = Tabs.Count > 1;
         Activate(tab);
+        RefreshAllTransferTargets();
         return true;
     }
 
@@ -223,6 +249,7 @@ public partial class MainWindow : Window
             return;
         Tabs.Remove(tab);
         ShowTabStrip = Tabs.Count > 1;
+        RefreshAllTransferTargets();
         if (Tabs.Count == 0)
         {
             var session = new MainWindowViewModel();
@@ -260,6 +287,8 @@ public partial class MainWindow : Window
         session.SettingsChanged = () => _settings.Save();
         session.AttachPresets(_settings, () => _settings.Save());
         session.SaveState.PropertyChanged += (_, _) => _activeTab?.Refresh();
+        session.OtherSaves = () => OtherSavesFor(session);
+        session.AttachTransfer();
     }
 
     // ---- Remembering where you were ----
