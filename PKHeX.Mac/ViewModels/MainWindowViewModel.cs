@@ -246,6 +246,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private TrainerRecordsViewModel? _records;
     [ObservableProperty] private DaycareViewModel? _daycare;
     [ObservableProperty] private FusionViewModel? _fusions;
+    [ObservableProperty] private RideLegendaryViewModel? _ride;
     [ObservableProperty] private GiftAlbumViewModel? _giftAlbum;
     [ObservableProperty] private GameExtrasViewModel? _extras;
     [ObservableProperty] private MailViewModel? _mail;
@@ -327,6 +328,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             Daycare ??= BuildDaycare(_sav);
             Fusions ??= BuildFusions(_sav);
+            Ride ??= BuildRide(_sav);
             if (GiftAlbum is null)
             {
                 StatusText = "Reading the Mystery Gift album…";
@@ -384,6 +386,24 @@ public partial class MainWindowViewModel : ViewModelBase
             Preview.Load(null);
         CurrentView = view;
         RefreshTargetSlotText();
+    }
+
+    /// <summary>
+    /// Builds the ride-legendary view, wiring both directions of box transfer so the
+    /// stored Pokémon can be edited with the full inspector and put back.
+    /// </summary>
+    private RideLegendaryViewModel BuildRide(SaveFile sav)
+    {
+        var vm = new RideLegendaryViewModel(sav, _strings, NoteChange);
+        vm.ReadSelectedSlot = () => _selected?.Pokemon;
+        vm.WriteSelectedSlot = pk =>
+        {
+            if (_selected is null)
+                return;
+            WriteSlot(_selected, pk);
+            RefreshSlotViews();
+        };
+        return vm;
     }
 
     /// <summary>

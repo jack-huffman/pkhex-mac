@@ -259,6 +259,58 @@
                                Text="Traversal abilities earned along the Path of Legends. Turning one off takes the ability away in the overworld, so the story can be replayed from any point."/>
                 </StackPanel>
 
+                <!-- The ride as an actual Pokémon, from the reserved box slot the
+                     game keeps it in. Nothing else in the app reaches it. -->
+                <Border DockPanel.Dock="Top" Classes="card" Padding="12" Margin="0,0,0,12"
+                        DataContext="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).Ride}"
+                        x:DataType="vm:RideLegendaryViewModel"
+                        IsVisible="{Binding IsSupported}">
+                    <StackPanel Spacing="8">
+                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                            <Image Grid.Column="0" Source="{Binding Sprite}" Width="68" Height="56"
+                                   VerticalAlignment="Top"
+                                   RenderOptions.BitmapInterpolationMode="None"/>
+                            <StackPanel Grid.Column="1" Spacing="2">
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock Text="{Binding SpeciesName}"
+                                               FontSize="{StaticResource FontBody}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="✦" FontSize="{StaticResource FontBody}"
+                                               IsVisible="{Binding IsShiny}"
+                                               Foreground="{DynamicResource MeterEvBrush}"/>
+                                    <Border Classes="chip" Padding="6,1"
+                                            IsVisible="{Binding IsLegal}"
+                                            Background="{DynamicResource LegalBgBrush}">
+                                        <TextBlock Text="Legal" FontSize="{StaticResource FontMicro}"
+                                                   Foreground="{DynamicResource LegalFgBrush}"/>
+                                    </Border>
+                                </StackPanel>
+                                <TextBlock Text="{Binding Summary}"
+                                           FontSize="{StaticResource FontMicro}" Classes="secondary"
+                                           TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding Detail}"
+                                           FontSize="{StaticResource FontMicro}" Classes="secondary"/>
+                                <TextBlock Text="{Binding Origin}"
+                                           FontSize="{StaticResource FontMicro}" Classes="secondary"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </Grid>
+
+                        <TextBlock FontSize="{StaticResource FontMicro}" Classes="secondary" TextWrapping="Wrap"
+                                   Text="Stored in a reserved box the game does not let you open, which is why it appears nowhere else. Copy it into a box slot to edit it with the inspector, then put it back."/>
+
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="Copy to selected slot" FontSize="{StaticResource FontBody}"
+                                    IsEnabled="{Binding !IsEmpty}"
+                                    Command="{Binding CopyToBoxCommand}"/>
+                            <Button Content="Store from selected slot" FontSize="{StaticResource FontBody}"
+                                    Command="{Binding TakeFromBoxCommand}"/>
+                        </StackPanel>
+
+                        <TextBlock Text="{Binding Status}" Classes="error"
+                                   IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    </StackPanel>
+                </Border>
+
                 <ScrollViewer IsVisible="{Binding HasRideUpgrades}">
                     <ItemsControl ItemsSource="{Binding RideUpgrades}">
                         <ItemsControl.ItemTemplate>
