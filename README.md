@@ -48,8 +48,9 @@ can read, this can read; the gap is only in what the interface exposes.
 ## The basics
 
 Boxes and party with drag-to-move, the trainer and bag editors, Pokédex, Tera Raids, Mystery
-Gift album, Hall of Fame, daycare, fusions, event flags, and a raw save-block browser for
-anything the interface doesn't surface yet. Legality comes straight from PKHeX.Core.
+Gift album, Hall of Fame, daycare, fusions, the ride legendary, event flags, and a raw
+save-block browser for anything the interface doesn't surface yet. Legality comes straight
+from PKHeX.Core.
 
 ## Beyond a port
 
@@ -67,25 +68,21 @@ to be written, and revert at three scopes — the whole save, a single slot, or 
 you haven't applied yet. There's a running change log, and exporting backs up the file it's
 about to overwrite.
 
-### Analysis PKHeX.Core doesn't do
+### Analysis tools
 
-PKHeX.Core validates legality, one Pokémon at a time. These look wider:
-
-- **Integrity audit** — compares entries *against each other* for shared identifiers, suspicious
-  IV concentration, and met-location clusters. Legality checking is blind to this by design,
-  because it never sees two Pokémon together. Findings are reported with how unlikely they are
-  and what innocently explains them; fixed-seed event distributions really do hand everyone the
-  same PID.
+- **Integrity audit** — save-wide checks that compare entries against each other. Upstream's
+  `BulkAnalysis` already covers duplicate PIDs, encryption constants, trainers and clones; this
+  adds IV concentration and met-location clustering on top. Findings come with how unlikely
+  they are and what innocently explains them, because fixed-seed event distributions really do
+  hand everyone the same PID.
 - **Box report** — what a box holds, and what in it fails a check
-- **Team analysis and type coverage** — including a type chart, which PKHeX.Core has no reason
-  to carry
+- **Team analysis and type coverage** — including a type chart. PKHeX.Core has no reason to
+  carry one: it validates legality, not damage.
 - **Breeding planner and egg-move lookup** — what can pass a move, and what to fix first
 
 ### Reaching what the games hide
 
-- The **ride legendary** — Koraidon or Miraidon — lives in a box you can't open. It's presented
-  here as a real, editable slot.
-- **Pokémon parked by an active fusion**, recoverable without breaking the fusion
+- **Fusion slots** — the Pokémon set aside while a fusion is active, editable in place
 - **The Crown Tundra**, below
 
 ### Quality of life
