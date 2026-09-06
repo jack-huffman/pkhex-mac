@@ -1,9 +1,21 @@
 #!/bin/zsh
 # Build a distributable PKHeX.app bundle (Apple Silicon, self-contained —
 # no .NET install needed on the target machine). Output: dist/PKHeX.app
+#
+# Pass --install to also replace /Applications/PKHeX.app with it. Nothing else in
+# the build chain touches /Applications, so a green build and passing tests never
+# reach the app you actually launch unless you do this.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export PATH="$HOME/.dotnet:$PATH"
+
+INSTALL=0
+for arg in "$@"; do
+  case "$arg" in
+    --install) INSTALL=1 ;;
+    *) echo "usage: $0 [--install]" >&2; exit 2 ;;
+  esac
+done
 
 APP="dist/PKHeX.app"
 PUBLISH="PKHeX.Mac/bin/Release/net10.0/osx-arm64/publish"
@@ -60,4 +72,20 @@ codesign --force --deep -s - "$APP"
 echo ""
 echo "Done: $APP"
 du -sh "$APP"
-echo "Launch with: open \"$APP\"  (or double-click in Finder)"
+
+if (( INSTALL )); then
+  DEST="/Applications/PKHeX.app"
+  # Replacing a running bundle leaves the launched copy in a half-swapped state.
+  if pgrep -f "$DEST/Contents/MacOS/PKHeX.Mac" >/dev/null 2>&1; then
+    echo "" >&2
+    echo "PKHeX is running — quit it first, then re-run with --install." >&2
+    exit 1
+  fi
+  echo "==> Installing to ${DEST}..."
+  rm -rf "$DEST"
+  ditto "$APP" "$DEST"
+  echo "Installed: $DEST"
+else
+  echo "Launch with: open \"$APP\"  (or double-click in Finder)"
+  echo "Install to /Applications with: $0 --install"
+fi
