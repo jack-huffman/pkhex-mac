@@ -659,6 +659,29 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>
+    /// Folder holding <paramref name="path"/>, for seeding a file picker's start location.
+    /// Returns null when there is nothing usable, which leaves the picker at its own default.
+    /// </summary>
+    private async Task<IStorageFolder?> TryGetFolder(string? path)
+    {
+        if (string.IsNullOrEmpty(path))
+            return null;
+        try
+        {
+            var dir = Path.GetDirectoryName(path);
+            if (string.IsNullOrEmpty(dir))
+                return null;
+            return await StorageProvider.TryGetFolderFromPathAsync(dir);
+        }
+        catch
+        {
+            // A folder that has since been deleted or become unreadable is not worth
+            // failing the export over; fall back to the picker's default location.
+            return null;
+        }
+    }
+
     private async Task ExportAsync()
     {
         try
@@ -674,6 +697,9 @@ public partial class MainWindow : Window
             {
                 Title = "Export Save File",
                 SuggestedFileName = suggested,
+                // Start in the folder the save came from. ExportSave moves SavePath to the
+                // file it wrote, so later exports open wherever it was last written instead.
+                SuggestedStartLocation = await TryGetFolder(VM.SavePath),
                 ShowOverwritePrompt = true,
             });
             if (file is null)

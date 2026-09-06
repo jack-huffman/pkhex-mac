@@ -189,7 +189,10 @@
                                 <TextBlock Text="{Binding SaveState.LastChange}"
                                            FontSize="{StaticResource FontMicro}" Classes="secondary"
                                            TextWrapping="Wrap"/>
-                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                <!-- Wraps, because four buttons do not fit the sidebar's
+                                     fixed width on one line and a StackPanel would spill
+                                     them over the card edge. -->
+                                <WrapPanel Orientation="Horizontal" ItemSpacing="6" LineSpacing="6">
                                     <Button Content="Export…" Classes="accent"
                                             FontSize="{StaticResource FontMicro}" Padding="8,3"
                                             Click="OnExportButtonClicked"/>
@@ -197,10 +200,10 @@
                                             Command="{Binding Review.OpenCommand}"/>
                                     <Button Content="History" FontSize="{StaticResource FontMicro}" Padding="8,3"
                                             Command="{Binding SaveState.ToggleLogCommand}"/>
-                                    <Button Content="Revert All" FontSize="{StaticResource FontMicro}" Padding="8,4"
+                                    <Button Content="Revert All" FontSize="{StaticResource FontMicro}" Padding="8,3"
                                             ToolTip.Tip="Throw away every edit and reload the file from disk"
                                             Click="OnRevertAllClicked"/>
-                                </StackPanel>
+                                </WrapPanel>
 
                                 <!-- Session log: what changed, newest first -->
                                 <Border IsVisible="{Binding SaveState.IsLogOpen}" CornerRadius="6"
