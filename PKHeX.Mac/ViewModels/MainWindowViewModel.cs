@@ -282,7 +282,10 @@ public partial class MainWindowViewModel : ViewModelBase
         Tab("Gyms, Titans & Team Star", "Trainer & Bag", "save", () => TrainerTab = 3, Trainer?.HasBadges ?? false);
         Tab("Badges", "Trainer & Bag", "save", () => TrainerTab = 3, Trainer?.HasBadges ?? false);
         Tab("Blueberry Perks", "Trainer & Bag", "save", () => TrainerTab = 4, Blueberry?.IsSupported ?? false);
-        Tab("Trainer Records", "Trainer & Bag", "save", () => TrainerTab = 5, Records?.IsSupported ?? false);
+        Tab("Crown Tundra", "Trainer & Bag", "save", () => TrainerTab = 5, CrownTundra?.IsSupported ?? false);
+        Tab("Max Lair", "Trainer & Bag", "save", () => TrainerTab = 5, CrownTundra?.IsSupported ?? false);
+        Tab("Dynamax Adventure stuck", "Trainer & Bag", "save", () => TrainerTab = 5, CrownTundra?.IsSupported ?? false);
+        Tab("Trainer Records", "Trainer & Bag", "save", () => TrainerTab = 6, Records?.IsSupported ?? false);
 
         // The transfer tab only exists with a second save open, so everything after it
         // shifts by one.
@@ -513,6 +516,7 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty] private RaidsViewModel? _raids;
     [ObservableProperty] private TrainerStyleViewModel? _style;
     [ObservableProperty] private BlueberryViewModel? _blueberry;
+    [ObservableProperty] private CrownTundraViewModel? _crownTundra;
     [ObservableProperty] private TrainerRecordsViewModel? _records;
     [ObservableProperty] private DaycareViewModel? _daycare;
     [ObservableProperty] private FusionViewModel? _fusions;
@@ -872,6 +876,8 @@ public partial class MainWindowViewModel : ViewModelBase
                 NoteChange("Blueberry Academy data updated"));
             // Unlocking throw styles writes to the club board, so keep that view honest.
             Style.BoardChanged = () => Blueberry?.Reload();
+            CrownTundra = new CrownTundraViewModel(sav, _strings, () =>
+                NoteChange("Crown Tundra data updated"));
             Records = new TrainerRecordsViewModel(sav, () =>
                 NoteChange("Trainer records updated"));
             AddDb = new AddPokemonViewModel(sav, _sources, _strings);
