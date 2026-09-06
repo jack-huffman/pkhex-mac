@@ -29,7 +29,7 @@ interface on top of it that is built for macOS.
 Upstream is a **git submodule pinned to a commit**, not a fork and not a vendored copy. None of
 Kurt's code is duplicated here. Everything in this repository is the UI layer.
 
-```
+```text
 PKHeX.Mac/          the interface — views, view models, services
 PKHeX.Mac.Tests/    177 tests covering the parts that aren't PKHeX.Core's job
 upstream/PKHeX/     submodule → github.com/kwsch/PKHeX
@@ -45,15 +45,58 @@ better tested. This exists because the Windows Forms UI doesn't run natively on 
 Feature coverage is a subset of upstream's. The engine is identical, so anything PKHeX.Core
 can read, this can read; the gap is only in what the interface exposes.
 
-## Highlights
+## The basics
 
-- **Boxes and party** — drag to move, transfer between two open saves in different tabs
-- **Trainer, bag, appearance** — with the per-game editors that apply to the loaded save
-- **Pokédex, Tera Raids, Mystery Gift album, Hall of Fame, daycare, fusions**
-- **Raw save block browser** for anything the UI doesn't surface yet
-- **Legality** straight from PKHeX.Core, with a save-wide integrity audit that looks for
-  duplicate identifiers across entries rather than checking one Pokémon at a time
-- **Crown Tundra editor** for Sword/Shield — see below
+Boxes and party with drag-to-move, the trainer and bag editors, Pokédex, Tera Raids, Mystery
+Gift album, Hall of Fame, daycare, fusions, event flags, and a raw save-block browser for
+anything the interface doesn't surface yet. Legality comes straight from PKHeX.Core.
+
+## Beyond a port
+
+The parts that aren't just Windows Forms redrawn.
+
+### Several saves at once
+
+Saves open in tabs, browser-style. A Pokémon can be sent from one open save to another, with
+the format conversion that implies handled on the way across.
+
+### Nothing gets written by surprise
+
+Every edit is tracked as you make it. Before exporting you can **review the exact diff** about
+to be written, and revert at three scopes — the whole save, a single slot, or inspector edits
+you haven't applied yet. There's a running change log, and exporting backs up the file it's
+about to overwrite.
+
+### Analysis PKHeX.Core doesn't do
+
+PKHeX.Core validates legality, one Pokémon at a time. These look wider:
+
+- **Integrity audit** — compares entries *against each other* for shared identifiers, suspicious
+  IV concentration, and met-location clusters. Legality checking is blind to this by design,
+  because it never sees two Pokémon together. Findings are reported with how unlikely they are
+  and what innocently explains them; fixed-seed event distributions really do hand everyone the
+  same PID.
+- **Box report** — what a box holds, and what in it fails a check
+- **Team analysis and type coverage** — including a type chart, which PKHeX.Core has no reason
+  to carry
+- **Breeding planner and egg-move lookup** — what can pass a move, and what to fix first
+
+### Reaching what the games hide
+
+- The **ride legendary** — Koraidon or Miraidon — lives in a box you can't open. It's presented
+  here as a real, editable slot.
+- **Pokémon parked by an active fusion**, recoverable without breaking the fusion
+- **The Crown Tundra**, below
+
+### Quality of life
+
+- **Command palette** — type to go anywhere, including straight to a specific editor tab
+- Remembers your window, your box, and which saves you had open
+- Full keyboard control of the grids
+- Type-ahead move fields instead of scrolling a 693-entry dropdown
+- The interface hides what a save doesn't have, rather than showing something that then
+  explains itself away
+- Checks GitHub for newer PKHeX releases and tells you when the engine is behind
 
 ### Rescuing a stuck Dynamax Adventure
 
