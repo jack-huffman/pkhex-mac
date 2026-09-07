@@ -29,7 +29,7 @@ public sealed class MoveChoice
         IsRealMove = true;
         var move = (ushort)value;
         var typeId = MoveInfo.GetType(move, context);
-        TypeName = (uint)typeId < strings.types.Length ? strings.types[typeId] : string.Empty;
+        TypeName = strings.TypeName(typeId);
         TypeBrush = TypePalette.GetBrush(typeId);
         TypeIcon = TypeIconService.Get(typeId);
         HasTypeIcon = TypeIcon is not null;
@@ -51,7 +51,7 @@ public sealed class MoveChoice
     public string Name { get; }
     public string TypeName { get; }
     public IBrush? TypeBrush { get; }
-    public Avalonia.Media.IImage? TypeIcon { get; }
+    public IImage? TypeIcon { get; }
     public bool HasTypeIcon { get; }
     public string CategoryLabel { get; } = string.Empty;
     public MoveDataService.Category CategoryKind { get; } = MoveDataService.Category.Unknown;
@@ -82,8 +82,7 @@ public sealed class MoveChoice
     /// <summary>Describes one move by id, for read-only displays.</summary>
     public static MoveChoice For(ushort move, EntityContext context, GameStrings strings)
     {
-        var name = (uint)move < strings.movelist.Length ? strings.movelist[move] : $"Move #{move}";
-        return new MoveChoice(move, name, context, strings);
+        return new MoveChoice(move, strings.MoveName(move), context, strings);
     }
 
     /// <summary>Builds picker entries for every move the save allows.</summary>

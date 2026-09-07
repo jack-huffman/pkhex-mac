@@ -71,11 +71,11 @@ public partial class BagViewModel : ObservableObject
                 if (!int.TryParse(name.AsSpan(2), out var number) || (uint)number >= moves.Length)
                     continue;
                 var move = moves[number];
-                if (move != 0 && move < _strings.movelist.Length)
-                    _machineMoves[id] = _strings.movelist[move];
+                if (move != 0)
+                    _machineMoves[id] = _strings.MoveName(move);
             }
         }
-        catch
+        catch (Exception ex) when (ex is ArgumentException or IndexOutOfRangeException or NotSupportedException)
         {
             _machineMoves.Clear(); // labels are a nicety; never block the editor
         }
@@ -86,7 +86,7 @@ public partial class BagViewModel : ObservableObject
     {
         if (id == 0)
             return "—";
-        var name = (uint)id < _strings.itemlist.Length ? _strings.itemlist[id] : $"#{id}";
+        var name = _strings.ItemName(id);
         return _machineMoves.TryGetValue(id, out var move) ? $"{name} · {move}" : name;
     }
 
@@ -99,7 +99,7 @@ public partial class BagViewModel : ObservableObject
         if (CurrentPouch is not { } pouch)
             return;
         MaxCount = pouch.MaxCount;
-        GiveAllCount = Math.Min(pouch.MaxCount, 1);
+        GiveAllCount = 1;
         foreach (var item in pouch.Items)
             Rows.Add(new BagItemRowViewModel(item, DescribeItem, pouch.MaxCount));
         PouchSummary = $"{pouch.Count} of {pouch.Items.Length} slots used · max {pouch.MaxCount} per item";
@@ -236,7 +236,7 @@ public partial class BagItemRowViewModel : ObservableObject
     {
         if (_loading)
             return;
-        _item.Count = System.Math.Clamp(value, 0, _maxCount);
+        _item.Count = Math.Clamp(value, 0, _maxCount);
     }
 
     private string NameOf(int id) => _describe(id);

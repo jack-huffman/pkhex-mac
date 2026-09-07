@@ -6,6 +6,7 @@ using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PKHeX.Core;
+using PKHeX.Mac.Services;
 
 namespace PKHeX.Mac.ViewModels;
 
@@ -35,37 +36,11 @@ public partial class SaveBlocksViewModel : ObservableObject
         if (sav is not ISCBlockArray array)
             return;
 
-        // Friendly names come from the block accessor PKHeX ships per game.
-        SCBlockMetadata? meta = null;
-        try
-        {
-            if (sav is SAV9SV sv)
-                meta = new SCBlockMetadata(sv.Blocks, [], []);
-            else if (sav is SAV8SWSH swsh)
-                meta = new SCBlockMetadata(swsh.Blocks, [], []);
-            else if (sav is SAV8LA la)
-                meta = new SCBlockMetadata(la.Blocks, [], []);
-            else if (sav is SAV9ZA za)
-                meta = new SCBlockMetadata(za.Blocks, [], []);
-        }
-        catch
-        {
-            meta = null; // names are a nicety; the editor still works without them
-        }
-
+        // Friendly names come from the block accessor PKHeX ships per game. They are a
+        // nicety: the editor works on bare keys when the metadata cannot be built.
+        var names = SCBlockNames.For(array);
         foreach (var block in array.AllBlocks)
-        {
-            string? name = null;
-            try
-            {
-                name = meta?.GetBlockName(block, out _);
-            }
-            catch
-            {
-                // ignore naming failures for individual blocks
-            }
-            _all.Add(new ScBlockRowViewModel(this, block, name));
-        }
+            _all.Add(new ScBlockRowViewModel(this, block, names.GetValueOrDefault(block.Key)));
 
         NamedCount = _all.Count(r => r.HasName);
         ApplyFilter();
@@ -80,7 +55,11 @@ public partial class SaveBlocksViewModel : ObservableObject
     [ObservableProperty] private bool _editableOnly = true;
     [ObservableProperty] private string _summary = string.Empty;
     [ObservableProperty] private string _capNotice = string.Empty;
-    [ObservableProperty] private ScBlockRowViewModel? _selectedRow;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SelectedName))]
+    private ScBlockRowViewModel? _selectedRow;
+
     [ObservableProperty] private string _ioResult = string.Empty;
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
@@ -158,7 +137,7 @@ public partial class ScBlockRowViewModel : ObservableObject
         _parent = parent;
         _block = block;
         HasName = !string.IsNullOrWhiteSpace(name);
-        Name = HasName ? name! : $"(unnamed)";
+        Name = HasName ? name! : "(unnamed)";
         KeyText = $"{block.Key:X8}";
         TypeName = block.Type.ToString();
 
@@ -172,7 +151,7 @@ public partial class ScBlockRowViewModel : ObservableObject
         if (IsBoolean)
             BoolValue = block.Type == SCTypeCode.Bool2;
         else if (IsScalar)
-            TextValue = block.GetValue().ToString() ?? "0";
+            TextValue = Convert.ToString(block.GetValue(), CultureInfo.InvariantCulture) ?? "0";
         _loading = false;
     }
 
@@ -191,12 +170,13 @@ public partial class ScBlockRowViewModel : ObservableObject
 
     [ObservableProperty] private bool _boolValue;
     [ObservableProperty] private string _textValue = string.Empty;
-    [ObservableProperty] private string _error = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasError))]
+    private string _error = string.Empty;
 
     /// <summary>Drives the field's error styling; the text itself goes in a tooltip.</summary>
     public bool HasError => Error.Length > 0;
-
-    partial void OnErrorChanged(string value) => OnPropertyChanged(nameof(HasError));
 
     /// <summary>A copy of the block's raw bytes.</summary>
     internal byte[] RawBytes() => _block.Data.ToArray();
@@ -209,7 +189,7 @@ public partial class ScBlockRowViewModel : ObservableObject
         if (IsBoolean)
             BoolValue = _block.Type == SCTypeCode.Bool2;
         else if (IsScalar)
-            TextValue = _block.GetValue().ToString() ?? "0";
+            TextValue = Convert.ToString(_block.GetValue(), CultureInfo.InvariantCulture) ?? "0";
         _loading = false;
     }
 
@@ -247,14 +227,14 @@ public partial class ScBlockRowViewModel : ObservableObject
         var ci = CultureInfo.InvariantCulture;
         switch (_block.Type)
         {
-            case SCTypeCode.Byte when byte.TryParse(text, out var v): result = v; return true;
-            case SCTypeCode.UInt16 when ushort.TryParse(text, out var v): result = v; return true;
-            case SCTypeCode.UInt32 when uint.TryParse(text, out var v): result = v; return true;
-            case SCTypeCode.UInt64 when ulong.TryParse(text, out var v): result = v; return true;
-            case SCTypeCode.SByte when sbyte.TryParse(text, out var v): result = v; return true;
-            case SCTypeCode.Int16 when short.TryParse(text, out var v): result = v; return true;
-            case SCTypeCode.Int32 when int.TryParse(text, out var v): result = v; return true;
-            case SCTypeCode.Int64 when long.TryParse(text, out var v): result = v; return true;
+            case SCTypeCode.Byte when byte.TryParse(text, ci, out var v): result = v; return true;
+            case SCTypeCode.UInt16 when ushort.TryParse(text, ci, out var v): result = v; return true;
+            case SCTypeCode.UInt32 when uint.TryParse(text, ci, out var v): result = v; return true;
+            case SCTypeCode.UInt64 when ulong.TryParse(text, ci, out var v): result = v; return true;
+            case SCTypeCode.SByte when sbyte.TryParse(text, ci, out var v): result = v; return true;
+            case SCTypeCode.Int16 when short.TryParse(text, ci, out var v): result = v; return true;
+            case SCTypeCode.Int32 when int.TryParse(text, ci, out var v): result = v; return true;
+            case SCTypeCode.Int64 when long.TryParse(text, ci, out var v): result = v; return true;
             case SCTypeCode.Single when float.TryParse(text, NumberStyles.Float, ci, out var v): result = v; return true;
             case SCTypeCode.Double when double.TryParse(text, NumberStyles.Float, ci, out var v): result = v; return true;
             default: result = 0; return false;

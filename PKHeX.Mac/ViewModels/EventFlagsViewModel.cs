@@ -9,19 +9,23 @@ using PKHeX.Core;
 namespace PKHeX.Mac.ViewModels;
 
 /// <summary>
-/// Event flag / work value editor for the save formats that expose them.
+/// Event flag editor for the save formats that keep a flat flag array.
 /// </summary>
 /// <remarks>
-/// Only some generations keep a flat event-flag array (<see cref="IEventFlagArray"/>)
-/// or work-value array (<see cref="IEventWorkArray{T}"/>). Gen 8/9 replaced both with
-/// the SCBlock system, so Sword/Shield, BDSP-era and Scarlet/Violet saves report
-/// unsupported here rather than showing an editor that cannot write anything.
+/// Generations 2 through 5 (and a few later formats) expose <see cref="IEventFlagArray"/>.
+/// Gen 8/9 replaced it with the SCBlock system, so Sword/Shield and Scarlet/Violet report
+/// unsupported here rather than showing an editor that cannot write anything. Work values
+/// are counted in the summary but are not edited yet.
 /// </remarks>
 public partial class EventFlagsViewModel : ObservableObject
 {
+    /// <summary>The array can be thousands long; the list stays responsive by stopping here.</summary>
+    private const int MaxFlagsShown = 500;
+
     private readonly SaveFile _sav;
     private readonly Action _onChanged;
     private readonly List<EventFlagRowViewModel> _allFlags = [];
+    private bool _bulk;
 
     public EventFlagsViewModel(SaveFile sav, Action onChanged)
     {
@@ -36,26 +40,24 @@ public partial class EventFlagsViewModel : ObservableObject
                 _allFlags.Add(new EventFlagRowViewModel(this, i, flags.GetEventFlag(i)));
         }
 
-        SupportsWork = sav is IEventWorkArray<int> or IEventWorkArray<byte>;
         if (sav is IEventWorkArray<int> wi)
             WorkCount = wi.EventWorkCount;
         else if (sav is IEventWorkArray<byte> wb)
             WorkCount = wb.EventWorkCount;
 
-        UnsupportedNote = SupportsFlags || SupportsWork
+        UnsupportedNote = SupportsFlags
             ? string.Empty
             : $"{GameInfo.GetVersionName(sav.Version)} stores progress in SCBlocks rather than a flat event-flag " +
-              "array, so there is nothing here to edit. Generations 2 through 5 (and BDSP work values) are supported.";
+              "array, so there is nothing here to edit. Generations 2 through 5 are supported.";
 
         ApplyFilter();
     }
 
     public bool SupportsFlags { get; }
-    public bool SupportsWork { get; }
     public int FlagCount { get; }
     public int WorkCount { get; }
     public string UnsupportedNote { get; }
-    public bool IsSupported => SupportsFlags || SupportsWork;
+    public bool IsSupported => SupportsFlags;
 
     public ObservableCollection<EventFlagRowViewModel> Flags { get; } = [];
 
@@ -77,8 +79,8 @@ public partial class EventFlagsViewModel : ObservableObject
             if (query.Length != 0 && !row.Label.Contains(query, StringComparison.OrdinalIgnoreCase))
                 continue;
             Flags.Add(row);
-            if (Flags.Count >= 500)
-                break; // the array can be thousands long; keep the list responsive
+            if (Flags.Count >= MaxFlagsShown)
+                break;
         }
         RefreshSummary();
     }
@@ -97,16 +99,22 @@ public partial class EventFlagsViewModel : ObservableObject
         if (_sav is not IEventFlagArray flags)
             return;
         flags.SetEventFlag(index, value);
+        if (_bulk)
+            return;
         RefreshSummary();
         _onChanged();
     }
 
+    /// <summary>Clears every flag currently listed, reported as one change.</summary>
     [RelayCommand]
     public void ClearVisible()
     {
+        _bulk = true;
         foreach (var row in Flags.ToList())
             row.Value = false;
+        _bulk = false;
         RefreshSummary();
+        _onChanged();
     }
 }
 

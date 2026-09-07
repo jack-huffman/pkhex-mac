@@ -6,7 +6,7 @@
              x:Class="PKHeX.Mac.Views.Panels.ToolsPanel"
              x:DataType="vm:MainWindowViewModel">
 
-    <Border Classes="card" IsVisible="{Binding IsToolsView}" Margin="18,14,18,14">
+    <Border Classes="card" Margin="18,14,18,14">
         <TabControl SelectedIndex="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).ToolsTab, Mode=TwoWay}" DataContext="{Binding Tools}" x:DataType="vm:ToolsViewModel" Padding="0,10,0,0">
 
             <!-- Only reachable with a second save open; see TransferViewModel. -->
@@ -135,7 +135,7 @@
                                                                            Classes="secondary"/>
                                                                 <TextBlock Text="{Binding Detail}" FontSize="{StaticResource FontMicro}"
                                                                            Classes="secondary"
-                                                                           FontFamily="Menlo, monospace"/>
+                                                                           FontFamily="{StaticResource MonoFont}"/>
                                                             </StackPanel>
                                                         </Grid>
                                                     </Border>
@@ -206,8 +206,8 @@
                                     <TextBlock Grid.Column="6" Text="{Binding Ability}" FontSize="{StaticResource FontBody}"
                                                VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
                                     <TextBlock Grid.Column="7" Text="{Binding Ivs}" FontSize="{StaticResource FontBody}"
-                                               FontFamily="Menlo, monospace" VerticalAlignment="Center"/>
-                                    <TextBlock Grid.Column="8" Text="★" FontSize="{StaticResource FontBody}" Foreground="Gold"
+                                               FontFamily="{StaticResource MonoFont}" VerticalAlignment="Center"/>
+                                    <TextBlock Grid.Column="8" Text="★" FontSize="{StaticResource FontBody}" Foreground="{DynamicResource ShinyBrush}"
                                                VerticalAlignment="Center" IsVisible="{Binding IsShiny}"/>
                                     <TextBlock Grid.Column="9" Text="✓" FontSize="{StaticResource FontBody}"
                                                Foreground="{DynamicResource LegalFgBrush}"

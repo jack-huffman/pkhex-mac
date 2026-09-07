@@ -30,6 +30,9 @@ public partial class GiftAlbumViewModel : ObservableObject
     private readonly IMysteryGiftFlags? _flags;
     private List<MysteryGift> _candidates = [];
 
+    /// <summary>The archive is thousands of entries; the list stays responsive by stopping here.</summary>
+    private const int MaxCandidatesShown = 300;
+
     public GiftAlbumViewModel(SaveFile sav, GameStrings strings, Action onChanged)
     {
         _sav = sav;
@@ -63,6 +66,10 @@ public partial class GiftAlbumViewModel : ObservableObject
 
     partial void OnCandidateFilterChanged(string value) => ApplyCandidateFilter();
 
+    // Gen 4 albums hold two card formats — eight PGT slots then three PCD slots — and the
+    // save casts on write, so the candidate list has to follow the selected slot.
+    partial void OnSelectedCardChanged(GiftCardViewModel? value) => BuildCandidates();
+
     private void LoadCards()
     {
         Cards.Clear();
@@ -79,7 +86,7 @@ public partial class GiftAlbumViewModel : ObservableObject
             {
                 // A malformed card slot reads as empty rather than taking down the view.
             }
-            Cards.Add(new GiftCardViewModel(this, i, gift, _strings));
+            Cards.Add(new GiftCardViewModel(i, gift, _strings));
         }
         RefreshSummary();
     }
@@ -95,28 +102,36 @@ public partial class GiftAlbumViewModel : ObservableObject
     }
 
     /// <summary>
-    /// The archive holds every gift ever distributed; only those whose card type
-    /// matches this save can be written into its album.
+    /// The archive holds every gift ever distributed; only those whose card type matches
+    /// the slot they would be written into can go in. With no slot selected, anything the
+    /// album holds somewhere is offered.
     /// </summary>
     private void BuildCandidates()
     {
         if (_album is null)
             return;
-        // The album's own slot type tells us exactly what it will accept.
-        Type? accepted = null;
-        try
-        {
-            accepted = _album.GetMysteryGift(0).GetType();
-        }
-        catch
-        {
-            accepted = null;
-        }
+        var accepted = SelectedCard is { } card
+            ? [SlotType(card.Index)]
+            : Enumerable.Range(0, _album.GiftCountMax).Select(SlotType).ToHashSet();
+        accepted.Remove(null);
 
         _candidates = EncounterEvent.GetAllEvents()
-            .Where(g => accepted is null || g.GetType() == accepted)
+            .Where(g => accepted.Count == 0 || accepted.Contains(g.GetType()))
             .ToList();
         ApplyCandidateFilter();
+    }
+
+    /// <summary>The card format a slot stores, read from whatever it holds now.</summary>
+    private Type? SlotType(int index)
+    {
+        try
+        {
+            return _album?.GetMysteryGift(index).GetType();
+        }
+        catch (Exception ex) when (ex is ArgumentOutOfRangeException or IndexOutOfRangeException)
+        {
+            return null; // a slot the album reports but cannot read offers nothing
+        }
     }
 
     private void ApplyCandidateFilter()
@@ -126,10 +141,11 @@ public partial class GiftAlbumViewModel : ObservableObject
         var shown = 0;
         foreach (var gift in _candidates)
         {
-            if (query.Length != 0 && !Describe(gift).Contains(query, StringComparison.OrdinalIgnoreCase))
+            var description = Describe(gift);
+            if (query.Length != 0 && !description.Contains(query, StringComparison.OrdinalIgnoreCase))
                 continue;
-            Candidates.Add(new GiftCandidate(gift, Describe(gift), SpriteFor(gift)));
-            if (++shown >= 300) // the archive is thousands of entries; keep the list responsive
+            Candidates.Add(new GiftCandidate(gift, description, SpriteFor(gift)));
+            if (++shown >= MaxCandidatesShown)
                 break;
         }
     }
@@ -137,14 +153,9 @@ public partial class GiftAlbumViewModel : ObservableObject
     private string Describe(MysteryGift gift)
     {
         var name = gift.CardTitle;
-        if (gift.IsEntity && gift.Species != 0)
-        {
-            var species = (uint)gift.Species < _strings.specieslist.Length
-                ? _strings.specieslist[gift.Species]
-                : $"#{gift.Species}";
-            return $"{name} — {species}";
-        }
-        return name;
+        return gift.IsEntity && gift.Species != 0
+            ? $"{name} — {_strings.SpeciesName(gift.Species)}"
+            : name;
     }
 
     private static Bitmap? SpriteFor(MysteryGift gift) =>
@@ -234,7 +245,7 @@ public partial class GiftAlbumViewModel : ObservableObject
 /// <summary>One card slot in the save's album.</summary>
 public sealed class GiftCardViewModel
 {
-    public GiftCardViewModel(GiftAlbumViewModel parent, int index, DataMysteryGift? gift, GameStrings strings)
+    public GiftCardViewModel(int index, DataMysteryGift? gift, GameStrings strings)
     {
         Index = index;
         Label = $"Card {index + 1}";
@@ -265,9 +276,7 @@ public sealed class GiftCardViewModel
         Title = gift.CardTitle;
         if (gift is { IsEntity: true, Species: not 0 })
         {
-            Species = (uint)gift.Species < strings.specieslist.Length
-                ? strings.specieslist[gift.Species]
-                : $"#{gift.Species}";
+            Species = strings.SpeciesName(gift.Species);
             Sprite = SpriteService.GetSprite(gift.Species, gift.Form, gift.Gender, 0, gift.IsShiny, EntityContext.None);
             Detail = $"{Species} · Lv. {gift.Level}{(gift.IsShiny ? " ★" : string.Empty)}";
         }

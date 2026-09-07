@@ -42,12 +42,12 @@ public partial class HallOfFameViewModel : ObservableObject
                 break;
             case SAV6XY xy:
                 _fame6 = xy.HallOfFame;
-                LoadGen6(strings);
+                LoadGen6(strings, sav.Language);
                 CanClear = true;
                 break;
             case SAV6AO ao:
                 _fame6 = ao.HallOfFame;
-                LoadGen6(strings);
+                LoadGen6(strings, sav.Language);
                 CanClear = true;
                 break;
         }
@@ -109,7 +109,7 @@ public partial class HallOfFameViewModel : ObservableObject
         {
             entries = HallFame3Entry.GetEntries(sav);
         }
-        catch
+        catch (Exception ex) when (ex is ArgumentException or IndexOutOfRangeException or NotSupportedException)
         {
             return; // some Gen 3 variants keep no readable record
         }
@@ -127,7 +127,7 @@ public partial class HallOfFameViewModel : ObservableObject
         }
     }
 
-    private void LoadGen6(GameStrings strings)
+    private void LoadGen6(GameStrings strings, int language)
     {
         if (_fame6 is null)
             return;
@@ -136,7 +136,8 @@ public partial class HallOfFameViewModel : ObservableObject
             var members = new List<FameMemberViewModel>();
             for (int slot = 0; slot < HallOfFame6.PokeCount; slot++)
             {
-                var entity = new HallFame6Entity(_fame6.GetEntity(team, slot), 2);
+                // The language only matters for the setters, which are never used here.
+                var entity = new HallFame6Entity(_fame6.GetEntity(team, slot), language);
                 if (entity.Species == 0)
                     continue;
                 members.Add(FameMemberViewModel.Create(entity.Species, entity.Form, (byte)entity.Level,
@@ -207,7 +208,7 @@ public sealed class FameMemberViewModel
     public static FameMemberViewModel Create(ushort species, byte form, byte level, string nickname,
                                             bool shiny, GameStrings strings)
     {
-        var name = species < strings.specieslist.Length ? strings.specieslist[species] : $"#{species}";
+        var name = strings.SpeciesName(species);
         var nick = string.IsNullOrWhiteSpace(nickname) || nickname == name ? string.Empty : nickname;
         var sprite = SpriteService.GetSprite(species, form, 0, 0, shiny, EntityContext.None);
         return new FameMemberViewModel(name, nick, $"Lv. {level}", sprite, shiny);

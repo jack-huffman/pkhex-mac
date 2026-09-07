@@ -5,13 +5,16 @@ using Xunit;
 namespace PKHeX.Mac.Tests;
 
 /// <summary>
-/// The Crown Tundra editor derives block keys by hashing internal names rather than pasting
-/// constants, because most of those blocks are unnamed in PKHeX. These tests pin the
-/// derivation against the keys PKHeX <em>does</em> document, so a mistake in the hash or in a
-/// name shows up here instead of silently writing to the wrong block in someone's save.
+/// The Crown Tundra editor looks blocks up by their internal names rather than pasting key
+/// constants, because most of those blocks are unnamed in PKHeX. These tests pin each name
+/// against the keys PKHeX <em>does</em> document, so a typo in a name shows up here instead of
+/// silently writing to the wrong block in someone's save.
 /// </summary>
 public class CrownTundraTests
 {
+    /// <summary>The engine's own lookup: the low 32 bits of the FNV-1a-64 hash of the name.</summary>
+    private static uint KeyOf(string internalName) => (uint)FnvHash.HashFnv1a_64(internalName);
+
     [Theory]
     // The Max Lair legendary family, FSYS_CHIKA_LEGEND_NN. The game's order is not PKHeX's
     // listing order, which is exactly why these need pinning.
@@ -33,8 +36,8 @@ public class CrownTundraTests
     [InlineData("FSYS_CHIKA_LEGEND_48", SaveBlockAccessor8SWSH.KCapturedStakataka)]
     // A flag outside that family, to prove the hash is not fitted to one pattern.
     [InlineData("FSYS_CHIKA_UB_OPEN", SaveBlockAccessor8SWSH.KUnlockedUBsInMaxLair)]
-    public void DerivedKeyMatchesTheKeyPKHeXDocuments(string internalName, uint expected)
-        => Assert.Equal(expected, SwshBlockKey.From(internalName));
+    public void NameHashesToTheKeyPKHeXDocuments(string internalName, uint expected)
+        => Assert.Equal(expected, KeyOf(internalName));
 
     [Theory]
     // Names PKHeX has no constant for. These come from the same brute force and are pinned
@@ -47,16 +50,8 @@ public class CrownTundraTests
     [InlineData("FSYS_GST_SIRUDHI", 0x8C42D0E4u)] // Shielbert
     [InlineData("FSYS_CHIKA_FIRST", 0xEB611D76u)]
     [InlineData("FE_R2_CHIKA_INTRO", 0x98C91379u)]
-    public void DerivedKeyMatchesTheRecoveredValue(string internalName, uint expected)
-        => Assert.Equal(expected, SwshBlockKey.From(internalName));
-
-    [Fact]
-    public void HashIsTheSameFnvVariantPKHeXUses()
-    {
-        // Cross-check against PKHeX's own implementation rather than trusting our copy.
-        const string name = "FSYS_CHIKA_LEGEND_05";
-        Assert.Equal((uint)FnvHash.HashFnv1a_64(name), SwshBlockKey.From(name));
-    }
+    public void NameHashesToTheRecoveredValue(string internalName, uint expected)
+        => Assert.Equal(expected, KeyOf(internalName));
 
     [Theory]
     [InlineData("0x405EF69F74046C91", 0x405EF69F74046C91ul)]
@@ -73,6 +68,7 @@ public class CrownTundraTests
     [InlineData("   ")]
     [InlineData("nonsense")]
     [InlineData("0x")]
+    [InlineData("12345678901234567")]   // 17 digits overflow 64 bits
     public void SeedTextRejectsWhatItCannotParse(string text)
         => Assert.False(CrownTundraViewModel.TryParseSeed(text, out _));
 

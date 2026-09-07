@@ -5,6 +5,7 @@ using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PKHeX.Core;
+using PKHeX.Mac.Services;
 
 namespace PKHeX.Mac.ViewModels;
 
@@ -52,9 +53,7 @@ public partial class TechRecordViewModel : ObservableObject
                 // Skip records this species can never learn — they only add noise.
                 if (!permit.IsRecordPermitted(i))
                     continue;
-                var moveId = moves[i];
-                var name = (uint)moveId < _strings.movelist.Length ? _strings.movelist[moveId] : $"Move #{moveId}";
-                _all.Add(new TechRecordRowViewModel(this, i, name, record.GetMoveRecordFlag(i)));
+                _all.Add(new TechRecordRowViewModel(this, i, _strings.MoveName(moves[i]), record.GetMoveRecordFlag(i)));
             }
             _all.Sort((a, b) => string.CompareOrdinal(a.MoveName, b.MoveName));
         }
@@ -104,7 +103,7 @@ public partial class TechRecordViewModel : ObservableObject
     [RelayCommand]
     public void SetAllLegal()
     {
-        if (_pk is not ITechRecord record || _pk is null)
+        if (_pk is not ITechRecord record)
             return;
         record.SetRecordFlags(_pk, TechnicalRecordApplicatorOption.LegalCurrent);
         Load(_pk);

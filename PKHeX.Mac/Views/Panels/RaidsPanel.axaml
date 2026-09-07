@@ -90,7 +90,7 @@
                                                                       IsChecked="{Binding IsWishingPiece, Mode=TwoWay}"
                                                                       VerticalAlignment="Center"/>
                                                             <TextBox Grid.Column="5" Text="{Binding SeedText, Mode=TwoWay}"
-                                                                     FontSize="{StaticResource FontBody}" FontFamily="Menlo, monospace"
+                                                                     FontSize="{StaticResource FontBody}" FontFamily="{StaticResource MonoFont}"
                                                                      Classes.error="{Binding HasError}"
                                                                      ToolTip.Tip="Raid seed (64-bit hex)"/>
                                                             <CheckBox Grid.Column="6" Content="Watts" FontSize="{StaticResource FontBody}"
@@ -137,12 +137,12 @@
                                                     <TextBlock Grid.Column="0" Text="Today" FontSize="{StaticResource FontBody}"
                                                                Classes="secondary" VerticalAlignment="Center"/>
                                                     <TextBox Grid.Column="1" Text="{Binding CurrentSeedText, Mode=TwoWay}"
-                                                             FontSize="{StaticResource FontBody}" FontFamily="Menlo, monospace"/>
+                                                             FontSize="{StaticResource FontBody}" FontFamily="{StaticResource MonoFont}"/>
                                                     <TextBlock Grid.Column="2" Text="Tomorrow" FontSize="{StaticResource FontBody}"
                                                                Classes="secondary" VerticalAlignment="Center"
                                                                Margin="8,0,0,0"/>
                                                     <TextBox Grid.Column="3" Text="{Binding TomorrowSeedText, Mode=TwoWay}"
-                                                             FontSize="{StaticResource FontBody}" FontFamily="Menlo, monospace"/>
+                                                             FontSize="{StaticResource FontBody}" FontFamily="{StaticResource MonoFont}"/>
                                                 </Grid>
                                                 <TextBlock Text="{Binding SeedError}" FontSize="{StaticResource FontBody}"
                                                            Foreground="{DynamicResource IllegalFgBrush}"
@@ -180,7 +180,7 @@
                                                                       ItemsSource="{Binding ContentChoices}"
                                                                       SelectedIndex="{Binding ContentIndex, Mode=TwoWay}"/>
                                                             <TextBox Grid.Column="4" Text="{Binding SeedText, Mode=TwoWay}"
-                                                                     FontSize="{StaticResource FontBody}" FontFamily="Menlo, monospace"
+                                                                     FontSize="{StaticResource FontBody}" FontFamily="{StaticResource MonoFont}"
                                                                      Classes.error="{Binding HasError}"
                                                                      ToolTip.Tip="Raid seed (32-bit hex)"/>
                                                             <CheckBox Grid.Column="5" Content="LP taken" FontSize="{StaticResource FontBody}"
@@ -221,7 +221,7 @@
                                 <DataTemplate x:DataType="vm:RaidRowViewModel">
                                     <Grid ColumnDefinitions="*,120,120" ColumnSpacing="12">
                                         <TextBlock Grid.Column="0" Text="{Binding Label}" FontSize="{StaticResource FontBody}"
-                                                   FontFamily="Menlo, monospace" VerticalAlignment="Center"/>
+                                                   FontFamily="{StaticResource MonoFont}" VerticalAlignment="Center"/>
                                         <CheckBox Grid.Column="1" Content="Captured" FontSize="{StaticResource FontBody}"
                                                   IsChecked="{Binding Captured, Mode=TwoWay}"/>
                                         <CheckBox Grid.Column="2" Content="Defeated" FontSize="{StaticResource FontBody}"

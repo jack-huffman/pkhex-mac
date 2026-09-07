@@ -6,7 +6,7 @@
              x:DataType="vm:MainWindowViewModel">
 
     <Border Classes="card" Margin="18,14,18,14">
-        <TabControl SelectedIndex="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).GameDataTab, Mode=TwoWay}" Padding="0,6,0,0">
+        <TabControl SelectedIndex="{Binding GameDataTab, Mode=TwoWay}" Padding="0,6,0,0">
 
             <!-- ── Daycare ── -->
             <TabItem Header="Daycare" IsVisible="{Binding Daycare.IsSupported}">
@@ -32,7 +32,7 @@
                             <TextBlock Text="Egg seed" FontSize="{StaticResource FontBody}" Classes="secondary"
                                        VerticalAlignment="Center"/>
                             <TextBox Text="{Binding SeedText, Mode=TwoWay}" MinWidth="180"
-                                     FontSize="{StaticResource FontBody}" FontFamily="Menlo, monospace"/>
+                                     FontSize="{StaticResource FontBody}" FontFamily="{StaticResource MonoFont}"/>
                             <TextBlock Text="{Binding SeedError}" FontSize="{StaticResource FontMicro}"
                                        Foreground="{DynamicResource IllegalFgBrush}"
                                        VerticalAlignment="Center"/>
@@ -109,7 +109,6 @@
             </DockPanel>
             </TabItem>
 
-            <!-- ── Mystery Gift album ── -->
             <!-- ── Pokémon parked by an active fusion ── -->
             <TabItem Header="Fusions" IsVisible="{Binding Fusions.IsSupported}">
             <DockPanel DataContext="{Binding Fusions}" x:DataType="vm:FusionViewModel" Margin="2,8,2,2">
@@ -433,9 +432,9 @@
                                                               HorizontalAlignment="Stretch" FontSize="{StaticResource FontBody}"
                                                               ItemsSource="{Binding EnumNames}"
                                                               SelectedIndex="{Binding EnumIndex, Mode=TwoWay}"/>
-                                                    <TextBox Grid.Column="1" IsVisible="{Binding IsInteger}"
+                                                    <TextBox Grid.Column="1" IsVisible="{Binding IsNumeric}"
                                                              Text="{Binding TextValue, Mode=TwoWay}"
-                                                             FontSize="{StaticResource FontBody}" FontFamily="Menlo, monospace"/>
+                                                             FontSize="{StaticResource FontBody}" FontFamily="{StaticResource MonoFont}"/>
                                                     <TextBox Grid.Column="1" IsVisible="{Binding IsText}"
                                                              Text="{Binding TextValue, Mode=TwoWay}"
                                                              FontSize="{StaticResource FontBody}"/>

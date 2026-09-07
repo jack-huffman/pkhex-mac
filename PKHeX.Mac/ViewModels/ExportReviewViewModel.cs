@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -16,11 +14,11 @@ namespace PKHeX.Mac.ViewModels;
 /// <summary>
 /// What is about to be written, shown before committing 4MB to disk.
 /// </summary>
-public partial class ExportReviewViewModel : ObservableObject
+public sealed partial class ExportReviewViewModel : ObservableObject, IDisposable
 {
     private readonly Func<(SaveFile? Live, SaveFile? Pristine)> _saves;
     private readonly GameStrings _strings;
-    private CancellationTokenSource? _cts;
+    private readonly BackgroundRefresh _refresh = new();
 
     public ExportReviewViewModel(Func<(SaveFile?, SaveFile?)> saves, GameStrings strings)
     {
@@ -47,10 +45,6 @@ public partial class ExportReviewViewModel : ObservableObject
         Groups.Clear();
         OnPropertyChanged(nameof(HasChanges));
 
-        _cts?.Cancel();
-        _cts = new CancellationTokenSource();
-        var token = _cts.Token;
-
         var (live, pristine) = _saves();
         if (live is null || pristine is null)
         {
@@ -59,43 +53,43 @@ public partial class ExportReviewViewModel : ObservableObject
             return;
         }
 
-        try
-        {
-            var changes = await Task.Run(() => SaveDiff.Compare(live, pristine, _strings, token), token);
-            if (token.IsCancellationRequested)
-                return;
+        // The overlay blocks editing while the comparison runs, so reading the live save
+        // off the UI thread here cannot race a write.
+        var outcome = await _refresh.RunAsync(token => SaveDiff.Compare(live, pristine, _strings, token));
+        if (outcome.IsSuperseded)
+            return;
 
-            foreach (var group in changes.GroupBy(c => c.Kind).OrderBy(g => g.Key))
-            {
-                Groups.Add(new ChangeGroupViewModel(
-                    group.Key == ChangeKind.Entity ? "POKÉMON" : "SAVE DATA",
-                    group.Select(c => new ChangeRowViewModel(c)).ToList()));
-            }
-            OnPropertyChanged(nameof(HasChanges));
+        IsBusy = false;
+        if (outcome.Result is not { } changes)
+        {
+            Summary = "The comparison failed; export anyway if you trust your edits.";
+            return;
+        }
 
-            Summary = changes.Count == 0
-                ? "Nothing has changed since this file was opened."
-                : $"{changes.Count} change{(changes.Count == 1 ? string.Empty : "s")} will be written.";
-        }
-        catch (OperationCanceledException)
+        foreach (var group in changes.GroupBy(c => c.Kind).OrderBy(g => g.Key))
         {
-            // Superseded by a newer review.
+            Groups.Add(new ChangeGroupViewModel(
+                group.Key == ChangeKind.Entity ? "POKÉMON" : "SAVE DATA",
+                group.Select(c => new ChangeRowViewModel(c)).ToList()));
         }
-        finally
-        {
-            IsBusy = false;
-        }
+        OnPropertyChanged(nameof(HasChanges));
+
+        Summary = changes.Count == 0
+            ? "Nothing has changed since this file was opened."
+            : $"{changes.Count} change{(changes.Count == 1 ? string.Empty : "s")} will be written.";
     }
 
     [RelayCommand]
-    public void Close() => IsOpen = false;
+    private void Close() => IsOpen = false;
 
     [RelayCommand]
-    public void Export()
+    private void Export()
     {
         IsOpen = false;
         ExportRequested?.Invoke();
     }
+
+    public void Dispose() => _refresh.Dispose();
 }
 
 /// <summary>A heading and the changes beneath it.</summary>
@@ -110,7 +104,7 @@ public sealed class ChangeRowViewModel
 {
     public ChangeRowViewModel(SaveChange change)
     {
-        Where = Prettify(change.Where);
+        Where = DisplayNames.FromBlockLabel(change.Where);
         Description = change.Description;
         Sprite = change.Entity is { Species: > 0 } pk ? SpriteService.GetPokemonSprite(pk) : null;
         HasSprite = Sprite is not null;
@@ -120,24 +114,4 @@ public sealed class ChangeRowViewModel
     public string Description { get; }
     public Bitmap? Sprite { get; }
     public bool HasSprite { get; }
-
-    /// <summary>
-    /// PKHeX's own block labels are identifiers — KUnlockedUpgradeFly, KMoney. They are
-    /// the only names these blocks have, so they are worth showing, but not raw.
-    /// </summary>
-    private static string Prettify(string name)
-    {
-        if (name.Length < 2 || name[0] != 'K' || !char.IsUpper(name[1]))
-            return name;
-
-        var sb = new StringBuilder(name.Length + 8);
-        for (int i = 1; i < name.Length; i++)
-        {
-            var c = name[i];
-            if (i > 1 && char.IsUpper(c) && !char.IsUpper(name[i - 1]))
-                sb.Append(' ');
-            sb.Append(i == 1 ? c : char.ToLowerInvariant(c));
-        }
-        return sb.ToString();
-    }
 }

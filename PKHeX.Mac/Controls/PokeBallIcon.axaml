@@ -1,6 +1,5 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:ctrl="using:PKHeX.Mac.Controls"
              x:Class="PKHeX.Mac.Controls.PokeBallIcon"
              x:Name="Root">
     <!-- Poké Ball, transcoded from the supplied 24x24 vector: the two shell halves

@@ -17,9 +17,13 @@ namespace PKHeX.Mac.ViewModels;
 /// </summary>
 public partial class RaidsViewModel : ObservableObject
 {
+    /// <summary>Difficulty 6 is the seven-star tier; its unlock explains an empty record list.</summary>
+    private const string SevenStarUnlockBlock = "KUnlockedRaidDifficulty6";
+
     private readonly SaveFile _sav;
     private readonly Action _onChanged;
     private readonly List<RaidRowViewModel> _all = [];
+    private bool _bulk;
 
     public RaidsViewModel(SaveFile sav, Action onChanged)
     {
@@ -64,7 +68,17 @@ public partial class RaidsViewModel : ObservableObject
             if (progress.Exists(block))
                 Counters.Add(new RaidCounterViewModel(progress, label, block, onChanged));
         }
-        SevenStarUnlocked = progress.GetFlag("KUnlockedRaidDifficulty6");
+        // The empty-records note depends on this flag, so it follows the unlock toggle.
+        var sevenStar = Unlocks.FirstOrDefault(u => u.Block == SevenStarUnlockBlock);
+        SevenStarUnlocked = sevenStar?.Value ?? progress.GetFlag(SevenStarUnlockBlock);
+        if (sevenStar is not null)
+        {
+            sevenStar.PropertyChanged += (_, _) =>
+            {
+                SevenStarUnlocked = sevenStar.Value;
+                RefreshSummary();
+            };
+        }
         ApplyFilter();
     }
 
@@ -143,28 +157,35 @@ public partial class RaidsViewModel : ObservableObject
 
     internal void NotifyChanged()
     {
+        if (_bulk)
+            return; // the bulk command reports once when it finishes
         RefreshSummary();
         _onChanged();
+    }
+
+    /// <summary>Runs a change to many rows and reports it once.</summary>
+    private void Bulk(Action apply)
+    {
+        _bulk = true;
+        apply();
+        _bulk = false;
+        NotifyChanged();
     }
 
     /// <summary>Clears every capture flag, making the event raids catchable again.</summary>
     [RelayCommand]
-    public void AllowRecatchAll()
+    public void AllowRecatchAll() => Bulk(() =>
     {
         foreach (var row in _all.Where(r => r.Captured))
             row.Captured = false;
-        RefreshSummary();
-        _onChanged();
-    }
+    });
 
     [RelayCommand]
-    public void MarkAllDefeated()
+    public void MarkAllDefeated() => Bulk(() =>
     {
         foreach (var row in _all.Where(r => r.Identifier != 0 && !r.Defeated))
             row.Defeated = true;
-        RefreshSummary();
-        _onChanged();
-    }
+    });
 }
 
 /// <summary>
@@ -177,6 +198,7 @@ public partial class RaidRegionViewModel : ObservableObject
     private readonly Action _onChanged;
     private readonly List<DenRowViewModel> _all = [];
     private bool _loading;
+    private bool _bulk;
 
     public RaidRegionViewModel(string name, RaidSpawnList9 list, int legalCount, Action onChanged)
     {
@@ -263,8 +285,18 @@ public partial class RaidRegionViewModel : ObservableObject
 
     internal void NotifyChanged()
     {
+        if (_bulk)
+            return;
         RefreshSummary();
         _onChanged();
+    }
+
+    private void Bulk(Action apply)
+    {
+        _bulk = true;
+        apply();
+        _bulk = false;
+        NotifyChanged();
     }
 
     /// <summary>
@@ -282,20 +314,18 @@ public partial class RaidRegionViewModel : ObservableObject
     }
 
     [RelayCommand]
-    public void UnclaimAllPoints()
+    public void UnclaimAllPoints() => Bulk(() =>
     {
         foreach (var den in _all.Where(d => d.ClaimedLeaguePoints))
             den.ClaimedLeaguePoints = false;
-        NotifyChanged();
-    }
+    });
 
     [RelayCommand]
-    public void EnableAllPlaced()
+    public void EnableAllPlaced() => Bulk(() =>
     {
         foreach (var den in _all.Where(d => d.AreaId != 0 && !d.IsEnabled))
             den.IsEnabled = true;
-        NotifyChanged();
-    }
+    });
 
     /// <summary>Re-reads every row after a bulk write went straight to the save data.</summary>
     private void Reload()
@@ -338,12 +368,13 @@ public partial class DenRowViewModel : ObservableObject
     [ObservableProperty] private int _contentIndex;
     [ObservableProperty] private string _seedText = string.Empty;
     [ObservableProperty] private bool _claimedLeaguePoints;
-    [ObservableProperty] private string _error = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasError))]
+    private string _error = string.Empty;
 
     /// <summary>Drives the field's error styling; the text itself goes in a tooltip.</summary>
     public bool HasError => Error.Length > 0;
-
-    partial void OnErrorChanged(string value) => OnPropertyChanged(nameof(HasError));
 
     /// <summary>Refreshes the displayed values from the underlying save data.</summary>
     internal void Reload()
@@ -367,7 +398,7 @@ public partial class DenRowViewModel : ObservableObject
 
     partial void OnContentIndexChanged(int value)
     {
-        if (_loading || (uint)value > 3)
+        if (_loading || (uint)value >= (uint)ContentChoices.Count)
             return;
         _detail.Content = (TeraRaidContentType)value;
         _parent.NotifyChanged();
@@ -444,14 +475,13 @@ public partial class RaidRowViewModel : ObservableObject
 public partial class RaidFlagViewModel : ObservableObject
 {
     private readonly Sv9Progress _progress;
-    private readonly string _block;
     private readonly Action _onChanged;
     private bool _loading;
 
     public RaidFlagViewModel(Sv9Progress progress, string label, string block, Action onChanged)
     {
         _progress = progress;
-        _block = block;
+        Block = block;
         _onChanged = onChanged;
         Label = label;
         _loading = true;
@@ -461,13 +491,16 @@ public partial class RaidFlagViewModel : ObservableObject
 
     public string Label { get; }
 
+    /// <summary>The save block behind this flag.</summary>
+    public string Block { get; }
+
     [ObservableProperty] private bool _value;
 
     partial void OnValueChanged(bool value)
     {
         if (_loading)
             return;
-        _progress.SetFlag(_block, value);
+        _progress.SetFlag(Block, value);
         _onChanged();
     }
 }
@@ -516,6 +549,7 @@ public partial class NestRegionViewModel : ObservableObject
     private readonly RaidSpawnList8 _list;
     private readonly Action _onChanged;
     private readonly List<NestRowViewModel> _all = [];
+    private bool _bulk;
 
     public NestRegionViewModel(string name, RaidSpawnList8 list, int legalCount, Action onChanged)
     {
@@ -570,6 +604,8 @@ public partial class NestRegionViewModel : ObservableObject
 
     internal void NotifyChanged()
     {
+        if (_bulk)
+            return;
         RefreshSummary();
         _onChanged();
     }
@@ -591,12 +627,14 @@ public partial class NestRegionViewModel : ObservableObject
         _onChanged();
     }
 
-    /// <summary>Clears the watts-collected flag so every active den pays out again.</summary>
+    /// <summary>Clears the watts-collected flag so every active den pays out again, as one change.</summary>
     [RelayCommand]
     public void ResetWatts()
     {
+        _bulk = true;
         foreach (var den in _all.Where(d => d.WattsHarvested))
             den.WattsHarvested = false;
+        _bulk = false;
         NotifyChanged();
     }
 
@@ -643,18 +681,19 @@ public partial class NestRowViewModel : ObservableObject
     [ObservableProperty] private bool _isWishingPiece;
     [ObservableProperty] private bool _wattsHarvested;
     [ObservableProperty] private string _seedText = string.Empty;
-    [ObservableProperty] private string _error = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasError))]
+    private string _error = string.Empty;
 
     /// <summary>Drives the field's error styling; the text itself goes in a tooltip.</summary>
     public bool HasError => Error.Length > 0;
-
-    partial void OnErrorChanged(string value) => OnPropertyChanged(nameof(HasError));
 
     internal void Reload()
     {
         _loading = true;
         Active = _detail.IsActive;
-        StarIndex = Math.Clamp((int)_detail.Stars, 0, 4);
+        StarIndex = Math.Clamp((int)_detail.Stars, 0, StarChoices.Count - 1);
         IsRare = _detail.IsRare;
         IsEvent = _detail.IsEvent;
         IsWishingPiece = _detail.IsWishingPiece;
@@ -679,7 +718,7 @@ public partial class NestRowViewModel : ObservableObject
 
     partial void OnStarIndexChanged(int value)
     {
-        if (_loading || (uint)value > 4)
+        if (_loading || (uint)value >= (uint)StarChoices.Count)
             return;
         _detail.Stars = (byte)value;
         _parent.NotifyChanged();

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using System;
 using System.Collections.ObjectModel;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -79,13 +79,13 @@ public partial class PokemonPreviewViewModel : ObservableObject
         HasPokemon = true;
         Artwork = SpriteService.GetPokemonArtwork(pk);
         BallSprite = SpriteService.GetBallSprite(pk.Ball);
-        SpeciesName = (uint)pk.Species < _strings.specieslist.Length ? _strings.specieslist[pk.Species] : $"#{pk.Species}";
+        SpeciesName = _strings.SpeciesName(pk);
         LevelBadge = $"Lv. {pk.CurrentLevel}";
         IsShiny = pk.IsShiny;
 
         var pi = pk.PersonalInfo;
-        Type1Name = Name(pi.Type1);
-        Type2Name = Name(pi.Type2);
+        Type1Name = _strings.TypeName(pi.Type1);
+        Type2Name = _strings.TypeName(pi.Type2);
         HasType2 = pi.Type1 != pi.Type2;
         Type1Brush = TypePalette.GetBrush(pi.Type1);
         Type2Brush = TypePalette.GetBrush(pi.Type2);
@@ -95,11 +95,9 @@ public partial class PokemonPreviewViewModel : ObservableObject
         HasType1Icon = Type1Icon is not null;
         HasType2Icon = Type2Icon is not null;
 
-        NatureText = (uint)pk.Nature < _strings.natures.Length ? _strings.natures[(int)pk.Nature] : pk.Nature.ToString();
-        AbilityText = (uint)pk.Ability < _strings.abilitylist.Length ? _strings.abilitylist[pk.Ability] : $"#{pk.Ability}";
-        ItemText = pk.HeldItem == 0
-            ? "No held item"
-            : (uint)pk.HeldItem < _strings.itemlist.Length ? _strings.itemlist[pk.HeldItem] : $"#{pk.HeldItem}";
+        NatureText = _strings.NatureName(pk.Nature);
+        AbilityText = _strings.AbilityName(pk.Ability);
+        ItemText = pk.HeldItem == 0 ? "No held item" : _strings.ItemName(pk.HeldItem);
         OriginText = $"{GameInfo.GetVersionName(pk.Version)} · met Lv. {pk.MetLevel}";
 
         BuildMoves(pk);
@@ -126,10 +124,8 @@ public partial class PokemonPreviewViewModel : ObservableObject
         Stats.Clear();
         pk.ResetPartyStats();
         var (up, dn) = pk.StatAlignment.GetNatureModification();
-        // Nature indexes use the internal order (Atk, Def, Spe, SpA, SpD).
-        int[] internalToRow = [1, 2, 5, 3, 4];
-        var upRow = up == dn ? -1 : internalToRow[up];
-        var dnRow = up == dn ? -1 : internalToRow[dn];
+        var upRow = up == dn ? -1 : NatureChoice.RowFor(up);
+        var dnRow = up == dn ? -1 : NatureChoice.RowFor(dn);
 
         (string Label, int Value)[] rows =
         [
@@ -144,9 +140,6 @@ public partial class PokemonPreviewViewModel : ObservableObject
             StatTotal += rows[i].Value;
         }
     }
-
-    private string Name(int type) =>
-        (uint)type < _strings.types.Length ? _strings.types[type] : $"#{type}";
 }
 
 /// <summary>A read-only stat row in the database preview, matching the Stats tab's look.</summary>
@@ -154,20 +147,13 @@ public sealed class PreviewStatRow
 {
     private const double BarScale = 500.0;
 
-    private static readonly IBrush Neutral = new SolidColorBrush(Color.Parse("#8FA6B8"));
-    private static readonly IBrush Raised = new SolidColorBrush(Color.Parse("#FF8A80"));
-    private static readonly IBrush Lowered = new SolidColorBrush(Color.Parse("#82B1FF"));
-    private static readonly IBrush NeutralBar = new SolidColorBrush(Color.Parse("#6FAFB8"));
-    private static readonly IBrush RaisedBar = new SolidColorBrush(Color.Parse("#E5776D"));
-    private static readonly IBrush LoweredBar = new SolidColorBrush(Color.Parse("#5E8FD0"));
-
     public PreviewStatRow(string label, int value, int natureDirection)
     {
         Label = label;
         Value = value;
-        BarPercent = System.Math.Min(100.0, value / BarScale * 100.0);
-        LabelBrush = natureDirection switch { 1 => Raised, -1 => Lowered, _ => Neutral };
-        BarBrush = natureDirection switch { 1 => RaisedBar, -1 => LoweredBar, _ => NeutralBar };
+        BarPercent = Math.Min(100.0, value / BarScale * 100.0);
+        LabelBrush = natureDirection switch { 1 => Palette.RaisedStat, -1 => Palette.LoweredStat, _ => Palette.Muted };
+        BarBrush = natureDirection switch { 1 => Palette.Bad, -1 => Palette.LoweredStatBar, _ => Palette.Good };
         NatureBadge = natureDirection switch { 1 => "▲", -1 => "▼", _ => string.Empty };
         HasNatureBadge = natureDirection != 0;
         Tooltip = natureDirection switch

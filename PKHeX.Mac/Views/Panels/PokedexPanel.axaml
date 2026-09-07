@@ -45,7 +45,7 @@
                         <Grid ColumnDefinitions="62,44,*,70,50,80" ColumnSpacing="12">
                             <TextBlock Grid.Column="0" Text="{Binding NumberText}" FontSize="{StaticResource FontBody}"
                                        Classes="secondary" VerticalAlignment="Center"
-                                       FontFamily="Menlo, monospace"/>
+                                       FontFamily="{StaticResource MonoFont}"/>
                             <Image Grid.Column="1" Source="{Binding Sprite}" Width="40" Height="34"
                                    RenderOptions.BitmapInterpolationMode="None"/>
                             <TextBlock Grid.Column="2" Text="{Binding Name}" FontSize="{StaticResource FontBody}"
@@ -85,7 +85,7 @@
                                 <StackPanel VerticalAlignment="Center">
                                     <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontTitle}" FontWeight="Bold"/>
                                     <TextBlock Text="{Binding NumberText}" FontSize="{StaticResource FontBody}"
-                                               Classes="secondary" FontFamily="Menlo, monospace"/>
+                                               Classes="secondary" FontFamily="{StaticResource MonoFont}"/>
                                 </StackPanel>
                             </StackPanel>
 

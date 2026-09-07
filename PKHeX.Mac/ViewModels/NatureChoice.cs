@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Avalonia.Media;
 using PKHeX.Core;
+using PKHeX.Mac.Services;
 
 namespace PKHeX.Mac.ViewModels;
 
@@ -20,8 +21,15 @@ public sealed class NatureChoice
     /// </summary>
     private static readonly int[] InternalToDisplay = [0, 1, 4, 2, 3];
 
-    public static readonly IBrush UpBrush = new SolidColorBrush(Color.Parse("#5FD07A"));
-    public static readonly IBrush DownBrush = new SolidColorBrush(Color.Parse("#FF9F43"));
+    /// <summary>
+    /// The row a nature's raised or lowered stat occupies in a six-row HP-first stat
+    /// table, or -1 for a neutral nature. Every stat display derives its highlight from this.
+    /// </summary>
+    public static int RowFor(int internalStat) =>
+        (uint)internalStat < InternalToDisplay.Length ? InternalToDisplay[internalStat] + 1 : -1;
+
+    public static readonly IBrush UpBrush = Palette.NatureUp;
+    public static readonly IBrush DownBrush = Palette.NatureDown;
 
     private NatureChoice(int value, string name, int upDisplay, int downDisplay, bool neutral)
     {

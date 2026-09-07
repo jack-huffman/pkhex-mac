@@ -17,6 +17,9 @@ namespace PKHeX.Mac.ViewModels;
 /// </remarks>
 public partial class CommandPaletteViewModel : ObservableObject
 {
+    /// <summary>How many recently used entries lead the list when nothing has been typed.</summary>
+    private const int RecentEntries = 5;
+
     private readonly List<PaletteEntry> _entries = [];
     private readonly List<string> _recent = [];
 
@@ -68,7 +71,7 @@ public partial class CommandPaletteViewModel : ObservableObject
 
         _recent.Remove(entry.Title);
         _recent.Insert(0, entry.Title);
-        while (_recent.Count > 5)
+        while (_recent.Count > RecentEntries)
             _recent.RemoveAt(_recent.Count - 1);
 
         entry.Run();

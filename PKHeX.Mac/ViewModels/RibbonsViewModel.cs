@@ -5,6 +5,7 @@ using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PKHeX.Core;
+using PKHeX.Mac.Services;
 
 namespace PKHeX.Mac.ViewModels;
 
@@ -18,7 +19,7 @@ public partial class RibbonsViewModel : ObservableObject
     private readonly GameStrings _strings;
     private readonly Action _markDirty;
     private PKM? _pk;
-    private List<RibbonRowViewModel> _all = [];
+    private readonly List<RibbonRowViewModel> _all = [];
     private bool _loading;
 
     public RibbonsViewModel(GameStrings strings, Action markDirty)
@@ -43,14 +44,17 @@ public partial class RibbonsViewModel : ObservableObject
         try
         {
             _pk = pk;
-            _all = [];
+            _all.Clear();
             Rows.Clear();
-            HasPokemon = pk is { Species: > 0 } and IRibbonIndex;
+            // Ribbons are discovered by reflection, so any format that has Ribbon* properties
+            // is editable — not only the Gen 8+ formats that index them.
+            var ribbons = pk is { Species: > 0 } ? RibbonInfo.GetRibbonInfo(pk) : [];
+            HasPokemon = ribbons.Count > 0;
             SupportsAffixed = pk is IRibbonSetAffixed;
             if (!HasPokemon || pk is null)
                 return;
 
-            foreach (var info in RibbonInfo.GetRibbonInfo(pk))
+            foreach (var info in ribbons)
             {
                 var display = _strings.Ribbons.GetNameSafe(info.Name, out var name) ? name : Prettify(info.Name);
                 _all.Add(new RibbonRowViewModel(this, info, display));
@@ -86,19 +90,13 @@ public partial class RibbonsViewModel : ObservableObject
         return Enum.TryParse<RibbonIndex>(name, out var idx) ? (int)idx : null;
     }
 
+    /// <summary>"RibbonChampionKalos" → "Champion Kalos"; proper nouns keep their capitals.</summary>
     private static string Prettify(string propertyName)
     {
         var name = propertyName.StartsWith("Ribbon", StringComparison.Ordinal)
             ? propertyName["Ribbon".Length..]
             : propertyName;
-        var sb = new System.Text.StringBuilder(name.Length + 8);
-        foreach (var ch in name)
-        {
-            if (char.IsUpper(ch) && sb.Length > 0)
-                sb.Append(' ');
-            sb.Append(ch);
-        }
-        return sb.ToString();
+        return DisplayNames.FromPascalCase(name, keepCase: true);
     }
 
     partial void OnSearchTextChanged(string value) => ApplyFilter();
@@ -160,14 +158,17 @@ public partial class RibbonsViewModel : ObservableObject
         _markDirty();
     }
 
+    /// <summary>
+    /// Clears every ribbon and mark, not only the ones the legality engine would remove:
+    /// the point of the button is a clean slate.
+    /// </summary>
     [RelayCommand]
     public void RemoveAll()
     {
         if (_pk is null)
             return;
-        RibbonApplicator.RemoveAllValidRibbons(new LegalityAnalysis(_pk));
         foreach (var row in _all)
-            row.SetQuiet(false, 0);
+            ReflectUtil.SetValue(_pk, row.PropertyName, row.IsCounter ? (byte)0 : false);
         Load(_pk);
         _markDirty();
     }
@@ -213,13 +214,5 @@ public partial class RibbonRowViewModel : ObservableObject
         if (_loading)
             return;
         _parent.Write(this);
-    }
-
-    internal void SetQuiet(bool has, int count)
-    {
-        _loading = true;
-        HasRibbon = has;
-        Count = count;
-        _loading = false;
     }
 }

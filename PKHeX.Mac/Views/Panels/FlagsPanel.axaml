@@ -6,8 +6,8 @@
              x:Class="PKHeX.Mac.Views.Panels.FlagsPanel"
              x:DataType="vm:MainWindowViewModel">
 
-    <Border Classes="card" IsVisible="{Binding IsFlagsView}" Margin="18,14,18,14">
-        <TabControl SelectedIndex="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).FlagsTab, Mode=TwoWay}" Padding="0,10,0,0">
+    <Border Classes="card" Margin="18,14,18,14">
+        <TabControl SelectedIndex="{Binding FlagsTab, Mode=TwoWay}" Padding="0,10,0,0">
 
             <!-- Gen 2-5 style flat event flag array -->
             <TabItem Header="Event Flags" IsVisible="{Binding EventFlags.IsSupported}">
@@ -117,7 +117,7 @@
                                                    IsVisible="{Binding HasError}"/>
                                     </StackPanel>
                                     <TextBlock Grid.Column="1" Text="{Binding KeyText}" FontSize="{StaticResource FontMicro}"
-                                               FontFamily="Menlo, monospace" Classes="secondary"
+                                               FontFamily="{StaticResource MonoFont}" Classes="secondary"
                                                VerticalAlignment="Center"/>
                                     <TextBlock Grid.Column="2" Text="{Binding TypeName}" FontSize="{StaticResource FontMicro}"
                                                Classes="secondary" VerticalAlignment="Center"/>

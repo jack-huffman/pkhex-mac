@@ -1,13 +1,8 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="PKHeX.Mac.App"
-             xmlns:local="using:PKHeX.Mac"
              Name="PKHeX"
              RequestedThemeVariant="Default">
-
-    <Application.DataTemplates>
-        <local:ViewLocator />
-    </Application.DataTemplates>
 
     <Application.Resources>
         <ResourceDictionary>
@@ -27,6 +22,9 @@
             <x:Double x:Key="FontHeading">15</x:Double>
             <x:Double x:Key="FontTitle">17</x:Double>
             <x:Double x:Key="FontHero">26</x:Double>
+
+            <!-- Identifiers, seeds and hashes want fixed-width digits. -->
+            <FontFamily x:Key="MonoFont">Menlo, monospace</FontFamily>
 
             <ResourceDictionary.ThemeDictionaries>
                 <!-- ============ LIGHT ============ -->
@@ -48,6 +46,8 @@
                     <SolidColorBrush x:Key="IllegalFgBrush" Color="#C43C31"/>
                     <SolidColorBrush x:Key="IllegalBgBrush" Color="#22FF453A"/>
                     <SolidColorBrush x:Key="BannerBrush" Color="#F00A84FF"/>
+                    <SolidColorBrush x:Key="ScrimBrush" Color="#B0000000"/>
+                    <SolidColorBrush x:Key="ShinyBrush" Color="#D4A017"/>
                 </ResourceDictionary>
                 <!-- ============ DARK ============ -->
                 <ResourceDictionary x:Key="Dark">
@@ -68,6 +68,8 @@
                     <SolidColorBrush x:Key="IllegalFgBrush" Color="#FF6961"/>
                     <SolidColorBrush x:Key="IllegalBgBrush" Color="#26FF453A"/>
                     <SolidColorBrush x:Key="BannerBrush" Color="#E60A6CD6"/>
+                    <SolidColorBrush x:Key="ScrimBrush" Color="#B0000000"/>
+                    <SolidColorBrush x:Key="ShinyBrush" Color="#FFD54F"/>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
         </ResourceDictionary>
@@ -205,6 +207,19 @@
         </Style>
         <Style Selector="TextBlock.secondary">
             <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}"/>
+        </Style>
+        <!-- Validation feedback: a field that refused a value, and the note saying why. -->
+        <Style Selector="TextBlock.error">
+            <Setter Property="Foreground" Value="{DynamicResource IllegalFgBrush}"/>
+            <Setter Property="FontSize" Value="{StaticResource FontMicro}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <Style Selector="TextBox.error">
+            <Setter Property="BorderBrush" Value="{DynamicResource IllegalFgBrush}"/>
+        </Style>
+        <!-- Hex identifiers and seeds line up in a fixed-width face. -->
+        <Style Selector="TextBox.mono">
+            <Setter Property="FontFamily" Value="{StaticResource MonoFont}"/>
         </Style>
         <Style Selector="ProgressBar.meter">
             <Setter Property="MinHeight" Value="5"/>

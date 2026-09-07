@@ -4,10 +4,10 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PKHeX.Core;
+using PKHeX.Mac.Services;
 
 namespace PKHeX.Mac.ViewModels;
 
@@ -79,9 +79,9 @@ public partial class GameExtrasViewModel : ObservableObject
         {
             return owner.GetType().GetProperty(name, BindingFlags.Public | BindingFlags.Instance)?.GetValue(owner);
         }
-        catch
+        catch (TargetInvocationException)
         {
-            return null;
+            return null; // a getter that throws on this save simply has nothing to show
         }
     }
 
@@ -113,7 +113,7 @@ public partial class GameExtrasViewModel : ObservableObject
                 continue;
 
             var name = prefix.Length == 0 ? prop.Name : $"{prefix}.{prop.Name}";
-            var group = new ExtrasGroupViewModel(Prettify(prop.Name), name, value, _onChanged);
+            var group = new ExtrasGroupViewModel(DisplayNames.FromPascalCase(prop.Name), name, value, _onChanged);
             if (group.Fields.Count == 0)
                 continue;
             _all.Add(group);
@@ -162,22 +162,6 @@ public partial class GameExtrasViewModel : ObservableObject
         NonZeroOnly = false;
     }
 
-    /// <summary>"BattleSubwayPlay" → "Battle subway play".</summary>
-    internal static string Prettify(string name)
-    {
-        var sb = new StringBuilder(name.Length + 6);
-        for (int i = 0; i < name.Length; i++)
-        {
-            var c = name[i];
-            var boundary = i > 0
-                && (char.IsUpper(c) || (char.IsDigit(c) && !char.IsDigit(name[i - 1])))
-                && !(char.IsUpper(c) && char.IsUpper(name[i - 1]));
-            if (boundary)
-                sb.Append(' ');
-            sb.Append(i == 0 ? char.ToUpperInvariant(c) : char.ToLowerInvariant(c));
-        }
-        return sb.ToString();
-    }
 }
 
 /// <summary>One save substructure and its editable scalar fields.</summary>
@@ -233,7 +217,7 @@ public enum ExtrasFieldKind
 {
     Unsupported,
     Boolean,
-    Integer,
+    Numeric,
     Enumeration,
     Text,
 }
@@ -252,7 +236,7 @@ public partial class ExtrasFieldViewModel : ObservableObject
         _prop = prop;
         _onChanged = onChanged;
         Kind = kind;
-        Label = GameExtrasViewModel.Prettify(prop.Name);
+        Label = DisplayNames.FromPascalCase(prop.Name);
         TypeName = prop.PropertyType.Name;
 
         if (kind == ExtrasFieldKind.Enumeration)
@@ -272,7 +256,7 @@ public partial class ExtrasFieldViewModel : ObservableObject
     public IReadOnlyList<string> EnumNames { get; } = [];
 
     public bool IsBoolean => Kind == ExtrasFieldKind.Boolean;
-    public bool IsInteger => Kind == ExtrasFieldKind.Integer;
+    public bool IsNumeric => Kind == ExtrasFieldKind.Numeric;
     public bool IsEnumeration => Kind == ExtrasFieldKind.Enumeration;
     public bool IsText => Kind == ExtrasFieldKind.Text;
 
@@ -282,12 +266,13 @@ public partial class ExtrasFieldViewModel : ObservableObject
     [ObservableProperty] private bool _boolValue;
     [ObservableProperty] private string _textValue = string.Empty;
     [ObservableProperty] private int _enumIndex;
-    [ObservableProperty] private string _error = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasError))]
+    private string _error = string.Empty;
 
     /// <summary>Drives the field's error styling; the text itself goes in a tooltip.</summary>
     public bool HasError => Error.Length > 0;
-
-    partial void OnErrorChanged(string value) => OnPropertyChanged(nameof(HasError));
 
     internal static ExtrasFieldKind Classify(Type type)
     {
@@ -300,7 +285,7 @@ public partial class ExtrasFieldViewModel : ObservableObject
         return type == typeof(byte) || type == typeof(sbyte) || type == typeof(short)
                || type == typeof(ushort) || type == typeof(int) || type == typeof(uint)
                || type == typeof(long) || type == typeof(ulong)
-            ? ExtrasFieldKind.Integer
+            ? ExtrasFieldKind.Numeric
             : ExtrasFieldKind.Unsupported;
     }
 

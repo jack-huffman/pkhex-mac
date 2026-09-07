@@ -24,6 +24,24 @@ public partial class PokemonDetailViewModel : ObservableObject
     private PKM? _pk; // working clone
     private bool _loading;
 
+    /// <summary>
+    /// The inspector's own buttons. Applying, closing and discarding all reach into the
+    /// save or the selection, which belong to the owning session, so the pane only
+    /// announces the intent and the session decides what it means.
+    /// </summary>
+    public event Action? ApplyRequested;
+    public event Action? CloseRequested;
+    public event Action? DiscardRequested;
+
+    [RelayCommand]
+    private void Apply() => ApplyRequested?.Invoke();
+
+    [RelayCommand]
+    private void Close() => CloseRequested?.Invoke();
+
+    [RelayCommand]
+    private void DiscardEdits() => DiscardRequested?.Invoke();
+
     public PokemonDetailViewModel(GameStrings strings)
     {
         _strings = strings;
@@ -130,7 +148,6 @@ public partial class PokemonDetailViewModel : ObservableObject
     [ObservableProperty] private int _teraTypeOriginalValue;
     [ObservableProperty] private int _teraTypeOverrideValue;
 
-    // ---- Hyper training ----
     // ---- Dynamax and Gigantamax ----
 
     [ObservableProperty] private bool _supportsGigantamax;
@@ -154,6 +171,8 @@ public partial class PokemonDetailViewModel : ObservableObject
         dmax.DynamaxLevel = (byte)Math.Clamp(value, 0, 10);
         MarkDirty();
     }
+
+    // ---- Hyper training ----
 
     [ObservableProperty] private bool _supportsHyperTraining;
     [ObservableProperty] private bool _htHp;
@@ -263,7 +282,7 @@ public partial class PokemonDetailViewModel : ObservableObject
     [ObservableProperty] private double _baseStatTotalPercent;
 
     /// <summary>Game-legal ceiling on the sum of all EVs (510 from Gen 3 on).</summary>
-    public int EvTotalLimit => EffortValues.Max510;
+    private static int EvTotalLimit => EffortValues.Max510;
 
     public PKM? Pokemon => _pk;
     public int MaxIV => _pk?.MaxIV ?? 31;
@@ -414,8 +433,8 @@ public partial class PokemonDetailViewModel : ObservableObject
         // The 18 regular types plus Stellar, which uses a sentinel value.
         var list = new List<ComboItem>(20);
         for (int i = 0; i <= TeraTypeUtil.MaxType; i++)
-            list.Add(new ComboItem(Name(_strings.types, i), i));
-        list.Add(new ComboItem(Name(_strings.types, TeraTypeUtil.StellarTypeDisplayStringIndex), TeraTypeUtil.Stellar));
+            list.Add(new ComboItem(_strings.TypeName(i), i));
+        list.Add(new ComboItem(_strings.TypeName(TeraTypeUtil.StellarTypeDisplayStringIndex), TeraTypeUtil.Stellar));
         return list;
     }
 
@@ -441,10 +460,10 @@ public partial class PokemonDetailViewModel : ObservableObject
     {
         Artwork = SpriteService.GetPokemonArtwork(p);
         BallSprite = SpriteService.GetBallSprite(p.Ball);
-        SpeciesName = Name(_strings.specieslist, p.Species);
+        SpeciesName = _strings.SpeciesName(p);
         var pi = p.PersonalInfo;
-        var t1 = Name(_strings.types, pi.Type1);
-        var t2 = Name(_strings.types, pi.Type2);
+        var t1 = _strings.TypeName(pi.Type1);
+        var t2 = _strings.TypeName(pi.Type2);
         TypeText = pi.Type1 == pi.Type2 ? t1 : $"{t1} / {t2}";
         Type1Name = t1;
         Type2Name = t2;
@@ -529,17 +548,14 @@ public partial class PokemonDetailViewModel : ObservableObject
             return;
         var nature = _pk.StatAlignment;
         var (up, dn) = nature.GetNatureModification();
-        // Nature indexes are in the games' internal order (Atk, Def, Spe, SpA, SpD);
-        // our rows are HP, Atk, Def, SpA, SpD, Spe.
-        int[] internalToRow = [1, 2, 5, 3, 4];
-        var upRow = (uint)up < internalToRow.Length ? internalToRow[up] : -1;
-        var dnRow = (uint)dn < internalToRow.Length ? internalToRow[dn] : -1;
+        var upRow = NatureChoice.RowFor(up);
+        var dnRow = NatureChoice.RowFor(dn);
         var neutral = up == dn;
 
         for (int i = 0; i < Stats.Count; i++)
             Stats[i].SetNatureEffect(neutral ? 0 : i == upRow ? 1 : i == dnRow ? -1 : 0);
 
-        var natureName = Name(_strings.natures, (int)nature);
+        var natureName = _strings.NatureName(nature);
         NatureEffectText = neutral
             ? $"{natureName} — no stat changes"
             : $"{natureName} — raises {StatEditRowViewModel.LabelFor(upRow)}, lowers {StatEditRowViewModel.LabelFor(dnRow)}";
@@ -551,9 +567,6 @@ public partial class PokemonDetailViewModel : ObservableObject
         IsLegal = la.Valid;
         LegalityReport = la.Report();
     }
-
-    private static string Name(IReadOnlyList<string> list, int index) =>
-        (uint)index < list.Count ? list[index] : $"#{index}";
 
     internal void MarkDirty()
     {
@@ -925,10 +938,9 @@ public partial class PokemonDetailViewModel : ObservableObject
     [RelayCommand]
     public void RandomizeScale()
     {
-        if (_pk is not IScaledSize3 s3)
+        if (_pk is not IScaledSize3)
             return;
-        Scale = (byte)Util.Rand.Next(0, 256);
-        _ = s3;
+        Scale = Util.Rand.Next(0, 256); // the setter writes it through
     }
 
     private void SetMove(int index, int value)
@@ -1066,10 +1078,6 @@ public partial class PokemonDetailViewModel : ObservableObject
         _pk.DisplaySID = value;
         MarkDirty();
     }
-
-    // =====================================================================
-    // Commands
-    // =====================================================================
 
     // =====================================================================
     // Legality suggestions — ask the engine what would make this legal
@@ -1239,8 +1247,7 @@ public partial class PokemonDetailViewModel : ObservableObject
     {
         if (_pk is not IHomeTrack track)
             return;
-        var high = (ulong)Util.Rand32() << 32;
-        track.Tracker = high | Util.Rand32();
+        track.Tracker = HomeTracker.NewRandom();
         History.Load(_pk);
         RefreshTransferSummary(_pk!);
         IsDirty = true;
@@ -1307,7 +1314,7 @@ public partial class PokemonDetailViewModel : ObservableObject
         _pk.ApplySetDetails(set);
         Load(_pk);
         IsDirty = true;
-        message = $"Applied Showdown set for {Name(_strings.specieslist, _pk.Species)}.";
+        message = $"Applied Showdown set for {_strings.SpeciesName(_pk)}.";
         return true;
     }
 
@@ -1327,12 +1334,12 @@ public partial class StatEditRowViewModel : ObservableObject
     // Bars are scaled against this so the six rows stay visually comparable.
     private const double BarScale = 500.0;
 
-    private static readonly IBrush NeutralLabel = new SolidColorBrush(Color.Parse("#8FA6B8"));
-    private static readonly IBrush RaisedLabel = new SolidColorBrush(Color.Parse("#FF8A80"));
-    private static readonly IBrush LoweredLabel = new SolidColorBrush(Color.Parse("#82B1FF"));
-    private static readonly IBrush NeutralBar = new SolidColorBrush(Color.Parse("#6FAFB8"));
-    private static readonly IBrush RaisedBar = new SolidColorBrush(Color.Parse("#E5776D"));
-    private static readonly IBrush LoweredBar = new SolidColorBrush(Color.Parse("#5E8FD0"));
+    private static readonly IBrush NeutralLabel = Palette.Muted;
+    private static readonly IBrush RaisedLabel = Palette.RaisedStat;
+    private static readonly IBrush LoweredLabel = Palette.LoweredStat;
+    private static readonly IBrush NeutralBar = Palette.Good;
+    private static readonly IBrush RaisedBar = Palette.Bad;
+    private static readonly IBrush LoweredBar = Palette.LoweredStatBar;
 
     internal static string LabelFor(int index) => (uint)index < Labels.Length ? Labels[index] : "?";
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -26,10 +27,17 @@ public partial class SaveStateViewModel : ObservableObject
 
     public ObservableCollection<ChangeLogEntry> Log { get; } = [];
 
-    [ObservableProperty] private int _pendingChanges;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasUnsavedChanges))]
+    [NotifyPropertyChangedFor(nameof(CountText))]
+    private int _pendingChanges;
+
     [ObservableProperty] private string _lastChange = string.Empty;
     [ObservableProperty] private bool _isLogOpen;
-    [ObservableProperty] private string _savedPath = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SavedText))]
+    private string _savedPath = string.Empty;
 
     public bool HasUnsavedChanges => PendingChanges > 0;
 
@@ -44,14 +52,6 @@ public partial class SaveStateViewModel : ObservableObject
     public string SavedText => SavedPath.Length == 0
         ? "Not exported this session"
         : $"Exported to {SavedPath}";
-
-    partial void OnPendingChangesChanged(int value)
-    {
-        OnPropertyChanged(nameof(HasUnsavedChanges));
-        OnPropertyChanged(nameof(CountText));
-    }
-
-    partial void OnSavedPathChanged(string value) => OnPropertyChanged(nameof(SavedText));
 
     /// <summary>Records one edit. The description is shown as-is, so keep it plain.</summary>
     public void NoteChange(string description)
@@ -89,5 +89,5 @@ public partial class SaveStateViewModel : ObservableObject
 /// <summary>One entry in the session log.</summary>
 public sealed record ChangeLogEntry(string Description, DateTime At, bool IsMilestone = false)
 {
-    public string TimeText => At.ToString("HH:mm:ss");
+    public string TimeText => At.ToString("HH:mm:ss", CultureInfo.InvariantCulture);
 }

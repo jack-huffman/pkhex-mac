@@ -1,8 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
-using System.Linq;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -26,6 +24,7 @@ public partial class DaycareViewModel : ObservableObject
     private readonly SaveFile _sav;
     private readonly GameStrings _strings;
     private readonly Action _onChanged;
+    private bool _loading;
 
     public DaycareViewModel(SaveFile sav, GameStrings strings, Action onChanged)
     {
@@ -66,8 +65,6 @@ public partial class DaycareViewModel : ObservableObject
             _loading = false;
         }
     }
-
-    private bool _loading;
 
     public bool IsSupported { get; }
     public bool HasEggState { get; }
@@ -234,10 +231,8 @@ public partial class DaycareSlotViewModel : ObservableObject
             IsEmpty = false;
             IsShiny = pk.IsShiny;
             Sprite = SpriteService.GetPokemonSprite(pk);
-            SpeciesName = (uint)pk.Species < _strings.specieslist.Length
-                ? _strings.specieslist[pk.Species]
-                : $"#{pk.Species}";
-            var nature = (uint)pk.Nature < _strings.natures.Length ? _strings.natures[(int)pk.Nature] : string.Empty;
+            SpeciesName = _strings.SpeciesName(pk);
+            var nature = _strings.NatureName(pk.Nature);
             var gender = pk.Gender switch { 0 => "♂", 1 => "♀", _ => string.Empty };
             DetailText = $"Lv. {pk.CurrentLevel} · {nature} {gender}".TrimEnd();
         }
@@ -293,15 +288,11 @@ public partial class DaycareSlotViewModel : ObservableObject
             _parent.Status = "Select a box slot holding a Pokémon first.";
             return;
         }
-        var converted = pk;
-        if (pk.GetType() != _sav.PKMType)
+        var converted = EntityFiles.ConvertFor(pk, _sav, out var problem);
+        if (converted is null)
         {
-            converted = EntityConverter.ConvertToType(pk, _sav.PKMType, out var result)!;
-            if (converted is null)
-            {
-                _parent.Status = $"That Pokémon cannot be converted for this save ({result}).";
-                return;
-            }
+            _parent.Status = $"That Pokémon cannot be converted for this save. {problem}";
+            return;
         }
         converted.RefreshChecksum();
         var slot = _storage.GetDaycareSlot(_index);

@@ -11,9 +11,9 @@ namespace PKHeX.Mac.Services;
 /// you were looking at, and which saves you have opened.
 /// </summary>
 /// <remarks>
-/// Stored under Application Support, the conventional place on macOS, and written
-/// atomically so a crash mid-write cannot leave an unreadable file. Nothing here is
-/// important enough to interrupt anyone over, so every failure is swallowed and the
+/// Stored under <c>~/Library/Application Support</c>, where macOS expects preferences, and
+/// written atomically so a crash mid-write cannot leave an unreadable file. Nothing here
+/// is important enough to interrupt anyone over, so every failure is swallowed and the
 /// defaults apply.
 /// </remarks>
 public sealed class AppSettings
@@ -22,8 +22,10 @@ public sealed class AppSettings
 
     public double WindowWidth { get; set; }
     public double WindowHeight { get; set; }
-    public double WindowX { get; set; } = double.NaN;
-    public double WindowY { get; set; } = double.NaN;
+
+    /// <summary>Last window position; null until one has been recorded.</summary>
+    public double? WindowX { get; set; }
+    public double? WindowY { get; set; }
     public bool WindowMaximized { get; set; }
 
     /// <summary>The sidebar destination that was showing.</summary>
@@ -38,10 +40,11 @@ public sealed class AppSettings
     /// <summary>Most recently opened saves, newest first.</summary>
     public List<string> Recent { get; set; } = [];
 
-
-
     [JsonIgnore]
     public bool HasWindowBounds => WindowWidth > 200 && WindowHeight > 200;
+
+    [JsonIgnore]
+    public bool HasWindowPosition => WindowX is not null && WindowY is not null;
 
     /// <summary>Records a save as opened, moving it to the front.</summary>
     public void NoteOpened(string path)
@@ -59,40 +62,86 @@ public sealed class AppSettings
 
     private static readonly JsonSerializerOptions Options = new() { WriteIndented = true };
 
-    public static string Path { get; } = System.IO.Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "PKHeX.Mac", "settings.json");
+    /// <summary>Where this user's settings live.</summary>
+    public static string Path { get; } = System.IO.Path.Combine(SettingsRoot(), "PKHeX.Mac", "settings.json");
 
+    /// <summary>
+    /// Where earlier builds wrote the file. .NET maps <see cref="Environment.SpecialFolder.ApplicationData"/>
+    /// to <c>~/.config</c> on every Unix, macOS included, which is not where a Mac app's
+    /// preferences belong. A file found there is adopted once and then left alone.
+    /// </summary>
+    private static readonly string LegacyPath = System.IO.Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PKHeX.Mac", "settings.json");
+
+    private static string SettingsRoot()
+    {
+        if (OperatingSystem.IsMacOS())
+        {
+            var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            return System.IO.Path.Combine(home, "Library", "Application Support");
+        }
+        return Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+    }
+
+    /// <summary>Loads this user's settings, or defaults when there are none worth reading.</summary>
     public static AppSettings Load()
+    {
+        AdoptLegacyFile();
+        return Load(Path);
+    }
+
+    /// <summary>Reads settings from <paramref name="path"/>. A missing, unreadable or corrupt file yields defaults.</summary>
+    public static AppSettings Load(string path)
     {
         try
         {
-            if (File.Exists(Path))
-                return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(Path)) ?? new AppSettings();
+            if (File.Exists(path))
+                return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path)) ?? new AppSettings();
         }
-        catch
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
         {
             // A corrupt or unreadable file is not worth reporting; defaults are fine.
         }
         return new AppSettings();
     }
 
-    public void Save()
+    /// <summary>Writes this user's settings. Never throws.</summary>
+    public void Save() => Save(Path);
+
+    /// <summary>Writes settings to <paramref name="path"/> atomically. Never throws.</summary>
+    public void Save(string path)
     {
         try
         {
-            var dir = System.IO.Path.GetDirectoryName(Path);
-            if (dir is not null)
+            var dir = System.IO.Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(dir))
                 Directory.CreateDirectory(dir);
             // Write beside the target and move into place, so an interrupted write
             // cannot truncate the previous settings.
-            var temp = Path + ".tmp";
+            var temp = path + ".tmp";
             File.WriteAllText(temp, JsonSerializer.Serialize(this, Options));
-            File.Move(temp, Path, overwrite: true);
+            File.Move(temp, path, overwrite: true);
         }
-        catch
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             // Losing window position is not worth surfacing.
+        }
+    }
+
+    private static void AdoptLegacyFile()
+    {
+        try
+        {
+            if (LegacyPath == Path || File.Exists(Path) || !File.Exists(LegacyPath))
+                return;
+            var dir = System.IO.Path.GetDirectoryName(Path);
+            if (!string.IsNullOrEmpty(dir))
+                Directory.CreateDirectory(dir);
+            File.Move(LegacyPath, Path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Then the defaults apply, as with any other unreadable file.
         }
     }
 }

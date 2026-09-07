@@ -1,12 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.Linq;
-using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PKHeX.Core;
+using PKHeX.Mac.Services;
 
 namespace PKHeX.Mac.ViewModels;
 
@@ -38,7 +37,7 @@ public partial class TrainerRecordsViewModel : ObservableObject
 
         for (int i = 0; i < record.RecordCount; i++)
         {
-            var label = names.TryGetValue(i, out var key) ? Prettify(key) : $"Record {i}";
+            var label = names.TryGetValue(i, out var key) ? DisplayNames.FromSnakeCase(key) : $"Record {i}";
             _all.Add(new RecordRowViewModel(record, i, label, onChanged));
         }
         ApplyFilter();
@@ -81,29 +80,14 @@ public partial class TrainerRecordsViewModel : ObservableObject
         Summary = $"{_all.Count} records · {set} with a value";
     }
 
-    /// <summary>Zeroes every record — the clean-slate option PKHeX offers.</summary>
+    /// <summary>Zeroes every record — the clean-slate option PKHeX offers — as one change.</summary>
     [RelayCommand]
     public void ClearAll()
     {
         foreach (var row in _all.Where(r => r.Value != 0))
-            row.Value = 0;
+            row.SetQuietly(0);
         ApplyFilter();
         _onChanged();
-    }
-
-    /// <summary>"total_capture" → "Total capture".</summary>
-    internal static string Prettify(string key)
-    {
-        var parts = key.Split('_', StringSplitOptions.RemoveEmptyEntries);
-        var sb = new StringBuilder(key.Length + 2);
-        for (int i = 0; i < parts.Length; i++)
-        {
-            if (i != 0)
-                sb.Append(' ');
-            var part = parts[i];
-            sb.Append(i == 0 ? char.ToUpperInvariant(part[0]) + part[1..] : part);
-        }
-        return sb.ToString();
     }
 }
 
@@ -149,5 +133,14 @@ public partial class RecordRowViewModel : ObservableObject
             _loading = false;
         }
         _onChanged();
+    }
+
+    /// <summary>Writes a value without reporting it, for bulk edits that report once.</summary>
+    internal void SetQuietly(int value)
+    {
+        _record.SetRecord(_id, value);
+        _loading = true;
+        Value = _record.GetRecord(_id);
+        _loading = false;
     }
 }

@@ -1,122 +1,340 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
-using Avalonia.Threading;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using Avalonia.VisualTree;
 using PKHeX.Mac.Services;
 using PKHeX.Mac.ViewModels;
 
 namespace PKHeX.Mac.Views;
 
+/// <summary>
+/// The one window. Its DataContext is always the active session; the
+/// <see cref="Workspace"/> owns the sessions and the tab strip.
+/// </summary>
+/// <remarks>
+/// Everything here needs the window itself: file and folder pickers, the clipboard, the
+/// drag ghost, window placement, the native menu, and routing keys that no control
+/// claimed. Anything that only needs the save lives on a view model.
+/// </remarks>
 public partial class MainWindow : Window
 {
+    /// <summary>Height of the title-bar band, matching ExtendClientAreaTitleBarHeightHint.</summary>
+    private const double TitleBarHeight = 46;
+
+    /// <summary>Pointer travel before a press on a slot becomes a drag.</summary>
+    private const double DragThreshold = 6;
+
     private MainWindowViewModel VM => (MainWindowViewModel)DataContext!;
 
-    private SlotViewModel? _dragSource;
-    private SlotViewModel? _dragOverSlot;
-    private Avalonia.Point _dragStart;
-    private bool _dragPending;
-    private bool _dragging;
-    private int _dragOverBoxIndex = -1;
-
-    public MainWindow()
-    {
-        InitializeComponent();
-        AddHandler(DragDrop.DragOverEvent, OnDragOver);
-        AddHandler(DragDrop.DropEvent, OnDrop);
-        Loaded += OnWindowLoaded;
-        HookShutdownRequest();
-        // The box grid sizes itself to the window, and the second box appears once
-        // there is room for it, so both need recomputing on every resize.
-        SizeChanged += (_, _) => RefreshBoxLayout();
-        // Tunnels, so the wheel is intercepted before a dropdown or spinner can act on it.
-        AddHandler(PointerWheelChangedEvent, OnWheelBeforeControls, RoutingStrategies.Tunnel);
-    }
+    /// <summary>The open saves. Bound by the tab strip through <c>#RootWindow.Workspace</c>.</summary>
+    public WorkspaceViewModel Workspace { get; } = new();
 
     /// <summary>Window bounds, last view and recent saves, kept between launches.</summary>
     private readonly AppSettings _settings = AppSettings.Load();
 
+    private NativeMenuItem? _recentMenu;
+
+    public MainWindow()
+    {
+        InitializeComponent();
+        Workspace.SessionCreated += WireSession;
+        Workspace.PropertyChanged += OnWorkspaceChanged;
+        DataContext = Workspace.AddEmptyTab().Session;
+
+        AddHandler(DragDrop.DragOverEvent, OnDragOver);
+        AddHandler(DragDrop.DropEvent, OnDrop);
+        // Tunnels, so the wheel is intercepted before a dropdown or spinner can act on it.
+        AddHandler(PointerWheelChangedEvent, OnWheelBeforeControls, RoutingStrategies.Tunnel);
+        Loaded += OnWindowLoaded;
+        HookShutdownRequest();
+    }
+
     private void OnWindowLoaded(object? sender, RoutedEventArgs e)
     {
-        // DataContext is assigned after construction, so this cannot be set up earlier.
         RestoreWindow();
-        var first = new SaveTabViewModel(VM);
-        Tabs.Add(first);
-        _activeTab = first;
-        first.IsActive = true;
-        WireSession(VM);
+        _recentMenu = FindMenuItem(NativeMenu.GetMenu(this), "Open Recent");
         RebuildRecentMenu();
-        RefreshBoxLayout();
         _ = VM.CheckForUpstreamUpdateAsync();
+    }
+
+    /// <summary>Connects a new session to the services only the window can provide.</summary>
+    private void WireSession(MainWindowViewModel session)
+    {
+        session.ExportRequested = () => Run(ExportAsync);
+        session.Settings = _settings;
+        session.SettingsChanged = () => _settings.Save();
+    }
+
+    private void OnWorkspaceChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(WorkspaceViewModel.Active) || Workspace.Active is not { } tab)
+            return;
+        DataContext = tab.Session;
+        // The new session has never seen the boxes column, so tell it the size now.
+        tab.Session.UpdateBoxLayout(BoxesView.Bounds.Width, BoxesView.Bounds.Height);
+    }
+
+    /// <summary>The boxes column reports its own size; the insights panel fits or hides on it.</summary>
+    private void OnBoxesViewSizeChanged(object? sender, SizeChangedEventArgs e) =>
+        VM.UpdateBoxLayout(e.NewSize.Width, e.NewSize.Height);
+
+    /// <summary>
+    /// Runs a view action — pickers, clipboard, dialogs — and surfaces any failure. A
+    /// discarded task that faults does not crash the process, but it does fail silently,
+    /// which for a save editor is worse.
+    /// </summary>
+    private async void Run(Func<Task> work)
+    {
+        try
+        {
+            await work();
+        }
+        catch (Exception ex)
+        {
+            await ShowMessage("Something Went Wrong", ex.Message);
+        }
     }
 
     // =====================================================================
     // File open / export
     // =====================================================================
 
-    private static readonly FilePickerFileType SaveFileType = new("Pokémon Save Files")
-    {
-        Patterns = ["main", "*.sav", "*.dsv", "*.dat", "*.gci", "*.bin", "*.raw", "*.sav.bak", "*"],
-    };
-
+    /// <summary>Every entity extension the engine knows, plus the encrypted <c>.ek*</c> twins.</summary>
     private static readonly FilePickerFileType EntityFileType = new("Pokémon Entity Files")
     {
-        Patterns = ["*.pk*", "*.pb7", "*.pb8", "*.ck3", "*.xk3", "*.sk2", "*.bk4", "*.rk4", "*.ek*"],
+        Patterns = ["*.ek*", .. PKHeX.Core.EntityFileExtension.GetExtensions().Select(e => $"*.{e}")],
     };
 
-    public void OnOpenClicked(object? sender, EventArgs e) => _ = OpenAsync();
-    public void OnOpenButtonClicked(object? sender, RoutedEventArgs e) => _ = OpenAsync();
+    private static readonly FilePickerFileType BlockFileType = new("Save Block")
+    {
+        Patterns = ["*.bin"],
+    };
 
-    public void OnExportClicked(object? sender, EventArgs e) => _ = ExportAsync();
+    public void OnOpenClicked(object? sender, EventArgs e) => Run(OpenAsync);
+    public void OnOpenButtonClicked(object? sender, RoutedEventArgs e) => Run(OpenAsync);
+    public void OnExportClicked(object? sender, EventArgs e) => Run(ExportAsync);
+    public void OnExportButtonClicked(object? sender, RoutedEventArgs e) => Run(ExportAsync);
+    public void OnCloseTabClicked(object? sender, EventArgs e)
+    {
+        if (Workspace.Active is { } tab)
+            Workspace.Close(tab);
+    }
+
+    private async Task OpenAsync()
+    {
+        // No FileTypeFilter: Switch saves ("main", "main (1)", …) have no extension and
+        // macOS open panels grey out files that don't match the filter. The engine sniffs
+        // the format from content, so allow selecting anything.
+        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = "Open Pokémon Save File",
+            AllowMultiple = true,
+        });
+        foreach (var file in files)
+        {
+            if (file.TryGetLocalPath() is { } path)
+                await OpenPathAsync(path);
+        }
+    }
+
+    /// <summary>Opens a save by path, from a picker, a drop, or the Open Recent menu.</summary>
+    private async Task OpenPathAsync(string path)
+    {
+        if (!Workspace.Open(path, out var error))
+        {
+            await ShowMessage("Could Not Open Save", error);
+            // A file that no longer opens should stop being offered.
+            _settings.Recent.Remove(path);
+            _settings.Save();
+        }
+        RebuildRecentMenu();
+    }
+
+    private async Task ExportAsync()
+    {
+        if (VM.Save is null)
+        {
+            await ShowMessage("No Save Loaded", "Open a save file first (⌘O).");
+            return;
+        }
+
+        var suggested = Path.GetFileName(VM.SavePath) ?? "main";
+        var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Export Save File",
+            SuggestedFileName = suggested,
+            // Start in the folder the save came from. ExportSave moves SavePath to the
+            // file it wrote, so later exports open wherever it was last written instead.
+            SuggestedStartLocation = await TryGetFolder(VM.SavePath),
+            ShowOverwritePrompt = true,
+        });
+        if (file?.TryGetLocalPath() is not { } path)
+            return;
+        if (!VM.ExportSave(path, out var error))
+            await ShowMessage("Could Not Export Save", error);
+    }
 
     /// <summary>
-    /// Hands the boxes column's dimensions to the view model. The inspector is a fixed
-    /// column, so subtracting it and the sidebar gives the space the grid actually has.
+    /// Folder holding <paramref name="path"/>, for seeding a file picker's start location.
+    /// Returns null when there is nothing usable, which leaves the picker at its own default.
     /// </summary>
-    private void RefreshBoxLayout()
+    private async Task<IStorageFolder?> TryGetFolder(string? path)
     {
-        var width = Bounds.Width - 238 - VM.InspectorWidth.Value;
-        var height = Bounds.Height - 46 - 26;      // drag strip and status line
-        if (width > 0 && height > 0)
-            VM.UpdateBoxLayout(width, height);
-    }
-
-    /// <summary>Jumps to a Pokémon the insights panel flagged.</summary>
-    public void OnBoxProblemClicked(object? sender, RoutedEventArgs e)
-    {
-        if (sender is Button { DataContext: BoxProblemViewModel problem })
-            problem.Select();
-    }
-
-    /// <summary>Opens a save by path, used by the Open Recent menu.</summary>
-    private async void OpenPath(string path)
-    {
+        if (string.IsNullOrEmpty(path))
+            return null;
         try
         {
-            if (!OpenInTab(path, out var error))
-            {
-                await ShowError("Could Not Open Save", error);
-                // A file that no longer opens should stop being offered.
-                _settings.Recent.Remove(path);
-                _settings.Save();
-            }
-            RebuildRecentMenu();
+            var dir = Path.GetDirectoryName(path);
+            return string.IsNullOrEmpty(dir) ? null : await StorageProvider.TryGetFolderFromPathAsync(dir);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            await ShowError("Error", ex.Message);
+            // A folder that has since been deleted or become unreadable is not worth
+            // failing the export over; fall back to the picker's default location.
+            return null;
         }
+    }
+
+    // =====================================================================
+    // Remembering where you were
+    // =====================================================================
+
+    private void RestoreWindow()
+    {
+        if (!_settings.HasWindowBounds)
+            return;
+        // Only restore a position that still lands on a screen; an external display
+        // that is no longer attached would otherwise put the window out of reach.
+        if (_settings is { WindowX: { } x, WindowY: { } y } && IsOnAScreen(x, y))
+            Position = new PixelPoint((int)x, (int)y);
+        Width = _settings.WindowWidth;
+        Height = _settings.WindowHeight;
+        if (_settings.WindowMaximized)
+            WindowState = WindowState.Maximized;
+    }
+
+    private bool IsOnAScreen(double x, double y) =>
+        Screens.All.Any(screen => screen.Bounds.Contains(new PixelPoint((int)x, (int)y)));
+
+    private void RememberWindow()
+    {
+        _settings.WindowMaximized = WindowState == WindowState.Maximized;
+        if (WindowState == WindowState.Normal)
+        {
+            _settings.WindowWidth = Width;
+            _settings.WindowHeight = Height;
+            _settings.WindowX = Position.X;
+            _settings.WindowY = Position.Y;
+        }
+        _settings.LastView = VM.CurrentView;
+        _settings.Save();
+    }
+
+    /// <summary>Fills the Open Recent submenu from the saves that have been opened.</summary>
+    private void RebuildRecentMenu()
+    {
+        if (_recentMenu?.Menu is not { } submenu)
+            return;
+
+        submenu.Items.Clear();
+        _settings.PruneMissing();
+        if (_settings.Recent.Count == 0)
+        {
+            submenu.Items.Add(new NativeMenuItem("No recent saves") { IsEnabled = false });
+            return;
+        }
+        foreach (var path in _settings.Recent)
+        {
+            var item = new NativeMenuItem(Path.GetFileName(path)) { ToolTip = path };
+            var target = path;
+            item.Click += (_, _) => Run(() => OpenPathAsync(target));
+            submenu.Items.Add(item);
+        }
+    }
+
+    private static NativeMenuItem? FindMenuItem(NativeMenu? menu, string header)
+    {
+        if (menu is null)
+            return null;
+        foreach (var item in menu.Items)
+        {
+            if (item is not NativeMenuItem entry)
+                continue;
+            if (entry.Header == header)
+                return entry;
+            if (FindMenuItem(entry.Menu, header) is { } found)
+                return found;
+        }
+        return null;
+    }
+
+    // =====================================================================
+    // Keyboard
+    // =====================================================================
+
+    public void OnPaletteOpenClicked(object? sender, EventArgs e) => OpenPalette();
+
+    private void OpenPalette()
+    {
+        VM.Palette.Open();
+        // Focus has to wait for the overlay to be realised before it can take it.
+        Dispatcher.UIThread.Post(() => PaletteBox.Focus());
+    }
+
+    private void OnPaletteActivate(object? sender, TappedEventArgs e) => VM.Palette.Activate();
+
+    /// <summary>
+    /// Drives the palette and the grids from the keyboard. Handled here rather than on
+    /// the controls so the shortcuts work from anywhere.
+    /// </summary>
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        var palette = VM.Palette;
+        if (e.Key == Key.K && e.KeyModifiers.HasFlag(KeyModifiers.Meta))
+        {
+            OpenPalette();
+            e.Handled = true;
+            return;
+        }
+        if (!palette.IsOpen && HandleGridKey(e))
+        {
+            e.Handled = true;
+            return;
+        }
+        if (palette.IsOpen)
+        {
+            switch (e.Key)
+            {
+                case Key.Escape:
+                    palette.Close();
+                    e.Handled = true;
+                    return;
+                case Key.Down:
+                    palette.MoveSelection(1);
+                    e.Handled = true;
+                    return;
+                case Key.Up:
+                    palette.MoveSelection(-1);
+                    e.Handled = true;
+                    return;
+                case Key.Enter:
+                    palette.Activate();
+                    e.Handled = true;
+                    return;
+            }
+        }
+        base.OnKeyDown(e);
     }
 
     /// <summary>
@@ -134,15 +352,21 @@ public partial class MainWindow : Window
         var command = e.KeyModifiers.HasFlag(KeyModifiers.Meta);
         switch (e.Key)
         {
-            case Key.Left:  VM.MoveSelection(-1, 0); return true;
-            case Key.Right: VM.MoveSelection(1, 0); return true;
-            case Key.Up:    VM.MoveSelection(0, -1); return true;
-            case Key.Down:  VM.MoveSelection(0, 1); return true;
-
+            case Key.Left:
+                VM.MoveSelection(-1, 0);
+                return true;
+            case Key.Right:
+                VM.MoveSelection(1, 0);
+                return true;
+            case Key.Up:
+                VM.MoveSelection(0, -1);
+                return true;
+            case Key.Down:
+                VM.MoveSelection(0, 1);
+                return true;
             case Key.Delete or Key.Back:
                 VM.DeleteSlot(slot);
                 return true;
-
             case Key.C when command:
                 VM.CopySlot(slot);
                 return true;
@@ -197,417 +421,9 @@ public partial class MainWindow : Window
         viewer.Offset = viewer.Offset.WithY(Math.Clamp(target, 0, limit));
     }
 
-    // ---- Open saves, one per tab ----
-
-    /// <summary>
-    /// Whether to show the tab strip. A styled property so the view can bind to it;
-    /// a plain field would never notify.
-    /// </summary>
-    public static readonly StyledProperty<bool> ShowTabStripProperty =
-        AvaloniaProperty.Register<MainWindow, bool>(nameof(ShowTabStrip));
-
-    public bool ShowTabStrip
-    {
-        get => GetValue(ShowTabStripProperty);
-        set => SetValue(ShowTabStripProperty, value);
-    }
-
-    /// <summary>
-    /// Every open save. The window's DataContext is always the active session, so the
-    /// rest of the interface is unaware that more than one exists.
-    /// </summary>
-    public ObservableCollection<SaveTabViewModel> Tabs { get; } = [];
-
-    private SaveTabViewModel? _activeTab;
-
-    /// <summary>Every open save except the one asking, as transfer destinations.</summary>
-    private List<TransferTarget> OtherSavesFor(MainWindowViewModel asking)
-    {
-        var targets = new List<TransferTarget>();
-        foreach (var tab in Tabs)
-        {
-            if (ReferenceEquals(tab.Session, asking) || tab.Session.SAV is not { } sav)
-                continue;
-            var session = tab.Session;
-            targets.Add(new TransferTarget($"{tab.Title} · {tab.Subtitle}", sav,
-                note => session.NoteExternalChange(note)));
-        }
-        return targets;
-    }
-
-    /// <summary>Tells every tab that the set of open saves changed.</summary>
-    private void RefreshAllTransferTargets()
-    {
-        foreach (var tab in Tabs)
-            tab.Session.RefreshTransferTargets();
-    }
-
-    /// <summary>Switches the whole interface to another open save.</summary>
-    public void Activate(SaveTabViewModel tab)
-    {
-        if (ReferenceEquals(_activeTab, tab))
-            return;
-        if (_activeTab is not null)
-            _activeTab.IsActive = false;
-        _activeTab = tab;
-        tab.IsActive = true;
-        DataContext = tab.Session;
-        WireSession(tab.Session);
-        RefreshBoxLayout();
-    }
-
-    /// <summary>Opens a save in a new tab, reusing the current one if it is empty.</summary>
-    private bool OpenInTab(string path, out string error)
-    {
-        // An untouched empty tab is a placeholder, not a document worth keeping.
-        if (_activeTab is { Session.SAV: null } empty)
-        {
-            var ok = empty.Session.LoadSave(path, out error);
-            if (ok)
-            {
-                empty.Refresh();
-                RefreshAllTransferTargets();
-            }
-            return ok;
-        }
-
-        var session = new MainWindowViewModel();
-        if (!session.LoadSave(path, out error))
-            return false;
-
-        var tab = new SaveTabViewModel(session);
-        Tabs.Add(tab);
-        ShowTabStrip = Tabs.Count > 1;
-        Activate(tab);
-        RefreshAllTransferTargets();
-        return true;
-    }
-
-    /// <summary>Closes a tab, keeping at least one open so the window is never blank.</summary>
-    public void CloseTab(SaveTabViewModel tab)
-    {
-        var index = Tabs.IndexOf(tab);
-        if (index < 0)
-            return;
-        Tabs.Remove(tab);
-        ShowTabStrip = Tabs.Count > 1;
-        RefreshAllTransferTargets();
-        if (Tabs.Count == 0)
-        {
-            var session = new MainWindowViewModel();
-            var replacement = new SaveTabViewModel(session);
-            Tabs.Add(replacement);
-            _activeTab = null;
-            Activate(replacement);
-            return;
-        }
-        if (ReferenceEquals(_activeTab, tab))
-        {
-            _activeTab = null;
-            Activate(Tabs[Math.Min(index, Tabs.Count - 1)]);
-        }
-    }
-
-    public void OnTabClicked(object? sender, RoutedEventArgs e)
-    {
-        if (sender is Control { DataContext: SaveTabViewModel tab })
-            Activate(tab);
-    }
-
-    public void OnTabCloseClicked(object? sender, RoutedEventArgs e)
-    {
-        if (sender is Control { DataContext: SaveTabViewModel tab })
-            CloseTab(tab);
-    }
-
-    /// <summary>Connects a session to the window-level services it needs.</summary>
-    private void WireSession(MainWindowViewModel session)
-    {
-        session.LayoutChanged = RefreshBoxLayout;
-        session.ExportRequested = () => _ = ExportAsync();
-        session.Settings = _settings;
-        session.SettingsChanged = () => _settings.Save();
-        session.SaveState.PropertyChanged += (_, _) => _activeTab?.Refresh();
-        session.OtherSaves = () => OtherSavesFor(session);
-        session.AttachTransfer();
-    }
-
-    // ---- Remembering where you were ----
-
-    private void RestoreWindow()
-    {
-        if (!_settings.HasWindowBounds)
-            return;
-        // Only restore a position that still lands on a screen; an external display
-        // that is no longer attached would otherwise put the window out of reach.
-        if (!double.IsNaN(_settings.WindowX) && !double.IsNaN(_settings.WindowY)
-            && IsOnAScreen(_settings.WindowX, _settings.WindowY))
-        {
-            Position = new PixelPoint((int)_settings.WindowX, (int)_settings.WindowY);
-        }
-        Width = _settings.WindowWidth;
-        Height = _settings.WindowHeight;
-        if (_settings.WindowMaximized)
-            WindowState = WindowState.Maximized;
-    }
-
-    private bool IsOnAScreen(double x, double y)
-    {
-        foreach (var screen in Screens.All)
-        {
-            if (screen.Bounds.Contains(new PixelPoint((int)x, (int)y)))
-                return true;
-        }
-        return false;
-    }
-
-    private void RememberWindow()
-    {
-        _settings.WindowMaximized = WindowState == WindowState.Maximized;
-        if (WindowState == WindowState.Normal)
-        {
-            _settings.WindowWidth = Width;
-            _settings.WindowHeight = Height;
-            _settings.WindowX = Position.X;
-            _settings.WindowY = Position.Y;
-        }
-        _settings.LastView = VM.CurrentView;
-        _settings.Save();
-    }
-
-    /// <summary>Fills the Open Recent submenu from the saves that have been opened.</summary>
-    private void RebuildRecentMenu()
-    {
-        var menu = NativeMenu.GetMenu(this);
-        var recentItem = FindRecentMenuItem(menu);
-        if (recentItem?.Menu is not { } submenu)
-            return;
-
-        submenu.Items.Clear();
-        _settings.PruneMissing();
-        if (_settings.Recent.Count == 0)
-        {
-            submenu.Items.Add(new NativeMenuItem("No recent saves") { IsEnabled = false });
-            return;
-        }
-        foreach (var path in _settings.Recent)
-        {
-            var item = new NativeMenuItem(Path.GetFileName(path))
-            {
-                ToolTip = path,
-            };
-            var target = path;
-            item.Click += (_, _) => OpenPath(target);
-            submenu.Items.Add(item);
-        }
-    }
-
-    private static NativeMenuItem? FindRecentMenuItem(NativeMenu? menu)
-    {
-        if (menu is null)
-            return null;
-        foreach (var item in menu.Items)
-        {
-            if (item is not NativeMenuItem entry)
-                continue;
-            if (entry.Header == "Open Recent")
-                return entry;
-            if (FindRecentMenuItem(entry.Menu) is { } found)
-                return found;
-        }
-        return null;
-    }
-
-    // ---- Command palette ----
-
-    public void OnPaletteOpenClicked(object? sender, EventArgs e) => OpenPalette();
-
-    private void OpenPalette()
-    {
-        VM.Palette.Open();
-        // Focus has to wait for the overlay to be realised before it can take it.
-        Dispatcher.UIThread.Post(() => this.FindControl<TextBox>("PaletteBox")?.Focus());
-    }
-
-    private void OnPaletteActivate(object? sender, TappedEventArgs e) => VM.Palette.Activate();
-
-    /// <summary>
-    /// Drives the palette from the keyboard. Handled here rather than on the overlay so
-    /// the shortcut works from anywhere, including while a text field has focus.
-    /// </summary>
-    protected override void OnKeyDown(KeyEventArgs e)
-    {
-        var palette = VM.Palette;
-        if (e.Key == Key.K && e.KeyModifiers.HasFlag(KeyModifiers.Meta))
-        {
-            OpenPalette();
-            e.Handled = true;
-            return;
-        }
-        if (!palette.IsOpen && HandleGridKey(e))
-        {
-            e.Handled = true;
-            return;
-        }
-        if (palette.IsOpen)
-        {
-            switch (e.Key)
-            {
-                case Key.Escape:
-                    palette.Close();
-                    e.Handled = true;
-                    return;
-                case Key.Down:
-                    palette.MoveSelection(1);
-                    e.Handled = true;
-                    return;
-                case Key.Up:
-                    palette.MoveSelection(-1);
-                    e.Handled = true;
-                    return;
-                case Key.Enter:
-                    palette.Activate();
-                    e.Handled = true;
-                    return;
-            }
-        }
-        base.OnKeyDown(e);
-    }
-
-    // ---- Closing with unsaved edits ----
-
-    /// <summary>Set once the user has decided, so the second close attempt goes through.</summary>
-    private bool _closeConfirmed;
-
-    protected override void OnClosing(WindowClosingEventArgs e)
-    {
-        // Recorded before the unsaved-changes guard, so the window is remembered even
-        // when the close is then cancelled.
-        RememberWindow();
-        if (!_closeConfirmed && AnyTabHasPendingWork())
-        {
-            // Editing happens against a copy in memory, so closing would silently
-            // discard it. Hold the window open and ask.
-            e.Cancel = true;
-            PromptBeforeLeaving();
-            return;
-        }
-        base.OnClosing(e);
-    }
-
-    /// <summary>
-    /// Cmd+Q asks the application to quit rather than closing the window, so it never
-    /// reaches OnClosing. Without this, the most common way a Mac user leaves an app
-    /// would still discard their edits silently.
-    /// </summary>
-    private void HookShutdownRequest()
-    {
-        if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime life)
-            return;
-        life.ShutdownRequested += (_, e) =>
-        {
-            // Cmd+Q never reaches OnClosing, so the window state has to be recorded here
-            // as well or quitting the usual way would forget it.
-            RememberWindow();
-            if (_closeConfirmed || !AnyTabHasPendingWork())
-                return;
-            e.Cancel = true;
-            PromptBeforeLeaving();
-        };
-    }
-
-    /// <summary>
-    /// True when any open save has unwritten edits. Checking only the visible tab would
-    /// let a background one be discarded in silence, which is the exact failure the
-    /// guard exists to prevent.
-    /// </summary>
-    private bool AnyTabHasPendingWork()
-    {
-        foreach (var tab in Tabs)
-        {
-            if (tab.Session.HasPendingWork)
-                return true;
-        }
-        return false;
-    }
-
-    /// <summary>Names the tabs with unsaved work, so the prompt is specific.</summary>
-    private string DescribePendingTabs()
-    {
-        var names = new List<string>();
-        foreach (var tab in Tabs)
-        {
-            if (tab.Session.HasPendingWork)
-                names.Add(tab.Title);
-        }
-        return names.Count switch
-        {
-            0 => string.Empty,
-            1 => string.Empty,      // the usual case; the existing wording covers it
-            _ => $"Unsaved in {names.Count} open saves: {string.Join(", ", names)}.",
-        };
-    }
-
-    private void PromptBeforeLeaving()
-    {
-        var multi = DescribePendingTabs();
-        VM.ClosePromptNote = multi.Length > 0
-            ? multi
-            : VM.Detail.IsDirty
-                ? "A Pokémon in the inspector also has edits that were never applied to its slot."
-                : string.Empty;
-        VM.IsClosePromptOpen = true;
-    }
-
-    // ---- Reverting ----
-
-    /// <summary>Clears the slot selection, which empties the inspector.</summary>
-    public void OnCloseDetailClicked(object? sender, RoutedEventArgs e) => VM.SelectSlot(null);
-
-    /// <summary>Leaves a database view without having to click a box slot to escape it.</summary>
-    public void OnCloseDatabaseClicked(object? sender, RoutedEventArgs e) => VM.SetView("boxes");
-
-    public void OnRevertAllClicked(object? sender, RoutedEventArgs e) => VM.RequestRevert();
-
-    public void OnRevertAllMenuClicked(object? sender, EventArgs e) => VM.RequestRevert();
-
-    public void OnSlotRevertClicked(object? sender, RoutedEventArgs e)
-    {
-        if (SlotOf(sender) is { } slot)
-            VM.RevertSlot(slot);
-    }
-
-    /// <summary>Throws away edits typed into the inspector without touching the save.</summary>
-    public void OnDetailRevertClicked(object? sender, RoutedEventArgs e) => VM.RevertDetailEdits();
-
-    public void OnCloseCancelClicked(object? sender, RoutedEventArgs e) => VM.IsClosePromptOpen = false;
-
-    public void OnCloseDiscardClicked(object? sender, RoutedEventArgs e)
-    {
-        _closeConfirmed = true;
-        VM.IsClosePromptOpen = false;
-        Close();
-    }
-
-    public void OnCloseExportClicked(object? sender, RoutedEventArgs e) => _ = ExportThenCloseAsync();
-
-    private async Task ExportThenCloseAsync()
-    {
-        VM.IsClosePromptOpen = false;
-        await ExportAsync();
-        // Only leave if the export actually landed; a cancelled picker keeps the work.
-        if (!VM.HasPendingWork)
-        {
-            _closeConfirmed = true;
-            Close();
-        }
-    }
-    public void OnExportButtonClicked(object? sender, RoutedEventArgs e) => _ = ExportAsync();
-
-    /// <summary>
-    /// Height of the title-bar band, matching ExtendClientAreaTitleBarHeightHint.
-    /// </summary>
-    private const double TitleBarHeight = 46;
+    // =====================================================================
+    // Window chrome
+    // =====================================================================
 
     /// <summary>
     /// Lets the whole width of the title-bar band drag the window, not just the strips
@@ -631,94 +447,109 @@ public partial class MainWindow : Window
         BeginMoveDrag(e);
     }
 
-    private async Task OpenAsync()
+    public void OnTabClicked(object? sender, RoutedEventArgs e)
     {
-        try
+        if (sender is Control { DataContext: SaveTabViewModel tab })
+            Workspace.Active = tab;
+    }
+
+    // =====================================================================
+    // Closing with unsaved edits
+    // =====================================================================
+
+    /// <summary>Set once the user has decided, so the second close attempt goes through.</summary>
+    private bool _closeConfirmed;
+
+    protected override void OnClosing(WindowClosingEventArgs e)
+    {
+        // Recorded before the unsaved-changes guard, so the window is remembered even
+        // when the close is then cancelled.
+        RememberWindow();
+        if (!_closeConfirmed && Workspace.HasPendingWork)
         {
-            // No FileTypeFilter: Switch saves ("main", "main (1)", …) have no extension and
-            // macOS open panels grey out files that don't match the filter. The engine sniffs
-            // the format from content, so allow selecting anything.
-            var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-            {
-                Title = "Open Pokémon Save File",
-                AllowMultiple = false,
-            });
-            if (files.Count == 0)
-                return;
-            var path = files[0].TryGetLocalPath();
-            if (path is null)
-                return;
-            if (!OpenInTab(path, out var error))
-                await ShowError("Could Not Open Save", error);
-            else
-                RebuildRecentMenu();
+            // Editing happens against a copy in memory, so closing would silently
+            // discard it. Hold the window open and ask.
+            e.Cancel = true;
+            PromptBeforeLeaving();
+            return;
         }
-        catch (Exception ex)
-        {
-            await ShowError("Error", ex.Message);
-        }
+        base.OnClosing(e);
     }
 
     /// <summary>
-    /// Folder holding <paramref name="path"/>, for seeding a file picker's start location.
-    /// Returns null when there is nothing usable, which leaves the picker at its own default.
+    /// Cmd+Q asks the application to quit rather than closing the window, so it never
+    /// reaches OnClosing. Without this, the most common way a Mac user leaves an app
+    /// would still discard their edits silently.
     /// </summary>
-    private async Task<IStorageFolder?> TryGetFolder(string? path)
+    private void HookShutdownRequest()
     {
-        if (string.IsNullOrEmpty(path))
-            return null;
-        try
+        if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime life)
+            return;
+        life.ShutdownRequested += (_, e) =>
         {
-            var dir = Path.GetDirectoryName(path);
-            if (string.IsNullOrEmpty(dir))
-                return null;
-            return await StorageProvider.TryGetFolderFromPathAsync(dir);
-        }
-        catch
-        {
-            // A folder that has since been deleted or become unreadable is not worth
-            // failing the export over; fall back to the picker's default location.
-            return null;
-        }
-    }
-
-    private async Task ExportAsync()
-    {
-        try
-        {
-            if (VM.SAV is null)
+            if (_closeConfirmed || !Workspace.HasPendingWork)
             {
-                await ShowError("No Save Loaded", "Open a save file first (⌘O).");
+                RememberWindow();
                 return;
             }
+            e.Cancel = true;
+            PromptBeforeLeaving();
+        };
+    }
 
-            var suggested = Path.GetFileName(VM.SavePath) ?? "main";
-            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
-            {
-                Title = "Export Save File",
-                SuggestedFileName = suggested,
-                // Start in the folder the save came from. ExportSave moves SavePath to the
-                // file it wrote, so later exports open wherever it was last written instead.
-                SuggestedStartLocation = await TryGetFolder(VM.SavePath),
-                ShowOverwritePrompt = true,
-            });
-            if (file is null)
-                return;
-            var path = file.TryGetLocalPath();
-            if (path is null)
-                return;
-            if (!VM.ExportSave(path, out var error))
-                await ShowError("Could Not Export Save", error);
-        }
-        catch (Exception ex)
+    /// <summary>Brings the first dirty tab forward and asks what to do with it.</summary>
+    private void PromptBeforeLeaving()
+    {
+        if (Workspace.FirstPendingTab() is { } pending && !ReferenceEquals(Workspace.Active, pending))
+            Workspace.Active = pending;
+
+        var multi = Workspace.DescribePendingTabs();
+        VM.ClosePromptNote = multi.Length > 0
+            ? multi
+            : VM.Detail.IsDirty
+                ? "A Pokémon in the inspector also has edits that were never applied to its slot."
+                : string.Empty;
+        VM.IsClosePromptOpen = true;
+    }
+
+    public void OnCloseDiscardClicked(object? sender, RoutedEventArgs e)
+    {
+        _closeConfirmed = true;
+        VM.IsClosePromptOpen = false;
+        Close();
+    }
+
+    public void OnCloseExportClicked(object? sender, RoutedEventArgs e) => Run(ExportThenCloseAsync);
+
+    /// <summary>
+    /// Exports the active save, then closes only if nothing anywhere is still unsaved.
+    /// A cancelled picker keeps the work; a second dirty tab gets its own prompt.
+    /// </summary>
+    private async Task ExportThenCloseAsync()
+    {
+        VM.IsClosePromptOpen = false;
+        await ExportAsync();
+        if (VM.HasPendingWork)
+            return;
+        if (Workspace.HasPendingWork)
         {
-            await ShowError("Error", ex.Message);
+            PromptBeforeLeaving();
+            return;
         }
+        _closeConfirmed = true;
+        Close();
     }
 
     // =====================================================================
-    // Slot selection + drag source
+    // Slot selection and drag between slots
     // =====================================================================
+
+    private SlotViewModel? _dragSource;
+    private SlotViewModel? _dragOverSlot;
+    private Point _dragStart;
+    private bool _dragPending;
+    private bool _dragging;
+    private int _dragOverBoxIndex = -1;
 
     private static SlotViewModel? SlotOf(object? sender) =>
         (sender as Control)?.DataContext as SlotViewModel;
@@ -731,22 +562,14 @@ public partial class MainWindow : Window
         // a click on empty chrome, which would fight the slot's own drag.
         e.Handled = true;
         var point = e.GetCurrentPoint(this);
-        if (point.Properties.IsLeftButtonPressed)
+        VM.SelectSlot(slot);
+        if (point.Properties.IsLeftButtonPressed && !slot.IsEmpty)
         {
-            VM.SelectSlot(slot);
-            if (!slot.IsEmpty)
-            {
-                _dragSource = slot;
-                _dragStart = point.Position;
-                _dragPending = true;
-                // Capture so we keep receiving moves/release anywhere in the window.
-                e.Pointer.Capture(sender as IInputElement);
-            }
-        }
-        else
-        {
-            // Right-click: select so the context menu applies to this slot.
-            VM.SelectSlot(slot);
+            _dragSource = slot;
+            _dragStart = point.Position;
+            _dragPending = true;
+            // Capture so we keep receiving moves/release anywhere in the window.
+            e.Pointer.Capture(sender as IInputElement);
         }
     }
 
@@ -758,7 +581,7 @@ public partial class MainWindow : Window
 
         if (_dragPending)
         {
-            if (Math.Abs(pos.X - _dragStart.X) < 6 && Math.Abs(pos.Y - _dragStart.Y) < 6)
+            if (Math.Abs(pos.X - _dragStart.X) < DragThreshold && Math.Abs(pos.Y - _dragStart.Y) < DragThreshold)
                 return;
             // Threshold crossed: start the drag and show the sprite ghost.
             _dragPending = false;
@@ -818,26 +641,38 @@ public partial class MainWindow : Window
     }
 
     /// <summary>Finds the slot under a window-relative point, if any.</summary>
-    private SlotViewModel? SlotAt(Avalonia.Point point)
-    {
-        var visual = this.GetVisualsAt(point)
-            .FirstOrDefault(v => FindSlotBorder(v) is not null);
-        return visual is null ? null : FindSlotBorder(visual)?.DataContext as SlotViewModel;
-    }
+    private SlotViewModel? SlotAt(Point point) =>
+        this.GetVisualsAt(point).Select(SlotUnder).FirstOrDefault(s => s is not null);
 
-    private static Border? FindSlotBorder(Avalonia.Visual? visual)
+    /// <summary>Walks up from a visual to the slot card containing it, if any.</summary>
+    private static SlotViewModel? SlotUnder(Visual? visual)
     {
         while (visual is not null)
         {
-            if (visual is Border { DataContext: SlotViewModel } b && b.Classes.Contains("slot"))
-                return b;
+            if (visual is Border { DataContext: SlotViewModel slot } b && b.Classes.Contains("slot"))
+                return slot;
             visual = visual.GetVisualParent();
         }
         return null;
     }
 
+    /// <summary>While dragging a Pokémon, hovering a box name marks it as the drop target.</summary>
+    private void OnBoxNamePointerEntered(object? sender, PointerEventArgs e)
+    {
+        if (!_dragging || sender is not Control { DataContext: string name })
+            return;
+        _dragOverBoxIndex = VM.BoxNames.IndexOf(name);
+    }
+
+    /// <summary>Leaving the name un-marks it, so a drop elsewhere does not land in a box brushed past.</summary>
+    private void OnBoxNamePointerExited(object? sender, PointerEventArgs e) => _dragOverBoxIndex = -1;
+
+    /// <summary>Any tap in the box list returns to the box grid, even when the
+    /// tapped box was already the selected one (no SelectionChanged fires then).</summary>
+    private void OnBoxListTapped(object? sender, TappedEventArgs e) => VM.SetView("boxes");
+
     // =====================================================================
-    // Drag & drop targets
+    // Files dragged in from Finder
     // =====================================================================
 
     // Slot-to-slot moves are handled by the custom ghost drag above; these handlers
@@ -851,52 +686,38 @@ public partial class MainWindow : Window
 
     private void OnDrop(object? sender, DragEventArgs e)
     {
-        if (e.DataTransfer.Contains(DataFormat.File))
-        {
-            var files = e.DataTransfer.TryGetFiles()?.Select(f => f.TryGetLocalPath()).OfType<string>().ToList();
-            if (files is null || files.Count == 0)
-                return;
-            _ = HandleFileDropAsync(files[0], FindSlotTarget(e));
-        }
+        if (!e.DataTransfer.Contains(DataFormat.File))
+            return;
+        var files = e.DataTransfer.TryGetFiles()?.Select(f => f.TryGetLocalPath()).OfType<string>().ToList();
+        if (files is not { Count: > 0 })
+            return;
+        var target = SlotUnder(e.Source as Visual);
+        Run(() => HandleFileDropAsync(files, target));
     }
 
-    private static SlotViewModel? FindSlotTarget(DragEventArgs e)
+    /// <summary>
+    /// Entity files import into slots — the dropped-on slot first, then the selected one,
+    /// then whatever is empty in the current box. Anything else is treated as a save.
+    /// </summary>
+    private async Task HandleFileDropAsync(IReadOnlyList<string> paths, SlotViewModel? dropTarget)
     {
-        var visual = e.Source as Avalonia.Visual;
-        while (visual is not null)
+        var slot = dropTarget;
+        foreach (var path in paths)
         {
-            if (visual is Border { DataContext: SlotViewModel slot } b && b.Classes.Contains("slot"))
-                return slot;
-            visual = visual.GetVisualParent();
-        }
-        return null;
-    }
-
-    private async Task HandleFileDropAsync(string path, SlotViewModel? targetSlot)
-    {
-        // Entity files (.pk*, .pb*, etc.) import into a slot; anything else is treated as a save.
-        var ext = Path.GetExtension(path).TrimStart('.').ToLowerInvariant();
-        var isEntity = ext.Length is >= 3 and <= 4
-                       && (ext.StartsWith("pk") || ext.StartsWith("pb") || ext.StartsWith("ek")
-                           || ext is "ck3" or "xk3" or "sk2" or "bk4" or "rk4");
-
-        if (isEntity && VM.SAV is not null)
-        {
-            var slot = targetSlot ?? VM.SelectedSlot ?? VM.BoxSlots.FirstOrDefault(s => s.IsEmpty);
+            if (!EntityFiles.HasEntityExtension(path) || VM.Save is null)
+            {
+                await OpenPathAsync(path);
+                continue;
+            }
+            slot ??= VM.SelectedSlot ?? VM.BoxSlots.FirstOrDefault(s => s.IsEmpty);
             if (slot is null)
             {
-                await ShowError("No Room", "No empty slot available in the current box.");
+                await ShowMessage("No Room", "No empty slot available in the current box.");
                 return;
             }
             if (!VM.ImportEntityFile(slot, path, out var message))
-                await ShowError("Import Failed", message);
-        }
-        else
-        {
-            if (!OpenInTab(path, out var error))
-                await ShowError("Could Not Open File", error);
-            else
-                RebuildRecentMenu();
+                await ShowMessage("Import Failed", message);
+            slot = null; // the next file finds its own empty slot
         }
     }
 
@@ -922,22 +743,24 @@ public partial class MainWindow : Window
             VM.DeleteSlot(slot);
     }
 
+    public void OnSlotRevertClicked(object? sender, RoutedEventArgs e) => VM.RevertSlot(SlotOf(sender));
+
     public void OnSlotImportClicked(object? sender, RoutedEventArgs e)
     {
         if (SlotOf(sender) is { } slot)
-            _ = ImportEntityAsync(slot);
+            Run(() => ImportEntityAsync(slot));
     }
 
     public void OnSlotExportClicked(object? sender, RoutedEventArgs e)
     {
         if (SlotOf(sender) is { } slot)
-            _ = ExportEntityAsync(slot);
+            Run(() => ExportEntityAsync(slot));
     }
 
     public void OnSlotShowdownClicked(object? sender, RoutedEventArgs e)
     {
         if (SlotOf(sender) is { } slot)
-            _ = CopyShowdownAsync(slot);
+            Run(() => CopyShowdownAsync(slot));
     }
 
     private async Task ImportEntityAsync(SlotViewModel slot)
@@ -951,7 +774,7 @@ public partial class MainWindow : Window
         if (files.Count == 0 || files[0].TryGetLocalPath() is not { } path)
             return;
         if (!VM.ImportEntityFile(slot, path, out var message))
-            await ShowError("Import Failed", message);
+            await ShowMessage("Import Failed", message);
     }
 
     private async Task ExportEntityAsync(SlotViewModel slot)
@@ -964,34 +787,25 @@ public partial class MainWindow : Window
             SuggestedFileName = pk.FileName,
             ShowOverwritePrompt = true,
         });
-        if (file is null || file.TryGetLocalPath() is not { } path)
+        if (file?.TryGetLocalPath() is not { } path)
             return;
-        try
-        {
-            var data = new byte[pk.SIZE_PARTY];
-            pk.WriteDecryptedDataParty(data);
-            await File.WriteAllBytesAsync(path, data);
-        }
-        catch (Exception ex)
-        {
-            await ShowError("Export Failed", ex.Message);
-        }
+        if (!VM.ExportEntityFile(slot, path, out var message))
+            await ShowMessage("Export Failed", message);
     }
 
     private async Task CopyShowdownAsync(SlotViewModel slot)
     {
         var text = VM.GetSlotShowdownText(slot);
-        if (text is null || Clipboard is null)
-            return;
-        await Clipboard.SetTextAsync(text);
+        if (text is not null && Clipboard is not null)
+            await Clipboard.SetTextAsync(text);
     }
 
     // =====================================================================
     // Showdown via menu
     // =====================================================================
 
-    public void OnShowdownImportClicked(object? sender, EventArgs e) => _ = ImportShowdownAsync();
-    public void OnShowdownExportClicked(object? sender, EventArgs e) => _ = ExportShowdownAsync();
+    public void OnShowdownImportClicked(object? sender, EventArgs e) => Run(ImportShowdownAsync);
+    public void OnShowdownExportClicked(object? sender, EventArgs e) => Run(ExportShowdownAsync);
 
     private async Task ImportShowdownAsync()
     {
@@ -1000,16 +814,16 @@ public partial class MainWindow : Window
         var text = await Clipboard.TryGetTextAsync();
         if (string.IsNullOrWhiteSpace(text))
         {
-            await ShowError("Clipboard Empty", "Copy a Showdown set to the clipboard first.");
+            await ShowMessage("Clipboard Empty", "Copy a Showdown set to the clipboard first.");
             return;
         }
         if (!VM.Detail.HasPokemon)
         {
-            await ShowError("No Pokémon Selected", "Select a Pokémon to apply the Showdown set to.");
+            await ShowMessage("No Pokémon Selected", "Select a Pokémon to apply the Showdown set to.");
             return;
         }
         if (!VM.Detail.ImportShowdownSet(text, out var message))
-            await ShowError("Showdown Import Failed", message);
+            await ShowMessage("Showdown Import Failed", message);
     }
 
     private async Task ExportShowdownAsync()
@@ -1017,7 +831,7 @@ public partial class MainWindow : Window
         var text = VM.Detail.GetShowdownText();
         if (text is null)
         {
-            await ShowError("No Pokémon Selected", "Select a Pokémon first.");
+            await ShowMessage("No Pokémon Selected", "Select a Pokémon first.");
             return;
         }
         if (Clipboard is not null)
@@ -1025,29 +839,39 @@ public partial class MainWindow : Window
     }
 
     // =====================================================================
-    // Trainer / database views (in-window, via sidebar navigation)
+    // Menus: trainer, databases, box tools
     // =====================================================================
 
-    /// <summary>Any tap in the box list returns to the box grid, even when the
-    /// tapped box was already the selected one (no SelectionChanged fires then).</summary>
-    private void OnBoxListTapped(object? sender, Avalonia.Input.TappedEventArgs e) => VM.SetView("boxes");
+    public void OnTrainerClicked(object? sender, EventArgs e) => VM.SetView("save");
+    public void OnBagClicked(object? sender, EventArgs e) => VM.ShowBagCommand.Execute(null);
+    public void OnAddPokemonClicked(object? sender, EventArgs e) => VM.SetView("add");
+    public void OnGiftsClicked(object? sender, EventArgs e) => VM.SetView("gifts");
+    public void OnSortBoxClicked(object? sender, EventArgs e) => VM.SortCurrentBoxCommand.Execute(null);
+    public void OnClearBoxClicked(object? sender, EventArgs e) => Run(ConfirmClearBoxAsync);
+    public void OnRevertAllMenuClicked(object? sender, EventArgs e) => VM.RequestRevert();
+    public void OnDumpBoxClicked(object? sender, EventArgs e) => Run(DumpBoxAsync);
+    public void OnLoadFolderClicked(object? sender, EventArgs e) => Run(LoadFolderAsync);
 
-    /// <summary>While dragging a Pokémon, hovering a box name marks it as the drop target.</summary>
-    private void OnBoxNamePointerEntered(object? sender, PointerEventArgs e)
+    /// <summary>Leaves a database view without having to click a box slot to escape it.</summary>
+    public void OnCloseDatabaseClicked(object? sender, RoutedEventArgs e) => VM.SetView("boxes");
+
+    private void OnAddPreviewClicked(object? sender, RoutedEventArgs e) => VM.AddPreviewToBoxCommand.Execute(null);
+
+    private async Task ConfirmClearBoxAsync()
     {
-        if (!_dragging || sender is not Control { DataContext: string name })
+        if (VM.Save is null)
             return;
-        _dragOverBoxIndex = VM.BoxNames.IndexOf(name);
+        var confirmed = await ShowConfirm("Clear Box",
+            $"Delete every Pokémon in \"{VM.CurrentBoxName}\"? This cannot be undone (until you re-open the save without exporting).");
+        if (confirmed)
+            VM.ClearCurrentBoxCommand.Execute(null);
     }
-
-    public void OnDumpBoxClicked(object? sender, EventArgs e) => _ = DumpBoxAsync();
-    public void OnLoadFolderClicked(object? sender, EventArgs e) => _ = LoadFolderAsync();
 
     private async Task DumpBoxAsync()
     {
-        if (VM.SAV is null)
+        if (VM.Save is null)
         {
-            await ShowError("No Save Loaded", "Open a save file first (⌘O).");
+            await ShowMessage("No Save Loaded", "Open a save file first (⌘O).");
             return;
         }
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
@@ -1057,16 +881,15 @@ public partial class MainWindow : Window
         });
         if (folders.Count == 0 || folders[0].TryGetLocalPath() is not { } dir)
             return;
-        var written = VM.DumpToFolder(dir);
-        if (written == 0)
-            await ShowError("Nothing Exported", "There were no Pokémon to write.");
+        if (VM.DumpToFolder(dir) == 0)
+            await ShowMessage("Nothing Exported", "There were no Pokémon to write.");
     }
 
     private async Task LoadFolderAsync()
     {
-        if (VM.SAV is null)
+        if (VM.Save is null)
         {
-            await ShowError("No Save Loaded", "Open a save file first (⌘O).");
+            await ShowMessage("No Save Loaded", "Open a save file first (⌘O).");
             return;
         }
         var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
@@ -1076,29 +899,35 @@ public partial class MainWindow : Window
         });
         if (folders.Count == 0 || folders[0].TryGetLocalPath() is not { } dir)
             return;
-        var (loaded, skipped) = VM.LoadFromFolder(dir);
-        if (loaded == 0)
-            await ShowError("Nothing Imported",
-                skipped > 0
-                    ? $"None of the {skipped} file(s) could be read as Pokémon for this save."
+        var result = VM.LoadFromFolder(dir);
+        if (result.Loaded == 0)
+        {
+            await ShowMessage("Nothing Imported",
+                result.Skipped > 0
+                    ? $"None of the {result.Skipped} file(s) could be read as Pokémon for this save."
                     : "That folder contains no Pokémon files.");
+        }
     }
 
-    // ---- Save block backup / restore ----
+    // =====================================================================
+    // Panels that need the window: block backup, search folder, report clipboard
+    // =====================================================================
 
-    private static readonly FilePickerFileType BlockFileType = new("Save Block")
+    public void OnExportBlockClicked(object? sender, RoutedEventArgs e) => Run(ExportBlockAsync);
+    public void OnImportBlockClicked(object? sender, RoutedEventArgs e) => Run(ImportBlockAsync);
+    public void OnChooseSearchFolderClicked(object? sender, RoutedEventArgs e) => Run(ChooseSearchFolderAsync);
+
+    public void OnCopyReportClicked(object? sender, RoutedEventArgs e)
     {
-        Patterns = ["*.bin"],
-    };
-
-    public void OnExportBlockClicked(object? sender, RoutedEventArgs e) => _ = ExportBlockAsync();
-    public void OnImportBlockClicked(object? sender, RoutedEventArgs e) => _ = ImportBlockAsync();
+        if (VM.Tools is { } tools && Clipboard is not null)
+            Run(() => Clipboard.SetTextAsync(tools.BuildReportText()));
+    }
 
     private async Task ExportBlockAsync()
     {
         if (VM.SaveBlocks is not { } blocks || blocks.GetSelectedBytes() is not { } data)
         {
-            await ShowError("No Block Selected", "Pick a block in the list first.");
+            await ShowMessage("No Block Selected", "Pick a block in the list first.");
             return;
         }
         var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
@@ -1108,17 +937,10 @@ public partial class MainWindow : Window
             ShowOverwritePrompt = true,
             FileTypeChoices = [BlockFileType],
         });
-        if (file is null || file.TryGetLocalPath() is not { } path)
+        if (file?.TryGetLocalPath() is not { } path)
             return;
-        try
-        {
-            await File.WriteAllBytesAsync(path, data);
-            await ShowError("Block Exported", $"Wrote {data.Length} bytes to {Path.GetFileName(path)}.");
-        }
-        catch (Exception ex)
-        {
-            await ShowError("Export Failed", ex.Message);
-        }
+        await File.WriteAllBytesAsync(path, data);
+        await ShowMessage("Block Exported", $"Wrote {data.Length} bytes to {Path.GetFileName(path)}.");
     }
 
     private async Task ImportBlockAsync()
@@ -1133,19 +955,10 @@ public partial class MainWindow : Window
         });
         if (files.Count == 0 || files[0].TryGetLocalPath() is not { } path)
             return;
-        try
-        {
-            var data = await File.ReadAllBytesAsync(path);
-            if (!blocks.ImportSelectedBytes(data, out var message))
-                await ShowError("Import Failed", message);
-        }
-        catch (Exception ex)
-        {
-            await ShowError("Import Failed", ex.Message);
-        }
+        var data = await File.ReadAllBytesAsync(path);
+        if (!blocks.ImportSelectedBytes(data, out var message))
+            await ShowMessage("Import Failed", message);
     }
-
-    public void OnChooseSearchFolderClicked(object? sender, RoutedEventArgs e) => _ = ChooseSearchFolderAsync();
 
     private async Task ChooseSearchFolderAsync()
     {
@@ -1160,55 +973,13 @@ public partial class MainWindow : Window
             search.FolderPath = dir;
     }
 
-    public void OnCopyReportClicked(object? sender, RoutedEventArgs e)
-    {
-        if (VM.Tools is { } tools && Clipboard is not null)
-            _ = Clipboard.SetTextAsync(tools.BuildReportText());
-    }
-
-
-    public void OnTrainerClicked(object? sender, EventArgs e) => VM.SetView("save");
-    public void OnBagClicked(object? sender, EventArgs e) => VM.SetView("save");
-    public void OnAddPokemonClicked(object? sender, EventArgs e) => VM.SetView("add");
-    public void OnGiftsClicked(object? sender, EventArgs e) => VM.SetView("gifts");
-
-    private void OnAddPreviewClicked(object? sender, RoutedEventArgs e) => VM.AddPreviewToBox();
-
     // =====================================================================
-    // Box tools
+    // Dialogs
     // =====================================================================
 
-    public void OnSortBoxClicked(object? sender, EventArgs e) => VM.SortCurrentBox();
+    private Task ShowMessage(string title, string message) => ShowDialog(title, message, confirm: false);
 
-    public void OnClearBoxClicked(object? sender, EventArgs e) => _ = ConfirmClearBoxAsync();
-
-    private async Task ConfirmClearBoxAsync()
-    {
-        if (VM.SAV is null)
-            return;
-        var confirmed = await ShowConfirm("Clear Box",
-            $"Delete every Pokémon in \"{VM.CurrentBoxName}\"? This cannot be undone (until you re-open the save without exporting).");
-        if (confirmed)
-            VM.ClearCurrentBox();
-    }
-
-    // =====================================================================
-    // Editor
-    // =====================================================================
-
-    private void OnApplyClicked(object? sender, RoutedEventArgs e)
-    {
-        VM.ApplyDetailChanges();
-    }
-
-    // =====================================================================
-    // Dialog helpers
-    // =====================================================================
-
-    private Task ShowError(string title, string message) => ShowDialog(title, message, confirm: false);
-
-    private async Task<bool> ShowConfirm(string title, string message) =>
-        await ShowDialog(title, message, confirm: true);
+    private Task<bool> ShowConfirm(string title, string message) => ShowDialog(title, message, confirm: true);
 
     private async Task<bool> ShowDialog(string title, string message, bool confirm)
     {
@@ -1228,17 +999,21 @@ public partial class MainWindow : Window
         };
         if (confirm)
         {
-            var cancel = new Button { Content = "Cancel" };
+            var cancel = new Button { Content = "Cancel", IsCancel = true };
             cancel.Click += (_, _) => dialog.Close();
             buttons.Children.Add(cancel);
         }
-        var ok = new Button { Content = confirm ? "Confirm" : "OK" };
-        ok.Click += (_, _) => { result = true; dialog.Close(); };
+        var ok = new Button { Content = confirm ? "Confirm" : "OK", IsDefault = true, IsCancel = !confirm };
+        ok.Click += (_, _) =>
+        {
+            result = true;
+            dialog.Close();
+        };
         buttons.Children.Add(ok);
 
         dialog.Content = new StackPanel
         {
-            Margin = new Avalonia.Thickness(24),
+            Margin = new Thickness(24),
             Spacing = 16,
             MaxWidth = 440,
             Children =

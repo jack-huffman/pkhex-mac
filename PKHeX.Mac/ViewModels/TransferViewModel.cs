@@ -83,9 +83,7 @@ public partial class TransferViewModel : ObservableObject
             return;
         }
 
-        SourceName = (uint)pk.Species < _strings.specieslist.Length
-            ? _strings.specieslist[pk.Species]
-            : $"#{pk.Species}";
+        SourceName = _strings.SpeciesName(pk);
         SourceSprite = SpriteService.GetPokemonSprite(pk);
 
         if (Target is not { } target)

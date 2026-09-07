@@ -1,6 +1,5 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 
 namespace PKHeX.Mac.Controls;
@@ -22,6 +21,4 @@ public partial class PokeBallIcon : UserControl
     }
 
     public PokeBallIcon() => InitializeComponent();
-
-    private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
 }

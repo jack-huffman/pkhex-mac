@@ -163,15 +163,11 @@ public partial class TeamAnalysisViewModel : ObservableObject
         }
     }
 
-    /// <summary>For every defending type, the best the team's moves can do to it.</summary>
+    /// <summary>For every defending type this era has, the best the team's moves can do to it.</summary>
     private void BuildCoverage()
     {
-        for (int defender = 0; defender < TypeChart.TypeCount; defender++)
+        foreach (var defender in TypeChart.GetTypes(_era))
         {
-            if (_era != ChartEra.Modern && defender == 17)
-                continue;
-            if (_era == ChartEra.Gen1 && defender is 8 or 16)
-                continue;
 
             // The best multiplier answers "do I have a super-effective hit"; among the
             // moves that reach it, the strongest one answers "which should I use".
@@ -214,35 +210,33 @@ public sealed class TeamMemberViewModel
     private readonly int _type2;
     private readonly int _ability;
     private readonly ChartEra _era;
-    private readonly GameStrings _typeStrings;
+    private readonly GameStrings _strings;
 
     public TeamMemberViewModel(PKM pk, GameStrings strings, ChartEra era)
     {
         _era = era;
-        _typeStrings = strings;
+        _strings = strings;
         var pi = pk.PersonalInfo;
         _type1 = pi.Type1;
         _type2 = pi.Type2;
         _ability = pk.Ability;
 
-        SpeciesName = (uint)pk.Species < strings.specieslist.Length
-            ? strings.specieslist[pk.Species]
-            : $"#{pk.Species}";
+        SpeciesName = strings.SpeciesName(pk);
         Nickname = pk.Nickname == SpeciesName ? string.Empty : pk.Nickname;
         LevelText = $"Lv. {pk.CurrentLevel}";
         // Pixel sprite for the dense grid rows, hi-res render for the team cards.
         Sprite = SpriteService.GetPokemonSprite(pk);
         Artwork = SpriteService.GetPokemonArtwork(pk);
 
-        Type1Name = TypeName(_type1, strings);
-        Type2Name = TypeName(_type2, strings);
+        Type1Name = strings.TypeName(_type1);
+        Type2Name = strings.TypeName(_type2);
         HasType2 = _type1 != _type2;
         Type1Icon = TypeIconService.Get(_type1);
         Type2Icon = TypeIconService.Get(_type2);
         Type1Brush = TypePalette.GetBrush(_type1);
         Type2Brush = TypePalette.GetBrush(_type2);
 
-        AbilityName = (uint)_ability < strings.abilitylist.Length ? strings.abilitylist[_ability] : string.Empty;
+        AbilityName = strings.AbilityName(_ability);
         AbilityMatters = TypeChart.IsRelevantAbility(_ability);
 
         // One pass builds both the display list and the damaging subset that feeds
@@ -268,7 +262,7 @@ public sealed class TeamMemberViewModel
                 continue;
 
             var type = MoveInfo.GetType(move, pk.Context);
-            var name = move < strings.movelist.Length ? strings.movelist[move] : $"#{move}";
+            var name = strings.MoveName(move);
 
             // Rough output per use, before the type matchup: effective power (hits and
             // crits folded in), same-type bonus, and the stat the move actually uses.
@@ -354,7 +348,7 @@ public sealed class TeamMemberViewModel
     {
         Cells.Clear();
         foreach (var attacker in attackingTypes)
-            Cells.Add(new MatrixCellViewModel(MultiplierAgainst(attacker), attacker, SpeciesName, _typeStrings));
+            Cells.Add(new MatrixCellViewModel(MultiplierAgainst(attacker), attacker, SpeciesName, _strings));
     }
 
     /// <summary>Incoming damage multiplier for an attacking type, abilities included.</summary>
@@ -363,23 +357,16 @@ public sealed class TeamMemberViewModel
         var raw = TypeChart.GetAgainst(attacker, _type1, _type2, _era);
         return TypeChart.ApplyAbility(raw, attacker, _ability);
     }
-
-    private static string TypeName(int type, GameStrings strings) =>
-        (uint)type < strings.types.Length ? strings.types[type] : $"#{type}";
 }
 
 /// <summary>What the team's moves can do to one defending type.</summary>
 public sealed class CoverageRowViewModel
 {
-    private static readonly IBrush Bad = new SolidColorBrush(Color.Parse("#E5776D"));
-    private static readonly IBrush Ok = new SolidColorBrush(Color.Parse("#6FAFB8"));
-    private static readonly IBrush Neutral = new SolidColorBrush(Color.Parse("#8FA6B8"));
-
     public CoverageRowViewModel(int typeId, GameStrings strings, double best,
                                IReadOnlyList<CoverageCandidate> candidates)
     {
         TypeId = typeId;
-        TypeName = (uint)typeId < strings.types.Length ? strings.types[typeId] : $"#{typeId}";
+        TypeName = strings.TypeName(typeId);
         TypeIcon = TypeIconService.Get(typeId);
         TypeBrush = TypePalette.GetBrush(typeId);
         Best = best;
@@ -399,7 +386,7 @@ public sealed class CoverageRowViewModel
                 candidates.Take(4).Select(c => $"  {c.Move} ({c.Owner}) — {c.Damage:F0}"
                                                + (c.HasStab ? ", same type" : string.Empty)));
         Verdict = best > 1 ? "covered" : best == 0 ? "immune" : "neutral at best";
-        VerdictBrush = best > 1 ? Ok : best == 0 ? Bad : Neutral;
+        VerdictBrush = best > 1 ? Palette.Good : best == 0 ? Palette.Bad : Palette.Muted;
     }
 
     public int TypeId { get; }
@@ -422,14 +409,10 @@ public sealed class CoverageRowViewModel
 /// </summary>
 public sealed class MatrixColumnViewModel
 {
-    private static readonly IBrush Bad = new SolidColorBrush(Color.Parse("#E5776D"));
-    private static readonly IBrush Muted = new SolidColorBrush(Color.Parse("#8FA6B8"));
-    private static readonly IBrush Cool = new SolidColorBrush(Color.Parse("#6FAFB8"));
-
     public MatrixColumnViewModel(int typeId, GameStrings strings, int weak, int resist, int immune, int quadWeak)
     {
         TypeId = typeId;
-        TypeName = (uint)typeId < strings.types.Length ? strings.types[typeId] : $"#{typeId}";
+        TypeName = strings.TypeName(typeId);
         TypeIcon = TypeIconService.Get(typeId);
         TypeBrush = TypePalette.GetBrush(typeId);
         Weak = weak;
@@ -439,10 +422,10 @@ public sealed class MatrixColumnViewModel
         // Zeroes are noise in a grid this dense; only counts that matter are printed.
         WeakText = weak == 0 ? string.Empty : weak.ToString(CultureInfo.InvariantCulture);
         ResistText = Resist == 0 ? string.Empty : Resist.ToString(CultureInfo.InvariantCulture);
-        WeakBrush = IsSharedWeakness ? Bad : weak > 0 ? Muted : Muted;
-        ResistBrush = Resist > 0 ? Cool : Muted;
+        WeakBrush = IsSharedWeakness ? Palette.Bad : Palette.Muted;
+        ResistBrush = Resist > 0 ? Palette.Good : Palette.Muted;
 
-        HeaderBrush = IsSharedWeakness ? Bad : Muted;
+        HeaderBrush = IsSharedWeakness ? Palette.Bad : Palette.Muted;
         Tooltip = IsSharedWeakness
             ? $"{TypeName}: {weak} weak, nothing resists it"
             : $"{TypeName}: {weak} weak · {Resist} resist or immune"
@@ -474,17 +457,6 @@ public sealed class MatrixColumnViewModel
 /// </summary>
 public sealed class MatrixCellViewModel
 {
-    private static readonly IBrush Quad = new SolidColorBrush(Color.Parse("#FF6B5B"));
-    private static readonly IBrush Double = new SolidColorBrush(Color.Parse("#E5776D"));
-    private static readonly IBrush Half = new SolidColorBrush(Color.Parse("#5E8FD0"));
-    private static readonly IBrush Quarter = new SolidColorBrush(Color.Parse("#4A78BC"));
-    private static readonly IBrush Zero = new SolidColorBrush(Color.Parse("#6FAFB8"));
-
-    private static readonly IBrush QuadFill = new SolidColorBrush(Color.Parse("#3A1E1B"));
-    private static readonly IBrush DoubleFill = new SolidColorBrush(Color.Parse("#2E1B19"));
-    private static readonly IBrush ResistFill = new SolidColorBrush(Color.Parse("#182430"));
-    private static readonly IBrush ZeroFill = new SolidColorBrush(Color.Parse("#16292B"));
-
     public MatrixCellViewModel(double multiplier, int attacker, string member, GameStrings strings)
     {
         Multiplier = multiplier;
@@ -493,23 +465,22 @@ public sealed class MatrixCellViewModel
 
         Foreground = multiplier switch
         {
-            >= 4 => Quad,
-            > 1 => Double,
-            0 => Zero,
-            <= 0.25 => Quarter,
-            < 1 => Half,
-            _ => Half,
+            >= 4 => Palette.Severe,
+            > 1 => Palette.Bad,
+            0 => Palette.Good,
+            <= 0.25 => Palette.Quarter,
+            _ => Palette.LoweredStatBar,
         };
         Background = multiplier switch
         {
-            >= 4 => QuadFill,
-            > 1 => DoubleFill,
-            0 => ZeroFill,
-            < 1 => ResistFill,
+            >= 4 => Palette.SevereFill,
+            > 1 => Palette.BadFill,
+            0 => Palette.ImmuneFill,
+            < 1 => Palette.ResistFill,
             _ => Brushes.Transparent,
         };
 
-        var type = (uint)attacker < strings.types.Length ? strings.types[attacker] : $"#{attacker}";
+        var type = strings.TypeName(attacker);
         Tooltip = multiplier == 1
             ? $"{type} → {member}: normal damage"
             : $"{type} → {member}: {Text}";
@@ -541,11 +512,6 @@ public sealed class MatrixCellViewModel
 /// </summary>
 public sealed class MatchupGroupViewModel
 {
-    private static readonly IBrush Resist = new SolidColorBrush(Color.Parse("#6FCF97"));
-    private static readonly IBrush Immune = new SolidColorBrush(Color.Parse("#7FD4C1"));
-    private static readonly IBrush Weak = new SolidColorBrush(Color.Parse("#E5776D"));
-    private static readonly IBrush Quad = new SolidColorBrush(Color.Parse("#FF6B5B"));
-
     public MatchupGroupViewModel(double multiplier, IReadOnlyList<TypeBadgeViewModel> types)
     {
         Multiplier = multiplier;
@@ -561,10 +527,10 @@ public sealed class MatchupGroupViewModel
         };
         LabelBrush = multiplier switch
         {
-            0 => Immune,
-            < 1 => Resist,
-            >= 4 => Quad,
-            _ => Weak,
+            0 => Palette.Immune,
+            < 1 => Palette.Resist,
+            >= 4 => Palette.Severe,
+            _ => Palette.Bad,
         };
         Tooltip = $"{Label} damage from {string.Join(", ", types.Select(t => t.TypeName))}";
     }
@@ -574,24 +540,6 @@ public sealed class MatchupGroupViewModel
     public IBrush LabelBrush { get; }
     public IReadOnlyList<TypeBadgeViewModel> Types { get; }
     public string Tooltip { get; }
-}
-
-/// <summary>A single type badge: the circular symbol, with a colour-chip fallback.</summary>
-public sealed class TypeBadgeViewModel
-{
-    public TypeBadgeViewModel(int typeId, GameStrings strings)
-    {
-        TypeId = typeId;
-        TypeName = (uint)typeId < strings.types.Length ? strings.types[typeId] : $"#{typeId}";
-        Icon = TypeIconService.Get(typeId);
-        Brush = TypePalette.GetBrush(typeId);
-    }
-
-    public int TypeId { get; }
-    public string TypeName { get; }
-    public IImage? Icon { get; }
-    public IBrush? Brush { get; }
-    public bool HasIcon => Icon is not null;
 }
 
 /// <summary>

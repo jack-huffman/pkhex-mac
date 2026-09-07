@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PKHeX.Core;
@@ -13,7 +14,6 @@ namespace PKHeX.Mac.ViewModels;
 /// </summary>
 public partial class PokemonHistoryViewModel : ObservableObject
 {
-    private readonly GameStrings _strings;
     private readonly MemoryStrings _memories;
     private readonly Action _markDirty;
     private PKM? _pk;
@@ -21,7 +21,6 @@ public partial class PokemonHistoryViewModel : ObservableObject
 
     public PokemonHistoryViewModel(GameStrings strings, Action markDirty)
     {
-        _strings = strings;
         _memories = new MemoryStrings(strings);
         _markDirty = markDirty;
         MemoryChoices = _memories.Memory;
@@ -213,8 +212,8 @@ public partial class PokemonHistoryViewModel : ObservableObject
         var text = _memories.Memory.Find(m => m.Value == memory)?.Text ?? $"Memory #{memory}";
         var qualities = _memories.GetMemoryQualities();
         var feelings = _memories.GetMemoryFeelings(_pk?.Format ?? 9);
-        var q = (uint)intensity < qualities.Length ? qualities[intensity] : intensity.ToString();
-        var f = (uint)feeling < feelings.Length ? feelings[feeling] : feeling.ToString();
+        var q = (uint)intensity < qualities.Length ? qualities[intensity] : intensity.ToString(CultureInfo.InvariantCulture);
+        var f = (uint)feeling < feelings.Length ? feelings[feeling] : feeling.ToString(CultureInfo.InvariantCulture);
         return $"{text}  ·  intensity: {q}  ·  feeling: {f}";
     }
 
@@ -348,7 +347,7 @@ public partial class PokemonHistoryViewModel : ObservableObject
             Touch();
             return;
         }
-        if (ulong.TryParse(cleaned, System.Globalization.NumberStyles.HexNumber, null, out var parsed))
+        if (ulong.TryParse(cleaned, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var parsed))
         {
             tr.Tracker = parsed;
             Touch();

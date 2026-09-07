@@ -1,6 +1,5 @@
 using System;
 using System.Collections.ObjectModel;
-using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -12,9 +11,9 @@ namespace PKHeX.Mac.ViewModels;
 /// <summary>
 /// The panel beneath the box grid: what this box holds, and what needs attention.
 /// </summary>
-public partial class BoxInsightsViewModel : ObservableObject
+public sealed partial class BoxInsightsViewModel : ObservableObject, IDisposable
 {
-    private CancellationTokenSource? _cts;
+    private readonly BackgroundRefresh _refresh = new();
 
     /// <summary>Raised when a listed problem is clicked, with the slot to select.</summary>
     public Action<int>? SlotRequested { get; set; }
@@ -22,13 +21,22 @@ public partial class BoxInsightsViewModel : ObservableObject
     public ObservableCollection<BoxProblemViewModel> Problems { get; } = [];
 
     /// <summary>Set by the window: only shown when the layout has room for it.</summary>
-    [ObservableProperty] private bool _hasRoom;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsVisible))]
+    private bool _hasRoom;
 
-    [ObservableProperty] private bool _hasContents;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsVisible))]
+    private bool _hasContents;
+
     [ObservableProperty] private string _fillText = string.Empty;
     [ObservableProperty] private string _levelText = string.Empty;
     [ObservableProperty] private string _originText = string.Empty;
-    [ObservableProperty] private int _shinyCount;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasShiny))]
+    private int _shinyCount;
+
     [ObservableProperty] private bool _isChecking;
     [ObservableProperty] private string _verdict = string.Empty;
 
@@ -36,64 +44,57 @@ public partial class BoxInsightsViewModel : ObservableObject
     public bool HasProblems => Problems.Count > 0;
     public bool IsVisible => HasRoom && HasContents;
 
-    partial void OnShinyCountChanged(int value) => OnPropertyChanged(nameof(HasShiny));
-    partial void OnHasRoomChanged(bool value) => OnPropertyChanged(nameof(IsVisible));
-    partial void OnHasContentsChanged(bool value) => OnPropertyChanged(nameof(IsVisible));
-
     /// <summary>
-    /// Recomputes for a box. Legality is the expensive part, so it runs off the UI
-    /// thread and any in-flight pass for a previous box is abandoned.
+    /// Recomputes for a box. The slots are copied here, on the UI thread, and the
+    /// legality work runs off it; a pass for a previous box is abandoned.
     /// </summary>
     public async Task RefreshAsync(SaveFile? sav, int box, GameStrings strings)
     {
-        _cts?.Cancel();
         if (sav is null || !sav.HasBox)
         {
+            _refresh.Cancel();
             HasContents = false;
+            IsChecking = false;
             return;
         }
 
-        _cts = new CancellationTokenSource();
-        var token = _cts.Token;
+        var snapshot = BoxInsights.Snapshot(sav, box);
         IsChecking = true;
-        try
-        {
-            var summary = await Task.Run(() => BoxInsights.Analyze(sav, box, strings, token), token);
-            if (token.IsCancellationRequested)
-                return;
+        var outcome = await _refresh.RunAsync(token => BoxInsights.Analyze(snapshot, strings, token));
+        if (outcome.IsSuperseded)
+            return; // a newer box owns the panel now
 
-            HasContents = summary.HasContents;
-            FillText = summary.FillText;
-            LevelText = summary.LevelText;
-            OriginText = summary.OriginText;
-            ShinyCount = summary.Shiny;
-
-            Problems.Clear();
-            foreach (var problem in summary.Problems)
-                Problems.Add(new BoxProblemViewModel(problem, this));
-            OnPropertyChanged(nameof(HasProblems));
-
-            Verdict = summary.Problems.Count == 0
-                ? "Everything here passes a legality check"
-                : $"{summary.Problems.Count} need"
-                  + (summary.Problems.Count == 1 ? "s attention" : " attention");
-        }
-        catch (OperationCanceledException)
+        IsChecking = false;
+        if (outcome.Result is not { } summary)
         {
-            // A newer box replaced this pass.
+            Verdict = "The legality check failed for this box.";
+            return;
         }
-        finally
-        {
-            if (!token.IsCancellationRequested)
-                IsChecking = false;
-        }
+
+        HasContents = summary.HasContents;
+        FillText = summary.FillText;
+        LevelText = summary.LevelText;
+        OriginText = summary.OriginText;
+        ShinyCount = summary.Shiny;
+
+        Problems.Clear();
+        foreach (var problem in summary.Problems)
+            Problems.Add(new BoxProblemViewModel(problem, this));
+        OnPropertyChanged(nameof(HasProblems));
+
+        Verdict = summary.Problems.Count == 0
+            ? "Everything here passes a legality check"
+            : $"{summary.Problems.Count} need"
+              + (summary.Problems.Count == 1 ? "s attention" : " attention");
     }
 
     internal void RequestSlot(int slot) => SlotRequested?.Invoke(slot);
+
+    public void Dispose() => _refresh.Dispose();
 }
 
 /// <summary>One flagged Pokémon, clickable to jump to its slot.</summary>
-public sealed class BoxProblemViewModel
+public sealed partial class BoxProblemViewModel
 {
     private readonly BoxInsightsViewModel _parent;
     private readonly int _slot;
@@ -113,5 +114,6 @@ public sealed class BoxProblemViewModel
     public string Issue { get; }
     public Bitmap? Sprite { get; }
 
-    public void Select() => _parent.RequestSlot(_slot);
+    [CommunityToolkit.Mvvm.Input.RelayCommand]
+    private void Select() => _parent.RequestSlot(_slot);
 }

@@ -75,14 +75,14 @@ public partial class BlueberryViewModel : ObservableObject
         Summary = $"{bought} of {total} perks bought";
     }
 
-    /// <summary>Marks every perk bought, clearing the "new" badges as the game would.</summary>
+    /// <summary>Marks every perk bought, clearing the "new" badges as the game would, as one change.</summary>
     [RelayCommand]
     public void BuyAllPerks()
     {
         if (_board is null)
             return;
         foreach (var row in Purchases)
-            row.Value = !row.IsUnreadFlag;
+            row.SetQuietly(!row.IsUnreadFlag);
         RefreshSummary();
         Status = "All club perks marked as purchased.";
         _onChanged();

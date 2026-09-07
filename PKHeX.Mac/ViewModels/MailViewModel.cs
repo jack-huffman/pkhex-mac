@@ -26,8 +26,14 @@ namespace PKHeX.Mac.ViewModels;
 /// </remarks>
 public partial class MailViewModel : ObservableObject
 {
+    /// <summary>Gen 2 and 3 keep one held mail per party slot ahead of the mailbox.</summary>
+    private const int HeldMailSlots = 6;
+    private const int MailboxSlots23 = 10;
+    private const int MailboxSlots45 = 20;
+
     private readonly SaveFile _sav;
     private readonly Action _onChanged;
+    private bool _bulk;
 
     public MailViewModel(SaveFile sav, GameStrings strings, Action onChanged)
     {
@@ -38,8 +44,8 @@ public partial class MailViewModel : ObservableObject
         {
             case SAV2 sav2:
                 // Gen 2 mail all lives in the save; the first six belong to the party.
-                for (int i = 0; i < 6 + 10; i++)
-                    Add(new Mail2(sav2, i), i < 6 ? $"Party {i + 1} held" : $"Mailbox {i - 5}", -1, strings);
+                for (int i = 0; i < HeldMailSlots + MailboxSlots23; i++)
+                    Add(new Mail2(sav2, i), i < HeldMailSlots ? $"Party {i + 1} held" : $"Mailbox {i - HeldMailSlots + 1}", -1, strings);
                 break;
 
             case SAV2Stadium stadium:
@@ -52,8 +58,8 @@ public partial class MailViewModel : ObservableObject
                 break;
 
             case SAV3 sav3:
-                for (int i = 0; i < 6 + 10; i++)
-                    Add(sav3.LargeBlock.GetMail(i), i < 6 ? $"Party {i + 1} held" : $"Mailbox {i - 5}", -1, strings);
+                for (int i = 0; i < HeldMailSlots + MailboxSlots23; i++)
+                    Add(sav3.LargeBlock.GetMail(i), i < HeldMailSlots ? $"Party {i + 1} held" : $"Mailbox {i - HeldMailSlots + 1}", -1, strings);
                 break;
 
             case SAV4 sav4:
@@ -62,7 +68,7 @@ public partial class MailViewModel : ObservableObject
                     if (sav4.GetPartySlotAtIndex(i) is PK4 pk4)
                         Add(new Mail4(pk4.HeldMail.ToArray()), $"Party {i + 1} held", i, strings);
                 }
-                for (int j = 0; j < 20; j++)
+                for (int j = 0; j < MailboxSlots45; j++)
                     Add(sav4.GetMail(j), $"Mailbox {j + 1}", -1, strings);
                 break;
 
@@ -72,7 +78,7 @@ public partial class MailViewModel : ObservableObject
                     if (sav5.GetPartySlotAtIndex(i) is PK5 pk5)
                         Add(new Mail5(pk5.HeldMail.ToArray()), $"Party {i + 1} held", i, strings);
                 }
-                for (int j = 0; j < 20; j++)
+                for (int j = 0; j < MailboxSlots45; j++)
                     Add(sav5.GetMail(j), $"Mailbox {j + 1}", -1, strings);
                 break;
         }
@@ -108,18 +114,22 @@ public partial class MailViewModel : ObservableObject
 
     internal void Notify(string message)
     {
+        if (_bulk)
+            return; // the bulk command reports once when it finishes
         Status = message;
         RefreshSummary();
         OnPropertyChanged(nameof(Visible));
         _onChanged();
     }
 
-    /// <summary>Empties every mail slot.</summary>
+    /// <summary>Empties every mail slot, reported as one change.</summary>
     [RelayCommand]
     public void ClearAll()
     {
+        _bulk = true;
         foreach (var row in Rows.Where(r => !r.IsBlank).ToList())
             row.Clear();
+        _bulk = false;
         Notify("Cleared every mail slot.");
     }
 }
@@ -147,9 +157,9 @@ public partial class MailRowViewModel : ObservableObject
         Label = label;
         IsHeldMail = partyIndex >= 0;
 
-        // Only formats that store the message as text can round-trip an edit.
-        MessageText = mail.GetMessage(false);
-        SupportsText = MessageText.Length > 0 || sav.Generation == 3;
+        // Only formats that store the message as text can round-trip an edit. Gen 4 and 5
+        // hold word codes, which come back empty.
+        SupportsText = mail.GetMessage(false).Length > 0 || sav.Generation == 3;
 
         Reload();
     }
@@ -177,6 +187,8 @@ public partial class MailRowViewModel : ObservableObject
         AuthorSid = _mail.AuthorSID;
         AppearSpecies = _mail.AppearPKM;
         MailType = _mail.MailType;
+        if (SupportsText)
+            MessageText = _mail.GetMessage(false);
 
         // IsEmpty is tri-state: true empty, false valid, null malformed.
         var empty = _mail.IsEmpty;
@@ -189,9 +201,7 @@ public partial class MailRowViewModel : ObservableObject
         };
 
         var species = (ushort)Math.Clamp(AppearSpecies, 0, ushort.MaxValue);
-        SpeciesName = species != 0 && species < _strings.specieslist.Length
-            ? _strings.specieslist[species]
-            : string.Empty;
+        SpeciesName = species == 0 ? string.Empty : _strings.SpeciesName(species);
         Sprite = species != 0
             ? SpriteService.GetSprite(species, 0, 0, 0, shiny: false, EntityContext.None)
             : null;

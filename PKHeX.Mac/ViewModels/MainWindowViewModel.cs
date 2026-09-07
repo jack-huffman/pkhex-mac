@@ -1,8 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -11,8 +8,27 @@ using PKHeX.Mac.Services;
 
 namespace PKHeX.Mac.ViewModels;
 
-public partial class MainWindowViewModel : ViewModelBase
+/// <summary>
+/// One editing session: an open save, the untouched copy it can be reverted to, and
+/// every editor built on top of it. The window shows one session at a time; the
+/// <see cref="WorkspaceViewModel"/> keeps the others.
+/// </summary>
+/// <remarks>
+/// The class is one object because the editors genuinely share state — the selected
+/// slot, the unsaved-changes counter, the dropdown sources — but it is split across
+/// files by concern so each stays readable:
+/// <list type="bullet">
+/// <item><c>Navigation</c>: which view is showing, the editors behind each, the command palette.</item>
+/// <item><c>Storage</c>: the box and party grids and every operation on a slot.</item>
+/// <item><c>Files</c>: loading, exporting, and moving Pokémon files in and out.</item>
+/// <item><c>Revert</c>: the prompts and the three scopes of undo.</item>
+/// </list>
+/// </remarks>
+public sealed partial class MainWindowViewModel : ObservableObject, IDisposable
 {
+    private const int PartySize = 6;
+    private const int DefaultBoxSlotCount = 30;
+
     private readonly GameStrings _strings = GameInfo.GetStrings("en");
 
     /// <summary>
@@ -25,9 +41,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private SaveFile? _sav;
 
     /// <summary>
-    /// A second, untouched parse of the same file. Editing never goes near it, so it is
-    /// what "revert" restores from — for the whole save or for one Pokémon. Costs one
-    /// extra parse and a few MB, which buys per-slot revert without a change journal.
+    /// A second, untouched copy of the same save. Editing never goes near it, so it is
+    /// what "revert" restores from — for the whole save or for one Pokémon. Costs a few
+    /// MB, which buys per-slot revert without a change journal.
     /// </summary>
     private SaveFile? _pristine;
 
@@ -37,89 +53,82 @@ public partial class MainWindowViewModel : ViewModelBase
     public MainWindowViewModel()
     {
         Detail = new PokemonDetailViewModel(_strings);
+        // The inspector's own buttons touch the save, so the session handles them.
+        Detail.ApplyRequested += ApplyDetailChanges;
+        Detail.CloseRequested += () => SelectSlot(null);
+        Detail.DiscardRequested += RevertDetailEdits;
+
         Review = new ExportReviewViewModel(() => (_sav, _pristine), _strings);
         Review.ExportRequested = () => ExportRequested?.Invoke();
+
         // Clicking a flagged Pokémon in the insights panel selects it in the grid.
         BoxInsights.SlotRequested = slot =>
         {
             if ((uint)slot < BoxSlots.Count)
                 SelectSlot(BoxSlots[slot]);
         };
+
         Preview = new PokemonPreviewViewModel(_strings);
-        for (int i = 0; i < 30; i++)
+        for (int i = 0; i < DefaultBoxSlotCount; i++)
             BoxSlots.Add(new SlotViewModel(0, i));
-        for (int i = 0; i < 6; i++)
-            PartySlots.Add(new SlotViewModel(-1, i));
+        for (int i = 0; i < PartySize; i++)
+            PartySlots.Add(new SlotViewModel(SlotViewModel.PartyBox, i));
     }
 
-    // ---- Box grid layout ----
-
-    /// <summary>Raised when something other than a resize changes the space available.</summary>
-    public Action? LayoutChanged { get; set; }
-
-    /// <summary>
-    /// Works out whether the insights panel fits beneath the grid.
-    /// </summary>
-    /// <remarks>
-    /// Slot size is deliberately fixed. The pixel sprites are authored at exactly 68x56,
-    /// which is the sprite box in a 94x82 slot, so they draw 1:1 and stay crisp. Growing
-    /// the slot would either upscale that art with visible blockiness or leave it at
-    /// native size while the Gen 9 species -- which only exist as 512x512 renders --
-    /// filled the larger box, so the two families would disagree in size. The art
-    /// decides the slot, not the window.
-    /// </remarks>
-    public void UpdateBoxLayout(double contentWidth, double contentHeight)
-    {
-        if (contentHeight <= 0)
-            return;
-        // Party card, box header, padding, status line, and the five rows of slots.
-        const double slotHeight = 82;
-        var used = 150 + (HasParty ? slotHeight + 44 : 0) + (slotHeight * 5) + 60;
-        BoxInsights.HasRoom = contentHeight - used >= 170;
-    }
-
-    /// <summary>
-    /// The ride legendary, presented as an ordinary slot beneath the boxes.
-    /// </summary>
-    /// <remarks>
-    /// It is universal to Scarlet and Violet and always present once obtained, so it
-    /// belongs on the storage screen rather than behind a tab. Treating it as a slot
-    /// rather than a card means clicking it loads the inspector and Apply writes it
-    /// back, with no copying in and out.
-    /// </remarks>
-    public ObservableCollection<SlotViewModel> RideSlots { get; } = [];
-
-    [ObservableProperty] private bool _hasRideSlot;
-    [ObservableProperty] private string _rideLabel = string.Empty;
-
-    private void LoadRideSlot()
-    {
-        RideSlots.Clear();
-        HasRideSlot = _sav is not null && RideLegendary.IsSupported(_sav);
-        if (!HasRideSlot || _sav is null)
-            return;
-
-        RideLabel = _sav.Version switch
-        {
-            GameVersion.SL => "KORAIDON · YOUR RIDE",
-            GameVersion.VL => "MIRAIDON · YOUR RIDE",
-            _ => "YOUR RIDE",
-        };
-        // Box index one past the last reachable box marks it as the reserved slot.
-        var slot = new SlotViewModel(_sav.BoxCount, 0);
-        slot.Update(RideLegendary.Read(_sav), _strings);
-        RideSlots.Add(slot);
-    }
-
-    /// <summary>Facts about the current box, shown beneath the grid when there is room.</summary>
-    public BoxInsightsViewModel BoxInsights { get; } = new();
-
+    public PokemonDetailViewModel Detail { get; }
+    public PokemonPreviewViewModel Preview { get; }
 
     /// <summary>What is about to be written, compared against the file on disk.</summary>
     public ExportReviewViewModel Review { get; }
 
+    /// <summary>Facts about the current box, shown beneath the grid when there is room.</summary>
+    public BoxInsightsViewModel BoxInsights { get; } = new();
+
+    /// <summary>Whether the in-memory save differs from the file on disk.</summary>
+    public SaveStateViewModel SaveState { get; } = new();
+
     /// <summary>Persisted preferences, owned by the window and shared for recording.</summary>
     public AppSettings? Settings { get; set; }
+
+    /// <summary>Asks the window to flush settings after something worth remembering.</summary>
+    public Action? SettingsChanged { get; set; }
+
+    /// <summary>Raised when an export needs a file dialog, which only the window can show.</summary>
+    public Action? ExportRequested { get; set; }
+
+    public SaveFile? Save => _sav;
+    public string? SavePath => _savPath;
+
+    /// <summary>
+    /// Anything that would be lost by quitting: edits written into the in-memory save,
+    /// plus edits typed into the inspector that have not been applied to a slot yet.
+    /// </summary>
+    public bool HasPendingWork => SaveState.HasUnsavedChanges || Detail.IsDirty;
+
+    [ObservableProperty] private bool _hasSave;
+    [ObservableProperty] private string _windowTitle = "PKHeX for Mac";
+    [ObservableProperty] private string _statusText = "Open a save file to begin  (⌘O)";
+
+    // ---- Trainer card ----
+    [ObservableProperty] private string _trainerName = string.Empty;
+    [ObservableProperty] private string _gameName = string.Empty;
+    [ObservableProperty] private string _trainerIds = string.Empty;
+    [ObservableProperty] private string _playTime = string.Empty;
+    [ObservableProperty] private string _generationText = string.Empty;
+
+    // ---- Update banner ----
+    [ObservableProperty] private bool _showUpdateBanner;
+    [ObservableProperty] private string _updateBannerText = string.Empty;
+
+    /// <summary>
+    /// Reports an edit: shown on the status line, counted as unsaved, and added to the
+    /// session log. Everything that mutates the save should go through here.
+    /// </summary>
+    private void NoteChange(string description)
+    {
+        StatusText = description;
+        SaveState.NoteChange(description);
+    }
 
     /// <summary>
     /// Records a change made to this save from elsewhere, such as another tab sending a
@@ -131,16 +140,28 @@ public partial class MainWindowViewModel : ViewModelBase
         RefreshSlotViews();
     }
 
+    /// <summary>Re-reads trainer card fields after the trainer editor writes them.</summary>
+    public void RefreshTrainerCard()
+    {
+        if (_sav is null)
+            return;
+        TrainerName = _sav.OT;
+        TrainerIds = $"TID {_sav.DisplayTID:D6} · SID {_sav.DisplaySID:D4}";
+        PlayTime = _sav.PlayTimeString;
+    }
+
+    // ---- Sending Pokémon to another open save ----
+
     /// <summary>Sends the selected Pokémon to another open save.</summary>
     [ObservableProperty] private TransferViewModel? _transfer;
 
-    /// <summary>Supplied by the window: the other saves currently open.</summary>
+    /// <summary>Supplied by the workspace: the other saves currently open.</summary>
     public Func<IReadOnlyList<TransferTarget>>? OtherSaves { get; set; }
 
     /// <summary>True once a second save is open, which is when transferring is possible.</summary>
     [ObservableProperty] private bool _canTransfer;
 
-    /// <summary>Built by the window once it can enumerate the other tabs.</summary>
+    /// <summary>Built by the workspace once it can enumerate the other tabs.</summary>
     public void AttachTransfer()
     {
         Transfer = new TransferViewModel(_strings,
@@ -159,649 +180,7 @@ public partial class MainWindowViewModel : ViewModelBase
             BuildPaletteEntries();
     }
 
-    /// <summary>Asks the window to flush settings after something worth remembering.</summary>
-    public Action? SettingsChanged { get; set; }
-
-    // ---- Keyboard navigation of the grids ----
-
-    /// <summary>
-    /// Moves the selection by a step within whichever grid holds it.
-    /// </summary>
-    /// <remarks>
-    /// The party is one row of six and a box is six across, so a vertical step is a
-    /// row's width in the box and does nothing in the party. Moving off the left or
-    /// right edge of a box carries on into the neighbouring box, which is how the
-    /// grids are read anyway.
-    /// </remarks>
-    public void MoveSelection(int columns, int rows)
-    {
-        if (_sav is null || _selected is null)
-            return;
-
-        if (_selected.IsParty)
-        {
-            if (rows != 0)
-                return;
-            var next = Math.Clamp(_selected.Slot + columns, 0, PartySlots.Count - 1);
-            SelectSlot(PartySlots[next]);
-            return;
-        }
-        if (IsRideSlot(_selected))
-            return;
-
-        const int width = 6;
-        var index = (_selected.Slot + columns) + (rows * width);
-        if (index < 0)
-        {
-            // Off the top or the left: step back a box and land on the mirror slot.
-            if (CurrentBox == 0)
-                return;
-            CurrentBox--;
-            index += BoxSlots.Count;
-        }
-        else if (index >= BoxSlots.Count)
-        {
-            if (CurrentBox >= _sav.BoxCount - 1)
-                return;
-            CurrentBox++;
-            index -= BoxSlots.Count;
-        }
-        SelectSlot(BoxSlots[Math.Clamp(index, 0, BoxSlots.Count - 1)]);
-    }
-
-    // ---- Command palette ----
-
-    /// <summary>Type-to-go navigation; see <see cref="BuildPaletteEntries"/>.</summary>
-    public CommandPaletteViewModel Palette { get; } = new();
-
-    // Bound to each panel's TabControl so the palette can land on a specific tab
-    // rather than only the view that contains it.
-    [ObservableProperty] private int _trainerTab;
-    [ObservableProperty] private int _toolsTab;
-    [ObservableProperty] private int _gameDataTab;
-    [ObservableProperty] private int _raidsTab;
-    [ObservableProperty] private int _flagsTab;
-
-    /// <summary>Jumps to a view, optionally selecting one of its tabs.</summary>
-    private void GoTo(string view, Action? tab = null)
-    {
-        tab?.Invoke();
-        SetView(view);
-    }
-
-    /// <summary>
-    /// Builds the editors whose availability can only be known by looking.
-    /// </summary>
-    /// <remarks>
-    /// Most of these report support as "did I find anything" rather than a type check,
-    /// so nothing can say whether a save has mail or a daycare without building the
-    /// editor. Doing it at load costs about 17ms and lets tabs and the palette hide
-    /// what this save does not have, instead of offering a pane that explains itself
-    /// away. The genuinely expensive ones stay lazy: the block editor builds ten
-    /// thousand rows, and the Pokédex and gift archive are heavier still.
-    /// </remarks>
-    private void BuildOptionalEditors(SaveFile sav)
-    {
-        Daycare = BuildDaycare(sav);
-        Fusions = BuildFusions(sav);
-        Extras = new GameExtrasViewModel(sav, () => NoteChange("Game data updated"));
-        Mail = new MailViewModel(sav, _strings, () => NoteChange("Mail updated"));
-        HallOfFame = new HallOfFameViewModel(sav, _strings, () => NoteChange("Hall of Fame updated"));
-        EventFlags = new EventFlagsViewModel(sav, () => NoteChange("Event flags updated"));
-    }
-
-    /// <summary>
-    /// Everything the palette can reach. Rebuilt when a save opens, because the boxes
-    /// and several destinations only exist once there is one.
-    /// </summary>
-    private void BuildPaletteEntries()
-    {
-        var entries = new List<PaletteEntry>
-        {
-            new("Boxes", "Navigate", () => GoTo("boxes")),
-            new("Trainer & Bag", "Navigate", () => GoTo("save")),
-            new("Pokédex", "Navigate", () => GoTo("dex")),
-            new("Tools", "Navigate", () => GoTo("tools")),
-            new("Raw Save Blocks", "Navigate", () => GoTo("flags")),
-            new("Tera Raids", "Navigate", () => GoTo("raids")),
-            new("Game Data", "Navigate", () => GoTo("gamedata")),
-            new("Search & Database", "Navigate", () => GoTo("search")),
-        };
-
-        // A destination the save cannot offer is worse than a missing one: it promises
-        // something and then explains itself away.
-        void Tab(string title, string group, string view, Action select, bool available = true)
-        {
-            if (available)
-                entries.Add(new PaletteEntry(title, group, () => GoTo(view, select)));
-        }
-
-        Tab("Bag / Items", "Trainer & Bag", "save", () => TrainerTab = 0, Bag?.HasPouches ?? false);
-        Tab("Appearance & Style", "Trainer & Bag", "save", () => TrainerTab = 1, Style?.IsSupported ?? false);
-        Tab("Ride abilities", "Trainer & Bag", "save", () => TrainerTab = 2, Trainer?.HasRideUpgrades ?? false);
-        Tab("Gyms, Titans & Team Star", "Trainer & Bag", "save", () => TrainerTab = 3, Trainer?.HasBadges ?? false);
-        Tab("Badges", "Trainer & Bag", "save", () => TrainerTab = 3, Trainer?.HasBadges ?? false);
-        Tab("Blueberry Perks", "Trainer & Bag", "save", () => TrainerTab = 4, Blueberry?.IsSupported ?? false);
-        Tab("Crown Tundra", "Trainer & Bag", "save", () => TrainerTab = 5, CrownTundra?.IsSupported ?? false);
-        Tab("Max Lair", "Trainer & Bag", "save", () => TrainerTab = 5, CrownTundra?.IsSupported ?? false);
-        Tab("Dynamax Adventure stuck", "Trainer & Bag", "save", () => TrainerTab = 5, CrownTundra?.IsSupported ?? false);
-        Tab("Trainer Records", "Trainer & Bag", "save", () => TrainerTab = 6, Records?.IsSupported ?? false);
-
-        // The transfer tab only exists with a second save open, so everything after it
-        // shifts by one.
-        var send = CanTransfer ? 1 : 0;
-        Tab("Send to another save", "Tools", "tools", () => ToolsTab = 0, CanTransfer);
-        Tab("Integrity audit", "Tools", "tools", () => ToolsTab = send);
-        Tab("Box Report", "Tools", "tools", () => ToolsTab = send + 1);
-        Tab("Breeding planner", "Tools", "tools", () => ToolsTab = send + 2);
-        Tab("Egg moves", "Tools", "tools", () => ToolsTab = send + 2);
-        Tab("Team Analysis", "Tools", "tools", () => ToolsTab = send + 3);
-        Tab("Type coverage", "Tools", "tools", () => ToolsTab = send + 3);
-
-        Tab("Daycare", "Game Data", "gamedata", () => GameDataTab = 0, Daycare?.IsSupported ?? false);
-        Tab("Gift Album", "Game Data", "gamedata", () => GameDataTab = 1, GiftAlbum?.IsSupported ?? false);
-        Tab("Fusions", "Game Data", "gamedata", () => GameDataTab = 2, Fusions?.IsSupported ?? false);
-        Tab("Hall of Fame", "Game Data", "gamedata", () => GameDataTab = 3, HallOfFame?.IsSupported ?? false);
-        Tab("Mail", "Game Data", "gamedata", () => GameDataTab = 4, Mail?.IsSupported ?? false);
-        Tab("Extras", "Game Data", "gamedata", () => GameDataTab = 5, Extras?.IsSupported ?? false);
-
-        var isSv = _sav is SAV9SV;
-        Tab("Max Raid dens", "Raids", "raids", () => RaidsTab = 0, _sav is SAV8SWSH);
-        Tab("Active raid dens", "Tera Raids", "raids", () => RaidsTab = 0, isSv);
-        Tab("Event raid records", "Tera Raids", "raids", () => RaidsTab = 1, isSv);
-        Tab("Raid progression", "Tera Raids", "raids", () => RaidsTab = 2, isSv);
-
-        Tab("Event Flags", "Raw Save Blocks", "flags", () => FlagsTab = 0, EventFlags?.IsSupported ?? false);
-        Tab("Save Blocks", "Raw Save Blocks", "flags", () => FlagsTab = 1, _sav is ISCBlockArray);
-
-        entries.Add(new PaletteEntry("Review changes before export", "Action",
-            () => _ = Review.OpenAsync()));
-        entries.Add(new PaletteEntry("Export save", "Action", () => ExportRequested?.Invoke()));
-        entries.Add(new PaletteEntry("Revert to saved file", "Action", RequestRevert));
-
-        if (_sav is { HasBox: true })
-        {
-            for (int i = 0; i < _sav.BoxCount; i++)
-            {
-                var index = i;
-                var name = (uint)i < BoxNames.Count ? BoxNames[i] : $"Box {i + 1}";
-                entries.Add(new PaletteEntry(name, "Boxes", () =>
-                {
-                    CurrentBox = index;
-                    SetView("boxes");
-                }));
-            }
-        }
-
-        Palette.SetEntries(entries);
-    }
-
-    /// <summary>Raised when the palette asks for an export, which needs a file dialog.</summary>
-    public Action? ExportRequested { get; set; }
-
-    /// <summary>Whether the in-memory save differs from the file on disk.</summary>
-    public SaveStateViewModel SaveState { get; } = new();
-
-    /// <summary>Shown when closing would discard unsaved edits.</summary>
-    [ObservableProperty] private bool _isClosePromptOpen;
-
-    /// <summary>Shown when the user asks to throw away every edit and reload the file.</summary>
-    [ObservableProperty] private bool _isRevertPromptOpen;
-
-    /// <summary>Extra line in the close prompt, for inspector edits not yet applied.</summary>
-    [ObservableProperty] private string _closePromptNote = string.Empty;
-
-    public bool HasUnappliedDetail => ClosePromptNote.Length > 0;
-
-    partial void OnClosePromptNoteChanged(string value) => OnPropertyChanged(nameof(HasUnappliedDetail));
-
-    /// <summary>
-    /// Anything that would be lost by quitting: edits written into the in-memory save,
-    /// plus edits typed into the inspector that have not been applied to a slot yet.
-    /// </summary>
-    public bool HasPendingWork => SaveState.HasUnsavedChanges || Detail.IsDirty;
-
-    /// <summary>Reverting needs a file to go back to.</summary>
-    public bool CanRevert => HasSave && !string.IsNullOrEmpty(_savPath) && File.Exists(_savPath);
-
-    /// <summary>What the revert prompt says will be thrown away.</summary>
-    public string RevertSummary => SaveState.HasUnsavedChanges
-        ? $"{SaveState.CountText} will be discarded."
-        : "There are no unsaved changes; this simply re-reads the file.";
-
-    /// <summary>Opens the confirmation, or explains why reverting is not possible.</summary>
-    public void RequestRevert()
-    {
-        if (!CanRevert)
-        {
-            StatusText = HasSave
-                ? "The file this save came from can no longer be found."
-                : "Open a save file first (⌘O).";
-            return;
-        }
-        OnPropertyChanged(nameof(RevertSummary));
-        IsRevertPromptOpen = true;
-    }
-
-    /// <summary>
-    /// Throws away every in-memory edit by reloading the file from disk. The file is
-    /// only ever read here, so a revert cannot damage it.
-    /// </summary>
-    [RelayCommand]
-    public void Revert()
-    {
-        IsRevertPromptOpen = false;
-        if (_savPath is not { } path || !File.Exists(path))
-        {
-            StatusText = "The file this save came from can no longer be found.";
-            return;
-        }
-
-        var discarded = SaveState.PendingChanges;
-        if (!LoadSave(path, out var error))
-        {
-            StatusText = error.Replace('\n', ' ');
-            return;
-        }
-        StatusText = discarded == 0
-            ? $"Reloaded {Path.GetFileName(path)} from disk."
-            : $"Reverted to {Path.GetFileName(path)} — {discarded} change{(discarded == 1 ? string.Empty : "s")} discarded.";
-    }
-
-    [RelayCommand]
-    public void CancelRevert() => IsRevertPromptOpen = false;
-
-    /// <summary>
-    /// Restores one slot to what the file holds, whether or not the edit was applied.
-    /// Works for both directions: a Pokémon that was changed goes back, and one that
-    /// was added to an empty slot is removed again.
-    /// </summary>
-    public void RevertSlot(SlotViewModel? slot)
-    {
-        if (_sav is null || _pristine is null || slot is null)
-        {
-            StatusText = "Nothing to revert to — reopen the save file first.";
-            return;
-        }
-
-        PKM original;
-        try
-        {
-            if (IsRideSlot(slot))
-            {
-                // The reserved slot is past the last box, so read it the same way we
-                // read the live one.
-                original = RideLegendary.Read(_pristine) ?? _pristine.BlankPKM;
-            }
-            else if (!slot.IsParty)
-            {
-                original = _pristine.GetBoxSlotAtIndex(slot.Box, slot.Slot);
-            }
-            else if (slot.Slot < _pristine.PartyCount)
-            {
-                original = _pristine.GetPartySlotAtIndex(slot.Slot);
-            }
-            else
-            {
-                // The party was shorter on disk, so this slot held nothing. Clamping to
-                // the last real member would restore the wrong Pokémon.
-                original = _pristine.BlankPKM;
-            }
-        }
-        catch
-        {
-            StatusText = "That slot does not exist in the file on disk.";
-            return;
-        }
-
-        var current = ReadSlot(slot);
-        if (current is not null && SameBytes(current, original))
-        {
-            StatusText = "That slot already matches the file on disk.";
-            return;
-        }
-
-        WriteSlot(slot, original);
-        RefreshSlotViews();
-        SelectSlot(slot);
-        var name = original.Species == 0
-            ? "an empty slot"
-            : (uint)original.Species < _strings.specieslist.Length
-                ? _strings.specieslist[original.Species]
-                : $"#{original.Species}";
-        var where = slot.IsParty
-            ? $"party slot {slot.Slot + 1}"
-            : $"{CurrentBoxName}, slot {slot.Slot + 1}";
-        NoteChange($"Reverted {where} to {name} as stored on disk");
-    }
-
-    private static bool SameBytes(PKM a, PKM b) => a.Data.SequenceEqual(b.Data);
-
-    /// <summary>
-    /// Discards edits typed into the inspector by re-reading the selected slot. The
-    /// save is untouched, because unapplied inspector edits never reached it.
-    /// </summary>
-    [RelayCommand]
-    public void RevertDetailEdits()
-    {
-        if (_selected is null)
-        {
-            StatusText = "Select a Pokémon first.";
-            return;
-        }
-        if (!Detail.IsDirty)
-        {
-            StatusText = "There are no unapplied edits to discard.";
-            return;
-        }
-        RefreshSlotViews();          // re-read the slot from the save
-        Detail.Load(_selected.Pokemon);
-        StatusText = "Discarded the unapplied edits.";
-    }
-
-    public PokemonDetailViewModel Detail { get; }
-    public PokemonPreviewViewModel Preview { get; }
-
-    // ---- In-window views (sidebar navigation) ----
-
-    [ObservableProperty] private string _currentView = "boxes";
-    [ObservableProperty] private TrainerEditorViewModel? _trainer;
-    [ObservableProperty] private BagViewModel? _bag;
-    [ObservableProperty] private AddPokemonViewModel? _addDb;
-    [ObservableProperty] private GiftsViewModel? _giftDb;
-    [ObservableProperty] private PokedexViewModel? _dex;
-    [ObservableProperty] private ToolsViewModel? _tools;
-    [ObservableProperty] private EventFlagsViewModel? _eventFlags;
-    [ObservableProperty] private SaveBlocksViewModel? _saveBlocks;
-    [ObservableProperty] private RaidsViewModel? _raids;
-    [ObservableProperty] private TrainerStyleViewModel? _style;
-    [ObservableProperty] private BlueberryViewModel? _blueberry;
-    [ObservableProperty] private CrownTundraViewModel? _crownTundra;
-    [ObservableProperty] private TrainerRecordsViewModel? _records;
-    [ObservableProperty] private DaycareViewModel? _daycare;
-    [ObservableProperty] private FusionViewModel? _fusions;
-    [ObservableProperty] private GiftAlbumViewModel? _giftAlbum;
-    [ObservableProperty] private GameExtrasViewModel? _extras;
-    [ObservableProperty] private MailViewModel? _mail;
-    [ObservableProperty] private HallOfFameViewModel? _hallOfFame;
-    [ObservableProperty] private SearchViewModel? _search;
-
-    public bool IsBoxesView => CurrentView == "boxes";
-    public bool IsSaveView => CurrentView == "save";
-    public bool IsDexView => CurrentView == "dex";
-    public bool IsToolsView => CurrentView == "tools";
-    public bool IsFlagsView => CurrentView == "flags";
-    public bool IsRaidsView => CurrentView == "raids";
-    public bool IsSearchView => CurrentView == "search";
-    public bool IsGameDataView => CurrentView == "gamedata";
-    public bool IsAddView => CurrentView == "add";
-    public bool IsGiftsView => CurrentView == "gifts";
-    public bool IsDatabaseView => IsAddView || IsGiftsView;
-
-    /// <summary>The box grid stays on screen while browsing a database, so a
-    /// destination slot can be picked before adding.</summary>
-    public bool ShowBoxes => IsBoxesView || IsDatabaseView;
-
-    /// <summary>
-    /// The databases only make sense when there is somewhere to put the result, so
-    /// they unlock once an empty box slot is selected.
-    /// </summary>
-    public bool CanUseDatabases => HasSave && _selected is { IsParty: false, IsEmpty: true };
-
-    [ObservableProperty] private string _databaseHint = "Select an empty box slot to add a Pokémon";
-
-    /// <summary>Dims the box list while another view is showing, so its selection
-    /// does not read as the active section.</summary>
-    public double BoxListOpacity => IsBoxesView ? 1.0 : 0.5;
-
-    /// <summary>Collapses the inspector column for the full-width Save view.</summary>
-    public Avalonia.Controls.GridLength InspectorWidth =>
-        IsSaveView || IsDexView || IsToolsView || IsFlagsView || IsRaidsView || IsSearchView || IsGameDataView
-            ? new Avalonia.Controls.GridLength(0)
-            : new Avalonia.Controls.GridLength(438);
-
-    partial void OnCurrentViewChanged(string value)
-    {
-        OnPropertyChanged(nameof(IsBoxesView));
-        OnPropertyChanged(nameof(IsSaveView));
-        OnPropertyChanged(nameof(IsDexView));
-        OnPropertyChanged(nameof(IsToolsView));
-        OnPropertyChanged(nameof(IsFlagsView));
-        OnPropertyChanged(nameof(IsRaidsView));
-        OnPropertyChanged(nameof(IsSearchView));
-        OnPropertyChanged(nameof(IsGameDataView));
-        OnPropertyChanged(nameof(IsAddView));
-        OnPropertyChanged(nameof(IsGiftsView));
-        OnPropertyChanged(nameof(IsDatabaseView));
-        OnPropertyChanged(nameof(ShowBoxes));
-        OnPropertyChanged(nameof(InspectorWidth));
-        OnPropertyChanged(nameof(BoxListOpacity));
-        LayoutChanged?.Invoke();
-    }
-
-    [RelayCommand]
-    public void SetView(string view)
-    {
-        if (_sav is null && view != "boxes")
-        {
-            StatusText = "Open a save file first (⌘O).";
-            return;
-        }
-        if (CurrentView == view)
-            return; // already here: keep any preview/selection intact
-
-        if (view is "add" or "gifts" && !CanUseDatabases)
-        {
-            StatusText = "Select an empty slot in a box first — that's where the Pokémon will go.";
-            return;
-        }
-        if (view == "search" && _sav is not null)
-            Search ??= new SearchViewModel(_sav, _strings, _sources);
-        if (view == "gamedata" && _sav is not null)
-        {
-            Daycare ??= BuildDaycare(_sav);
-            Fusions ??= BuildFusions(_sav);
-            if (GiftAlbum is null)
-            {
-                StatusText = "Reading the Mystery Gift album…";
-                GiftAlbum = new GiftAlbumViewModel(_sav, _strings, () =>
-                    NoteChange("Gift album updated"));
-            }
-            Extras ??= new GameExtrasViewModel(_sav, () =>
-                NoteChange("Save structure edited"));
-            Mail ??= new MailViewModel(_sav, _strings, () =>
-                NoteChange("Mail updated"));
-            HallOfFame ??= new HallOfFameViewModel(_sav, _strings, () =>
-                NoteChange("Hall of Fame updated"));
-        }
-        if (view == "raids" && _sav is not null)
-        {
-            Raids ??= new RaidsViewModel(_sav, () =>
-                NoteChange("Raid records updated"));
-        }
-        if (view == "flags" && _sav is not null)
-        {
-            EventFlags ??= new EventFlagsViewModel(_sav, () =>
-                NoteChange("Event flags updated"));
-            if (SaveBlocks is null)
-            {
-                StatusText = "Reading save blocks…";
-                SaveBlocks = new SaveBlocksViewModel(_sav, () =>
-                    NoteChange("Save block changed"));
-            }
-        }
-        if (view == "tools" && _sav is not null)
-        {
-            Tools ??= new ToolsViewModel(_sav, _strings, () =>
-            {
-                RefreshSlotViews();
-                NoteChange("Batch changes applied.");
-            });
-        }
-        if (view == "dex" && Dex is null && _sav is not null)
-        {
-            StatusText = "Loading the Pokédex…";
-            Dex = new PokedexViewModel(_sav, _strings, () =>
-                NoteChange("Pokédex updated"));
-        }
-        if (view == "gifts" && GiftDb is null && _sav is not null)
-        {
-            StatusText = "Loading the Mystery Gift archive…";
-            GiftDb = new GiftsViewModel(_sav, _strings)
-            {
-                PreviewReady = pk => Preview.Load(pk),
-                Blocked = reason => Preview.ShowBlocked(reason),
-            };
-        }
-        if (!(IsDatabaseView && (view == "add" || view == "gifts")))
-            Preview.Load(null);
-        CurrentView = view;
-        RefreshTargetSlotText();
-    }
-
-    /// <summary>
-    /// Builds the fusion-slot view, wiring extraction to the selected box slot so a
-    /// parked donor can be recovered without unfusing in-game.
-    /// </summary>
-    private FusionViewModel BuildFusions(SaveFile sav)
-    {
-        var vm = new FusionViewModel(sav, _strings, message => NoteChange(message));
-        vm.WriteSelectedSlot = pk =>
-        {
-            if (_selected is null)
-                return;
-            WriteSlot(_selected, pk);
-            RefreshSlotViews();
-        };
-        return vm;
-    }
-
-    /// <summary>
-    /// Builds the daycare editor, wiring its box transfers to the selected slot so a
-    /// boarded parent can be moved into storage and edited with the full inspector.
-    /// </summary>
-    private DaycareViewModel BuildDaycare(SaveFile sav)
-    {
-        var vm = new DaycareViewModel(sav, _strings, () =>
-            NoteChange("Daycare updated"));
-        vm.ReadSelectedSlot = () => _selected?.Pokemon;
-        vm.WriteSelectedSlot = pk =>
-        {
-            if (_selected is null)
-                return;
-            WriteSlot(_selected, pk);
-            RefreshSlotViews();
-        };
-        return vm;
-    }
-
-    /// <summary>Applies trainer identity and bag edits together, then returns to the boxes.</summary>
-    [RelayCommand]
-    public void ApplySave()
-    {
-        Trainer?.Apply();
-        Bag?.Apply();
-        RefreshTrainerCard();
-        NoteChange("Trainer info and bag updated.");
-        CurrentView = "boxes";
-    }
-
-    /// <summary>Discards unapplied trainer/bag edits by rebuilding both editors from the save.</summary>
-    [RelayCommand]
-    public void ResetSave()
-    {
-        if (_sav is null)
-            return;
-        Trainer = new TrainerEditorViewModel(_sav, () => NoteChange("Trainer progression updated"));
-        Bag = new BagViewModel(_sav, _strings);
-        StatusText = "Reverted unsaved trainer and bag changes.";
-    }
-
-    /// <summary>
-    /// Writes the previewed entity into the slot the user selected, or the first
-    /// empty slot in the current box when nothing is selected.
-    /// </summary>
-    public void AddPreviewToBox()
-    {
-        if (_sav is null)
-            return;
-        if (Preview.Current is not { } pk)
-        {
-            StatusText = "Nothing to add — pick an entry first.";
-            return;
-        }
-
-        var clone = pk.Clone();
-        if (_selected is { IsParty: false } slot)
-        {
-            WriteSlot(slot, clone);
-            RefreshSlotViews();
-            var name = (uint)clone.Species < _strings.specieslist.Length ? _strings.specieslist[clone.Species] : $"#{clone.Species}";
-            NoteChange($"Placed {name} in {CurrentBoxName}, slot {slot.Slot + 1}");
-            SelectSlot(BoxSlots[slot.Slot]); // reselect so the editor shows what landed
-            return;
-        }
-        if (!TryAddToCurrentBox(clone, out var message))
-            StatusText = message;
-        RefreshTargetSlotText();
-    }
-
-    [ObservableProperty] private string _targetSlotText = "Add to first empty slot";
-
-    /// <summary>Describes where the next "add" will land, for the button label.</summary>
-    /// <summary>
-    /// Reports an edit: shown on the status line, counted as unsaved, and added to the
-    /// session log. Everything that mutates the save should go through here.
-    /// </summary>
-    private void NoteChange(string description)
-    {
-        StatusText = description;
-        SaveState.NoteChange(description);
-    }
-
-    public void RefreshTargetSlotText()
-    {
-        TargetSlotText = _selected is { IsParty: false } s
-            ? $"Add to {CurrentBoxName}, slot {s.Slot + 1}"
-            : "Add to first empty slot";
-        OnPropertyChanged(nameof(CanUseDatabases));
-    }
-
-    public ObservableCollection<SlotViewModel> BoxSlots { get; } = [];
-    public ObservableCollection<SlotViewModel> PartySlots { get; } = [];
-    public ObservableCollection<string> BoxNames { get; } = [];
-
-    [ObservableProperty] private bool _hasSave;
-    [ObservableProperty] private string _windowTitle = "PKHeX for Mac";
-    [ObservableProperty] private string _statusText = "Open a save file to begin  (⌘O)";
-
-    // Trainer card
-    [ObservableProperty] private string _trainerName = string.Empty;
-    [ObservableProperty] private string _gameName = string.Empty;
-    [ObservableProperty] private string _trainerIds = string.Empty;
-    [ObservableProperty] private string _playTime = string.Empty;
-    [ObservableProperty] private string _generationText = string.Empty;
-
-    [ObservableProperty] private int _currentBox;
-    [ObservableProperty] private string _currentBoxName = string.Empty;
-    [ObservableProperty] private bool _hasParty;
-
-    // Update banner
-    [ObservableProperty] private bool _showUpdateBanner;
-    [ObservableProperty] private string _updateBannerText = string.Empty;
-
-    private SlotViewModel? _selected;
-
-    /// <summary>Box the current selection lives in; -1 for the party or no selection.</summary>
-    private int _selectedBox = -1;
-
-    public SaveFile? SAV => _sav;
-    public string? SavePath => _savPath;
-    public SlotViewModel? SelectedSlot => _selected;
-
-    // =====================================================================
-    // Update check
-    // =====================================================================
+    // ---- Update check ----
 
     public async Task CheckForUpstreamUpdateAsync()
     {
@@ -815,717 +194,12 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    public void DismissUpdateBanner() => ShowUpdateBanner = false;
+    private void DismissUpdateBanner() => ShowUpdateBanner = false;
 
-    // =====================================================================
-    // Save load / export
-    // =====================================================================
-
-    public bool LoadSave(string path, out string error)
+    public void Dispose()
     {
-        error = string.Empty;
-        try
-        {
-            if (!SaveUtil.TryGetSaveFile(path, out var sav))
-            {
-                error = "This file is not a recognized Pokémon save file.\nMake sure it is decrypted (exported with Checkpoint, JKSM, or a save manager).";
-                return false;
-            }
-
-            _sav = sav;
-            // Parse a second, pristine copy to revert individual slots against.
-            SaveUtil.TryGetSaveFile(path, out _pristine);
-            _savPath = path;
-            SaveState.Reset();          // a different save: previous edits are moot
-            sav.Metadata.SetExtraInfo(path);
-            _sources = new FilteredGameDataSource(sav, GameInfo.Sources);
-            // Still set the global, because parts of PKHeX.Core consult it.
-            GameInfo.FilteredSources = _sources;
-            Detail.SetContext(sav, _sources);
-            HasSave = true;
-            HasParty = sav.HasParty;
-
-            TrainerName = sav.OT;
-            GameName = GameInfo.GetVersionName(sav.Version);
-            TrainerIds = $"TID {sav.DisplayTID:D6} · SID {sav.DisplaySID:D4}";
-            PlayTime = sav.PlayTimeString;
-            GenerationText = $"Generation {sav.Generation}";
-            WindowTitle = $"PKHeX for Mac — {Path.GetFileName(path)} ({GameName})";
-            StatusText = $"Loaded {Path.GetFileName(path)} · {GameName} · OT: {sav.OT}";
-
-            BoxNames.Clear();
-            if (sav.HasBox)
-            {
-                foreach (var n in BoxUtil.GetBoxNames(sav))
-                    BoxNames.Add(n);
-            }
-
-            RebuildBoxSlots();
-            CurrentBox = 0;
-            CurrentBoxName = BoxNames.Count > 0 ? BoxNames[0] : string.Empty;
-            LoadBox(0);
-            LoadParty();
-            SelectSlot(null);
-
-            // In-window editor views for this save.
-            Trainer = new TrainerEditorViewModel(sav, () => NoteChange("Trainer progression updated"));
-            Bag = new BagViewModel(sav, _strings);
-            Style = new TrainerStyleViewModel(sav, () =>
-                NoteChange("Trainer appearance updated"));
-            Blueberry = new BlueberryViewModel(sav, () =>
-                NoteChange("Blueberry Academy data updated"));
-            // Unlocking throw styles writes to the club board, so keep that view honest.
-            Style.BoardChanged = () => Blueberry?.Reload();
-            CrownTundra = new CrownTundraViewModel(sav, _strings, () =>
-                NoteChange("Crown Tundra data updated"));
-            Records = new TrainerRecordsViewModel(sav, () =>
-                NoteChange("Trainer records updated"));
-            AddDb = new AddPokemonViewModel(sav, _sources, _strings);
-            AddDb.PreviewReady = pk => Preview.Load(pk);
-            // The gift archive is ~2.6k entries with sprites; build it on first open
-            // so loading a save stays instant.
-            GiftDb = null;
-            Preview.Load(null);
-            LoadRideSlot();
-            BuildOptionalEditors(sav);
-            if (Settings is { } settings)
-            {
-                settings.NoteOpened(path);
-                // Only restore the box if this is the same save it was recorded against.
-                if (string.Equals(settings.LastSavePath, path, StringComparison.OrdinalIgnoreCase)
-                    && (uint)settings.LastBox < sav.BoxCount)
-                    CurrentBox = settings.LastBox;
-                settings.LastSavePath = path;
-                SettingsChanged?.Invoke();
-            }
-            BuildPaletteEntries();
-            CurrentView = "boxes";
-            return true;
-        }
-        catch (Exception ex)
-        {
-            error = $"Failed to load save file:\n{ex.Message}";
-            return false;
-        }
-    }
-
-    public bool ExportSave(string path, out string error)
-    {
-        error = string.Empty;
-        if (_sav is null)
-        {
-            error = "No save file loaded.";
-            return false;
-        }
-        try
-        {
-            // Back up whatever is already there before overwriting it. Writing a
-            // corrupt save over the only copy would cost real playtime.
-            var backup = TryBackup(path);
-            var data = _sav.Write();
-            File.WriteAllBytes(path, data.ToArray());
-            _savPath = path;
-            StatusText = backup is null
-                ? $"Saved to {Path.GetFileName(path)}"
-                : $"Saved to {Path.GetFileName(path)} (previous version kept as {Path.GetFileName(backup)})";
-            SaveState.MarkSaved(Path.GetFileName(path));
-            // The file now matches memory, so that becomes the state a revert returns to.
-            SaveUtil.TryGetSaveFile(path, out _pristine);
-            return true;
-        }
-        catch (Exception ex)
-        {
-            error = $"Failed to write save file:\n{ex.Message}";
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// Copies an existing save aside before it is overwritten. Returns the backup
-    /// path, or null when there was nothing to back up. Never throws — a failed
-    /// backup must not block the export.
-    /// </summary>
-    private static string? TryBackup(string path)
-    {
-        try
-        {
-            if (!File.Exists(path))
-                return null;
-            var dir = Path.GetDirectoryName(path) ?? ".";
-            var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
-            var backup = Path.Combine(dir, $"{Path.GetFileName(path)}.{stamp}.bak");
-            File.Copy(path, backup, overwrite: false);
-            return backup;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    // =====================================================================
-    // Box / party display
-    // =====================================================================
-
-    private void RebuildBoxSlots()
-    {
-        if (_sav is null)
-            return;
-        var count = _sav.HasBox ? _sav.BoxSlotCount : 0;
-        if (BoxSlots.Count == count)
-            return;
-        BoxSlots.Clear();
-        for (int i = 0; i < count; i++)
-            BoxSlots.Add(new SlotViewModel(0, i));
-    }
-
-    partial void OnCurrentBoxChanged(int value)
-    {
-        if (_sav is null || !_sav.HasBox || (uint)value >= _sav.BoxCount)
-            return;
-        CurrentBoxName = (uint)value < BoxNames.Count ? BoxNames[value] : $"Box {value + 1}";
-        LoadBox(value);
-        CurrentView = "boxes"; // clicking a box in the sidebar returns to the box view
-        if (Settings is { } settings)
-        {
-            settings.LastBox = value;
-            SettingsChanged?.Invoke();
-        }
-    }
-
-    private void LoadBox(int box)
-    {
-        if (_sav is null || !_sav.HasBox)
-            return;
-        for (int i = 0; i < BoxSlots.Count; i++)
-        {
-            var pk = _sav.GetBoxSlotAtIndex(box, i);
-            BoxSlots[i].Box = box;
-            BoxSlots[i].Update(pk, _strings);
-        }
-        _ = BoxInsights.RefreshAsync(_sav, box, _strings);
-        RefreshSelectionHighlight(box);
-    }
-
-    /// <summary>
-    /// Shows the selection ring only while its own box is on screen. Switching away
-    /// hides it; coming back restores it, because the selection itself is untouched.
-    /// </summary>
-    private void RefreshSelectionHighlight(int box)
-    {
-        var selectedSlot = _selected is { IsParty: false } && _selectedBox == box ? _selected.Slot : -1;
-        for (int i = 0; i < BoxSlots.Count; i++)
-            BoxSlots[i].IsSelected = i == selectedSlot;
-        // The ride is not in any box, so a box change never owns its highlight.
-        foreach (var ride in RideSlots)
-            ride.IsSelected = ReferenceEquals(_selected, ride);
-    }
-
-    private void LoadParty()
-    {
-        if (_sav is null || !_sav.HasParty)
-            return;
-        for (int i = 0; i < 6; i++)
-        {
-            var pk = i < _sav.PartyCount ? _sav.GetPartySlotAtIndex(i) : null;
-            PartySlots[i].Update(pk?.Species > 0 ? pk : null, _strings);
-        }
-    }
-
-    private void RefreshSlotViews()
-    {
-        LoadBox(CurrentBox);
-        LoadParty();
-        RefreshRideSlot();
-    }
-
-    /// <summary>Re-reads the reserved slot without rebuilding it, so selection survives.</summary>
-    private void RefreshRideSlot()
-    {
-        if (_sav is null || RideSlots.Count == 0)
-            return;
-        RideSlots[0].Update(RideLegendary.Read(_sav), _strings);
-    }
-
-    /// <summary>Reads the current contents of a slot from the save.</summary>
-    private PKM? ReadSlot(SlotViewModel slot)
-    {
-        if (_sav is null)
-            return null;
-        if (slot.IsParty)
-            return slot.Slot < _sav.PartyCount ? _sav.GetPartySlotAtIndex(slot.Slot) : null;
-        // The ride legendary sits one box past the last the player can open, so the
-        // normal box accessor cannot reach it.
-        if (IsRideSlot(slot))
-            return RideLegendary.Read(_sav);
-        return _sav.GetBoxSlotAtIndex(slot.Box, slot.Slot);
-    }
-
-    /// <summary>Writes a PKM into a slot (party writes are compacted).</summary>
-    private void WriteSlot(SlotViewModel slot, PKM pk)
-    {
-        if (_sav is null)
-            return;
-        pk.RefreshChecksum();
-        if (slot.IsParty)
-        {
-            var index = Math.Min(slot.Slot, _sav.PartyCount);
-            _sav.SetPartySlotAtIndex(pk, index);
-        }
-        else if (IsRideSlot(slot))
-        {
-            RideLegendary.Write(_sav, pk);
-        }
-        else
-        {
-            _sav.SetBoxSlotAtIndex(pk, slot.Box, slot.Slot);
-        }
-    }
-
-    /// <summary>True for the reserved slot holding the ride legendary.</summary>
-    private bool IsRideSlot(SlotViewModel slot) =>
-        _sav is not null && !slot.IsParty && slot.Box == _sav.BoxCount;
-
-    // =====================================================================
-    // Slot operations
-    // =====================================================================
-
-    [RelayCommand]
-    public void SelectSlot(SlotViewModel? slot)
-    {
-        if (_selected is not null)
-            _selected.IsSelected = false;
-        _selected = slot;
-        _selectedBox = slot is null || slot.IsParty ? -1 : slot.Box;
-        if (slot is not null)
-            slot.IsSelected = true;
-        Detail.Load(slot?.Pokemon);
-        Transfer?.Refresh();
-        RefreshTargetSlotText();
-        OnPropertyChanged(nameof(CanUseDatabases));
-        if (IsDatabaseView && !CanUseDatabases)
-            CurrentView = "boxes"; // the chosen slot is no longer empty
-
-    }
-
-    [RelayCommand]
-    public void ApplyDetailChanges()
-    {
-        if (_sav is null || _selected is null || Detail.Pokemon is not { } pk)
-            return;
-        WriteSlot(_selected, pk);
-        RefreshSlotViews();
-        Detail.Load(pk);
-        NoteChange($"Applied changes to {Detail.SpeciesName}");
-    }
-
-    public void DeleteSlot(SlotViewModel slot)
-    {
-        if (_sav is null)
-            return;
-        if (slot.IsParty)
-        {
-            if (slot.Slot >= _sav.PartyCount)
-                return;
-            // Compact the party: shift later members up, blank the last.
-            for (int i = slot.Slot; i < _sav.PartyCount - 1; i++)
-            {
-                var next = _sav.GetPartySlotAtIndex(i + 1);
-                next.RefreshChecksum();
-                _sav.SetPartySlotAtIndex(next, i);
-            }
-            _sav.SetPartySlotAtIndex(_sav.BlankPKM, _sav.PartyCount - 1);
-        }
-        else
-        {
-            WriteSlot(slot, _sav.BlankPKM);
-        }
-        RefreshSlotViews();
-        if (_selected == slot)
-            Detail.Load(null);
-        StatusText = "Slot cleared.";
-    }
-
-    public void CopySlot(SlotViewModel slot)
-    {
-        var pk = ReadSlot(slot);
-        if (pk is null || pk.Species == 0)
-            return;
-        _clipboardPk = pk.Clone();
-        StatusText = $"Copied {_strings.specieslist[pk.Species]}.";
-    }
-
-    public bool CanPaste => _clipboardPk is not null;
-
-    public void PasteSlot(SlotViewModel slot)
-    {
-        if (_sav is null || _clipboardPk is null)
-            return;
-        WriteSlot(slot, _clipboardPk.Clone());
-        RefreshSlotViews();
-        StatusText = $"Pasted {_strings.specieslist[_clipboardPk.Species]}.";
-    }
-
-    /// <summary>Moves (or swaps) the contents of two slots. Used by drag-and-drop.</summary>
-    public void MoveOrSwapSlot(SlotViewModel from, SlotViewModel to)
-    {
-        if (_sav is null || from == to)
-            return;
-        var pkFrom = ReadSlot(from);
-        if (pkFrom is null || pkFrom.Species == 0)
-            return;
-        var pkTo = ReadSlot(to);
-
-        if (from.IsParty && !to.IsParty && _sav.PartyCount <= 1 && (pkTo is null || pkTo.Species == 0))
-        {
-            StatusText = "Cannot remove the last party member.";
-            return;
-        }
-
-        if (pkTo is not null && pkTo.Species != 0)
-        {
-            // Swap
-            WriteSlot(from, pkTo);
-            WriteSlot(to, pkFrom);
-        }
-        else
-        {
-            // Move
-            WriteSlot(to, pkFrom);
-            if (from.IsParty)
-                DeleteSlot(from);
-            else
-                WriteSlot(from, _sav.BlankPKM);
-        }
-        RefreshSlotViews();
-        SelectSlot(to.IsParty ? PartySlots[to.Slot] : BoxSlots[to.Slot]);
-        StatusText = "Moved.";
-    }
-
-    /// <summary>Imports a .pk*/.pb*/etc entity file into a slot, converting format if needed.</summary>
-    public bool ImportEntityFile(SlotViewModel slot, string path, out string message)
-    {
-        message = string.Empty;
-        if (_sav is null)
-            return false;
-        try
-        {
-            var data = File.ReadAllBytes(path);
-            var prefer = EntityFileExtension.GetContextFromExtension(path, _sav.Context);
-            var pk = EntityFormat.GetFromBytes(data, prefer);
-            if (pk is null)
-            {
-                message = "Not a recognizable Pokémon entity file.";
-                return false;
-            }
-            if (pk.GetType() != _sav.PKMType)
-            {
-                pk = EntityConverter.ConvertToType(pk, _sav.PKMType, out var result);
-                if (pk is null)
-                {
-                    message = $"Cannot convert to this save's format: {result}";
-                    return false;
-                }
-            }
-            WriteSlot(slot, pk);
-            RefreshSlotViews();
-            SelectSlot(slot.IsParty ? PartySlots[slot.Slot] : BoxSlots[slot.Slot]);
-            message = $"Imported {_strings.specieslist[pk.Species]}.";
-            StatusText = message;
-            return true;
-        }
-        catch (Exception ex)
-        {
-            message = ex.Message;
-            return false;
-        }
-    }
-
-    public string? GetSlotShowdownText(SlotViewModel slot)
-    {
-        var pk = ReadSlot(slot);
-        return pk is null || pk.Species == 0 ? null : new ShowdownSet(pk).Text;
-    }
-
-    /// <summary>Adds a Pokémon into the first empty slot of the current box.</summary>
-    public bool TryAddToCurrentBox(PKM pk, out string message)
-    {
-        message = string.Empty;
-        if (_sav is null || !_sav.HasBox)
-        {
-            message = "No save loaded.";
-            return false;
-        }
-        int empty = -1;
-        for (int i = 0; i < _sav.BoxSlotCount; i++)
-        {
-            if (_sav.GetBoxSlotAtIndex(CurrentBox, i).Species == 0)
-            {
-                empty = i;
-                break;
-            }
-        }
-        if (empty < 0)
-        {
-            message = $"{CurrentBoxName} is full — clear a slot or switch boxes.";
-            return false;
-        }
-        pk.RefreshChecksum();
-        _sav.SetBoxSlotAtIndex(pk, CurrentBox, empty);
-        RefreshSlotViews();
-        SelectSlot(BoxSlots[empty]);
-        var name = (uint)pk.Species < _strings.specieslist.Length ? _strings.specieslist[pk.Species] : $"#{pk.Species}";
-        message = $"Added {name} to {CurrentBoxName}, slot {empty + 1}.";
-        StatusText = message;
-        return true;
-    }
-
-    /// <summary>Re-reads trainer card fields after an external edit (trainer editor dialog).</summary>
-    public void RefreshTrainerCard()
-    {
-        if (_sav is null)
-            return;
-        TrainerName = _sav.OT;
-        TrainerIds = $"TID {_sav.DisplayTID:D6} · SID {_sav.DisplaySID:D4}";
-        PlayTime = _sav.PlayTimeString;
-        NoteChange("Trainer info updated.");
-    }
-
-    /// <summary>Reveals a search hit that lives in this save.</summary>
-    [RelayCommand]
-    public void GoToSearchResult(SearchResultViewModel? result)
-    {
-        if (result is null || result.IsFromFile || _sav is null)
-            return;
-        var c = result.Candidate;
-        CurrentView = "boxes";
-        if (c.Box >= 0)
-        {
-            CurrentBox = c.Box;
-            if ((uint)c.Slot < BoxSlots.Count)
-                SelectSlot(BoxSlots[c.Slot]);
-        }
-        else if ((uint)c.Slot < PartySlots.Count)
-        {
-            SelectSlot(PartySlots[c.Slot]);
-        }
-    }
-
-    /// <summary>Copies a search hit found on disk into the current box.</summary>
-    [RelayCommand]
-    public void ImportSearchResult(SearchResultViewModel? result)
-    {
-        if (result is null || _sav is null)
-            return;
-        var pk = result.Candidate.Entity;
-        if (pk.GetType() != _sav.PKMType)
-        {
-            var converted = EntityConverter.ConvertToType(pk, _sav.PKMType, out var res);
-            if (converted is null)
-            {
-                StatusText = $"Cannot bring that Pokémon into this save ({res}).";
-                return;
-            }
-            pk = converted;
-        }
-        if (!TryAddToCurrentBox(pk.Clone(), out var message))
-            StatusText = message;
-    }
-
-    // =====================================================================
-    // Folder import / export
-    // =====================================================================
-
-    /// <summary>Writes every Pokémon in the current box to a folder.</summary>
-    public int DumpToFolder(string folder)
-    {
-        if (_sav is null || !_sav.HasBox)
-            return 0;
-        var written = 0;
-        for (int index = 0; index < _sav.BoxSlotCount; index++)
-        {
-            var pk = _sav.GetBoxSlotAtIndex(CurrentBox, index);
-            if (pk.Species == 0)
-                continue;
-            try
-            {
-                var data = new byte[pk.SIZE_PARTY];
-                pk.WriteDecryptedDataParty(data);
-                var name = PathUtil.CleanFileName(pk.FileName);
-                var path = Path.Combine(folder, name);
-                // Never clobber: same species+nickname can repeat in a box.
-                var suffix = 1;
-                while (File.Exists(path))
-                {
-                    var stem = Path.GetFileNameWithoutExtension(name);
-                    path = Path.Combine(folder, $"{stem} ({++suffix}){Path.GetExtension(name)}");
-                }
-                File.WriteAllBytes(path, data);
-                written++;
-            }
-            catch
-            {
-                // skip unwritable entries rather than aborting the dump
-            }
-        }
-        StatusText = $"Exported {written} Pokémon to {Path.GetFileName(folder)}.";
-        return written;
-    }
-
-    /// <summary>Loads every readable entity file in a folder into the current box's free slots.</summary>
-    public (int loaded, int skipped) LoadFromFolder(string folder)
-    {
-        if (_sav is null || !_sav.HasBox)
-            return (0, 0);
-        int loaded = 0, skipped = 0;
-        var files = Directory.EnumerateFiles(folder).OrderBy(f => f).ToList();
-        var next = 0;
-
-        foreach (var file in files)
-        {
-            if (next >= _sav.BoxSlotCount)
-                break;
-            PKM? pk;
-            try
-            {
-                var data = File.ReadAllBytes(file);
-                var prefer = EntityFileExtension.GetContextFromExtension(file, _sav.Context);
-                pk = EntityFormat.GetFromBytes(data, prefer);
-            }
-            catch
-            {
-                pk = null;
-            }
-            if (pk is null || pk.Species == 0)
-            {
-                skipped++;
-                continue;
-            }
-            if (pk.GetType() != _sav.PKMType)
-            {
-                pk = EntityConverter.ConvertToType(pk, _sav.PKMType, out _);
-                if (pk is null)
-                {
-                    skipped++;
-                    continue;
-                }
-            }
-            // Fill the next empty slot.
-            while (next < _sav.BoxSlotCount && _sav.GetBoxSlotAtIndex(CurrentBox, next).Species != 0)
-                next++;
-            if (next >= _sav.BoxSlotCount)
-                break;
-            pk.RefreshChecksum();
-            _sav.SetBoxSlotAtIndex(pk, CurrentBox, next);
-            loaded++;
-            next++;
-        }
-        RefreshSlotViews();
-        StatusText = $"Imported {loaded} Pokémon into {CurrentBoxName}"
-                     + (skipped > 0 ? $" ({skipped} file(s) skipped)" : string.Empty) + ".";
-        return (loaded, skipped);
-    }
-
-    // =====================================================================
-    // Cross-box moves and search
-    // =====================================================================
-
-    /// <summary>
-    /// Moves the dragged Pokémon into the first free slot of another box. Used when
-    /// a slot is dropped onto a box name in the sidebar.
-    /// </summary>
-    public void MoveSlotToBox(SlotViewModel from, int targetBox)
-    {
-        if (_sav is null || !_sav.HasBox || (uint)targetBox >= _sav.BoxCount)
-            return;
-        var pk = ReadSlot(from);
-        if (pk is null || pk.Species == 0)
-            return;
-        if (!from.IsParty && targetBox == from.Box)
-            return; // same box: the grid drag already handles this
-
-        int empty = -1;
-        for (int i = 0; i < _sav.BoxSlotCount; i++)
-        {
-            if (_sav.GetBoxSlotAtIndex(targetBox, i).Species == 0)
-            {
-                empty = i;
-                break;
-            }
-        }
-        var boxName = (uint)targetBox < BoxNames.Count ? BoxNames[targetBox] : $"Box {targetBox + 1}";
-        if (empty < 0)
-        {
-            StatusText = $"{boxName} is full.";
-            return;
-        }
-
-        var moved = pk.Clone();
-        moved.RefreshChecksum();
-        _sav.SetBoxSlotAtIndex(moved, targetBox, empty);
-        if (from.IsParty)
-            DeleteSlot(from);
-        else
-            WriteSlot(from, _sav.BlankPKM);
-        RefreshSlotViews();
-        var name = (uint)moved.Species < _strings.specieslist.Length ? _strings.specieslist[moved.Species] : $"#{moved.Species}";
-        StatusText = $"Moved {name} to {boxName}, slot {empty + 1}.";
-    }
-
-
-    // =====================================================================
-    // Box tools
-    // =====================================================================
-
-    [RelayCommand]
-    public void SortCurrentBox()
-    {
-        if (_sav is null || !_sav.HasBox)
-            return;
-        var data = _sav.GetBoxData(CurrentBox);
-        Array.Sort(data, (a, b) =>
-        {
-            if (a.Species == 0)
-                return b.Species == 0 ? 0 : 1;
-            if (b.Species == 0)
-                return -1;
-            var bySpecies = a.Species.CompareTo(b.Species);
-            return bySpecies != 0 ? bySpecies : a.Form.CompareTo(b.Form);
-        });
-        for (int i = 0; i < data.Length; i++)
-        {
-            data[i].RefreshChecksum();
-            _sav.SetBoxSlotAtIndex(data[i], CurrentBox, i);
-        }
-        RefreshSlotViews();
-        StatusText = $"Sorted {CurrentBoxName} by species.";
-    }
-
-    [RelayCommand]
-    public void ClearCurrentBox()
-    {
-        if (_sav is null || !_sav.HasBox)
-            return;
-        for (int i = 0; i < _sav.BoxSlotCount; i++)
-            _sav.SetBoxSlotAtIndex(_sav.BlankPKM, CurrentBox, i);
-        RefreshSlotViews();
-        Detail.Load(null);
-        StatusText = $"Cleared {CurrentBoxName}.";
-    }
-
-    [RelayCommand]
-    public void PreviousBox()
-    {
-        if (_sav is null || !_sav.HasBox)
-            return;
-        CurrentBox = (CurrentBox - 1 + _sav.BoxCount) % _sav.BoxCount;
-    }
-
-    [RelayCommand]
-    public void NextBox()
-    {
-        if (_sav is null || !_sav.HasBox)
-            return;
-        CurrentBox = (CurrentBox + 1) % _sav.BoxCount;
+        BoxInsights.Dispose();
+        Review.Dispose();
+        Tools?.Dispose();
     }
 }

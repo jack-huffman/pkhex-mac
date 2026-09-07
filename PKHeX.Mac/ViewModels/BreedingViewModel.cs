@@ -88,7 +88,11 @@ public partial class BreedingViewModel : ObservableObject
     [ObservableProperty] private string _hatchText = string.Empty;
     [ObservableProperty] private Bitmap? _sprite;
     [ObservableProperty] private bool _hasSpecies;
-    [ObservableProperty] private string _blockedReason = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsBlocked))]
+    private string _blockedReason = string.Empty;
+
     [ObservableProperty] private string _partnerSummary = string.Empty;
 
     public ObservableCollection<EggMoveViewModel> EggMoves { get; } = [];
@@ -128,10 +132,8 @@ public partial class BreedingViewModel : ObservableObject
         }
         else if (!EggGroups.CanBreed(pi))
         {
-            BlockedReason = $"{_strings.specieslist[species]} is in the Undiscovered group and cannot breed.";
+            BlockedReason = $"{_strings.SpeciesName(species)} is in the Undiscovered group and cannot breed.";
         }
-
-        OnPropertyChanged(nameof(IsBlocked));
 
         var moves = _source.GetEggMoves(species, 0);
         foreach (var move in moves)
@@ -149,7 +151,7 @@ public partial class BreedingViewModel : ObservableObject
 
     private string GameName => _sav.Version.ToString();
 
-    private string DescribeGender(IPersonalInfo pi)
+    private static string DescribeGender(IPersonalInfo pi)
     {
         if (pi.Genderless)
             return "Genderless — can only breed with Ditto";
@@ -231,7 +233,6 @@ public partial class BreedingViewModel : ObservableObject
         Partners.Clear();
         Summary = string.Empty;
         BlockedReason = string.Empty;
-        OnPropertyChanged(nameof(IsBlocked));
         OnPropertyChanged(nameof(HasEggMoves));
     }
 }
@@ -242,9 +243,9 @@ public sealed class EggMoveViewModel
     public EggMoveViewModel(ushort move, GameStrings strings, EntityContext context)
     {
         Move = move;
-        Name = move < strings.movelist.Length ? strings.movelist[move] : $"#{move}";
+        Name = strings.MoveName(move);
         var type = MoveInfo.GetType(move, context);
-        TypeName = (uint)type < strings.types.Length ? strings.types[type] : string.Empty;
+        TypeName = strings.TypeName(type);
         TypeIcon = TypeIconService.Get(type);
         TypeBrush = TypePalette.GetBrush(type);
 
@@ -273,7 +274,7 @@ public sealed class PartnerViewModel
     public PartnerViewModel(ushort species, GameStrings strings, string how, bool isDirect)
     {
         Species = species;
-        Name = species < strings.specieslist.Length ? strings.specieslist[species] : $"#{species}";
+        Name = strings.SpeciesName(species);
         How = how;
         IsDirect = isDirect;
         Sprite = SpriteService.GetSprite(species, 0, 0, 0, shiny: false, EntityContext.None);

@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -47,22 +46,11 @@ public partial class FusionViewModel : ObservableObject
             return;
         foreach (var (key, label) in slots)
         {
-            var block = FindBlock(array, key);
-            if (block is not null)
+            if (array.Accessor.TryGetBlock(key, out var block))
                 Slots.Add(new FusionSlotViewModel(this, sav, strings, block, label));
         }
         IsSupported = Slots.Count > 0;
         RefreshSummary();
-    }
-
-    private static SCBlock? FindBlock(ISCBlockArray array, uint key)
-    {
-        foreach (var block in array.AllBlocks)
-        {
-            if (block.Key == key)
-                return block;
-        }
-        return null;
     }
 
     public bool IsSupported { get; }
@@ -141,9 +129,7 @@ public partial class FusionSlotViewModel : ObservableObject
 
         IsEmpty = false;
         IsShiny = Pokemon.IsShiny;
-        SpeciesName = (uint)Pokemon.Species < _strings.specieslist.Length
-            ? _strings.specieslist[Pokemon.Species]
-            : $"#{Pokemon.Species}";
+        SpeciesName = _strings.SpeciesName(Pokemon);
         DetailText = $"Lv. {Pokemon.CurrentLevel} · "
                      + $"IV {Pokemon.IV_HP}/{Pokemon.IV_ATK}/{Pokemon.IV_DEF}"
                      + $"/{Pokemon.IV_SPA}/{Pokemon.IV_SPD}/{Pokemon.IV_SPE}";
@@ -160,9 +146,9 @@ public partial class FusionSlotViewModel : ObservableObject
                 return null;
             return _sav.GetDecryptedPKM(raw.AsMemory(0, _sav.SIZE_PARTY));
         }
-        catch
+        catch (ArgumentException)
         {
-            return null;
+            return null; // a block that is not entity-shaped holds nothing to show
         }
     }
 

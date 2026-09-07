@@ -1,6 +1,5 @@
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Markup.Xaml;
 using PKHeX.Mac.Services;
 
 namespace PKHeX.Mac.Controls;
@@ -25,8 +24,6 @@ public partial class MoveCategoryIcon : UserControl
         UpdateVisual();
     }
 
-    private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
-
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
@@ -34,18 +31,12 @@ public partial class MoveCategoryIcon : UserControl
             UpdateVisual();
     }
 
+    /// <summary>The control is a stack of three badges; show the one that applies.</summary>
     private void UpdateVisual()
     {
-        // The control is a stack of three badges; show the one that applies.
-        var physical = this.FindControl<Control>("PhysicalIcon");
-        var special = this.FindControl<Control>("SpecialIcon");
-        var status = this.FindControl<Control>("StatusIcon");
-        if (physical is null || special is null || status is null)
-            return;
-
-        physical.IsVisible = Category == MoveDataService.Category.Physical;
-        special.IsVisible = Category == MoveDataService.Category.Special;
-        status.IsVisible = Category == MoveDataService.Category.Status;
+        PhysicalIcon.IsVisible = Category == MoveDataService.Category.Physical;
+        SpecialIcon.IsVisible = Category == MoveDataService.Category.Special;
+        StatusIcon.IsVisible = Category == MoveDataService.Category.Status;
         IsVisible = Category != MoveDataService.Category.Unknown;
     }
 }

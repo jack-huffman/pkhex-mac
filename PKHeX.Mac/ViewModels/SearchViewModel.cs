@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -15,13 +16,14 @@ namespace PKHeX.Mac.ViewModels;
 /// Multi-criteria search over the open save's storage, or over a folder of saved
 /// entity files — PKHeX's "database" tool.
 /// </summary>
-public partial class SearchViewModel : ObservableObject
+public sealed partial class SearchViewModel : ObservableObject, IDisposable
 {
     /// <summary>Results are capped; the list is not virtualized and folders can be huge.</summary>
     private const int MaxResults = 500;
 
     private readonly SaveFile _sav;
     private readonly GameStrings _strings;
+    private readonly BackgroundRefresh _refresh = new();
 
     public SearchViewModel(SaveFile sav, GameStrings strings, FilteredGameDataSource sources)
     {
@@ -44,7 +46,10 @@ public partial class SearchViewModel : ObservableObject
     public ObservableCollection<SearchResultViewModel> Results { get; } = [];
 
     // ---- Filters ----
-    [ObservableProperty] private int _sourceIndex;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsFolderSource))]
+    private int _sourceIndex;
+
     [ObservableProperty] private string _folderPath = string.Empty;
     [ObservableProperty] private string _text = string.Empty;
     [ObservableProperty] private int _speciesValue;
@@ -62,10 +67,8 @@ public partial class SearchViewModel : ObservableObject
 
     public bool IsFolderSource => SourceIndex == 1;
 
-    partial void OnSourceIndexChanged(int value) => OnPropertyChanged(nameof(IsFolderSource));
-
     [RelayCommand]
-    public void Reset()
+    private void Reset()
     {
         Text = string.Empty;
         SpeciesValue = 0;
@@ -82,105 +85,114 @@ public partial class SearchViewModel : ObservableObject
         Summary = "Filters cleared.";
     }
 
+    /// <summary>
+    /// Runs the search off the UI thread. The save's slots are copied first; a folder is
+    /// read entirely in the background. Legality is the expensive filter, so a search
+    /// that asks for it takes visibly longer than one that does not.
+    /// </summary>
     [RelayCommand]
-    public void Search()
+    private async Task SearchAsync()
     {
         Results.Clear();
         IsSearching = true;
-        try
+        Summary = "Searching…";
+
+        var criteria = Snapshot();
+        var candidates = IsFolderSource ? null : _sav.EnumerateOccupiedSlots().ToList();
+        var folder = FolderPath;
+        var context = _sav.Context;
+
+        var outcome = await _refresh.RunAsync(token =>
         {
+            var source = candidates is not null
+                ? candidates.Select(s => new SearchCandidate(s.Entity, null, s.Box, s.Slot))
+                : EnumerateFolder(folder, context);
+            var hits = new List<(SearchCandidate Candidate, bool IsLegal)>();
             var scanned = 0;
-            var matched = 0;
-            foreach (var candidate in Enumerate())
+            foreach (var candidate in source)
             {
+                token.ThrowIfCancellationRequested();
                 scanned++;
-                if (!Matches(candidate.Entity))
-                    continue;
-                matched++;
-                if (Results.Count < MaxResults)
-                    Results.Add(new SearchResultViewModel(candidate, _strings));
+                if (criteria.Matches(candidate.Entity, out var legal))
+                    hits.Add((candidate, legal ?? new LegalityAnalysis(candidate.Entity).Valid));
             }
+            return (Hits: hits, Scanned: scanned);
+        });
+        if (outcome.IsSuperseded)
+            return;
 
-            Summary = matched == 0
-                ? $"No matches among {scanned:N0} Pokémon."
-                : $"{matched:N0} match{(matched == 1 ? string.Empty : "es")} of {scanned:N0} scanned"
-                  + (matched > MaxResults ? $" · showing the first {MaxResults}" : string.Empty);
-        }
-        catch (Exception ex)
+        IsSearching = false;
+        if (outcome.Error is { } error)
         {
-            Summary = $"Search failed: {ex.Message}";
+            Summary = $"Search failed: {error.Message}";
+            return;
         }
-        finally
-        {
-            IsSearching = false;
-        }
+        var (hits, scanned) = outcome.Result;
+
+        foreach (var (candidate, isLegal) in hits.Take(MaxResults))
+            Results.Add(new SearchResultViewModel(candidate, isLegal, _strings));
+
+        Summary = hits.Count == 0
+            ? $"No matches among {scanned:N0} Pokémon."
+            : $"{hits.Count:N0} match{(hits.Count == 1 ? string.Empty : "es")} of {scanned:N0} scanned"
+              + (hits.Count > MaxResults ? $" · showing the first {MaxResults}" : string.Empty);
     }
 
-    /// <summary>Every candidate from the chosen source, with where it came from.</summary>
-    private IEnumerable<SearchCandidate> Enumerate()
+    /// <summary>The filters as plain values, so the background pass never reads bound properties.</summary>
+    private SearchCriteria Snapshot() => new(
+        SpeciesValue, NatureValue, BallValue, MoveValue, ShinyIndex, LegalIndex, EggIndex,
+        MinLevel, MaxLevel, MinIvTotal, Text.Trim(), _strings);
+
+    /// <summary>Every readable entity file below a folder. Saves and junk are skipped by size.</summary>
+    private static IEnumerable<SearchCandidate> EnumerateFolder(string folder, EntityContext context)
     {
-        if (IsFolderSource)
-        {
-            if (string.IsNullOrWhiteSpace(FolderPath) || !Directory.Exists(FolderPath))
-                yield break;
-            foreach (var file in Directory.EnumerateFiles(FolderPath, "*", SearchOption.AllDirectories))
-            {
-                PKM? pk = null;
-                try
-                {
-                    var info = new FileInfo(file);
-                    if (info.Length is 0 or > 0x400) // entity files are small; skip saves and junk
-                        continue;
-                    var data = File.ReadAllBytes(file);
-                    pk = EntityFormat.GetFromBytes(data, EntityFileExtension.GetContextFromExtension(file, _sav.Context));
-                }
-                catch
-                {
-                    pk = null;
-                }
-                if (pk is { Species: > 0 })
-                    yield return new SearchCandidate(pk, file, -1, -1);
-            }
+        if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
             yield break;
-        }
-
-        if (_sav.HasBox)
+        foreach (var file in Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories))
         {
-            for (int box = 0; box < _sav.BoxCount; box++)
+            PKM? pk = null;
+            try
             {
-                for (int slot = 0; slot < _sav.BoxSlotCount; slot++)
-                {
-                    var pk = _sav.GetBoxSlotAtIndex(box, slot);
-                    if (pk.Species != 0)
-                        yield return new SearchCandidate(pk, null, box, slot);
-                }
+                var info = new FileInfo(file);
+                if (info.Length is 0 or > 0x400)
+                    continue;
+                var data = File.ReadAllBytes(file);
+                pk = EntityFormat.GetFromBytes(data, EntityFileExtension.GetContextFromExtension(file, context));
             }
-        }
-        if (_sav.HasParty)
-        {
-            for (int i = 0; i < _sav.PartyCount; i++)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                var pk = _sav.GetPartySlotAtIndex(i);
-                if (pk.Species != 0)
-                    yield return new SearchCandidate(pk, null, -1, i);
+                // An unreadable file is not a result.
             }
+            if (pk is { Species: > 0 })
+                yield return new SearchCandidate(pk, file, -1, -1);
         }
     }
 
-    private bool Matches(PKM pk)
+    public void Dispose() => _refresh.Dispose();
+}
+
+/// <summary>An immutable copy of the search filters, safe to evaluate on any thread.</summary>
+internal sealed record SearchCriteria(
+    int Species, int Nature, int Ball, int Move, int ShinyIndex, int LegalIndex, int EggIndex,
+    int MinLevel, int MaxLevel, int MinIvTotal, string Text, GameStrings Strings)
+{
+    /// <summary>
+    /// Whether an entity passes every filter. Legality is checked last because it is by
+    /// far the most expensive test; when it was checked, the verdict is returned so the
+    /// result row does not have to compute it again.
+    /// </summary>
+    public bool Matches(PKM pk, out bool? isLegal)
     {
-        if (SpeciesValue != 0 && pk.Species != SpeciesValue)
+        isLegal = null;
+        if (Species != 0 && pk.Species != Species)
             return false;
-        if (NatureValue >= 0 && (int)pk.Nature != NatureValue)
+        if (Nature >= 0 && (int)pk.Nature != Nature)
             return false;
-        if (BallValue >= 0 && pk.Ball != BallValue)
+        if (Ball >= 0 && pk.Ball != Ball)
             return false;
         if (pk.CurrentLevel < MinLevel || pk.CurrentLevel > MaxLevel)
             return false;
-
-        if (!MatchTri(ShinyIndex, pk.IsShiny))
-            return false;
-        if (!MatchTri(EggIndex, pk.IsEgg))
+        if (!MatchTri(ShinyIndex, pk.IsShiny) || !MatchTri(EggIndex, pk.IsEgg))
             return false;
 
         if (MinIvTotal > 0)
@@ -190,27 +202,29 @@ public partial class SearchViewModel : ObservableObject
                 return false;
         }
 
-        if (MoveValue != 0)
+        if (Move != 0)
         {
-            var move = (ushort)MoveValue;
+            var move = (ushort)Move;
             if (pk.Move1 != move && pk.Move2 != move && pk.Move3 != move && pk.Move4 != move)
                 return false;
         }
 
-        var query = Text.Trim();
-        if (query.Length != 0)
+        if (Text.Length != 0)
         {
-            var species = (uint)pk.Species < _strings.specieslist.Length ? _strings.specieslist[pk.Species] : string.Empty;
-            if (!species.Contains(query, StringComparison.OrdinalIgnoreCase)
-                && !pk.Nickname.Contains(query, StringComparison.OrdinalIgnoreCase)
-                && !pk.OriginalTrainerName.Contains(query, StringComparison.OrdinalIgnoreCase))
+            var species = Strings.SpeciesName(pk);
+            if (!species.Contains(Text, StringComparison.OrdinalIgnoreCase)
+                && !pk.Nickname.Contains(Text, StringComparison.OrdinalIgnoreCase)
+                && !pk.OriginalTrainerName.Contains(Text, StringComparison.OrdinalIgnoreCase))
                 return false;
         }
 
-        // Legality last: it is the most expensive check by far.
-        if (LegalIndex != 0 && !MatchTri(LegalIndex, new LegalityAnalysis(pk).Valid))
-            return false;
-
+        if (LegalIndex != 0)
+        {
+            var legal = new LegalityAnalysis(pk).Valid;
+            isLegal = legal;
+            if (!MatchTri(LegalIndex, legal))
+                return false;
+        }
         return true;
     }
 
@@ -228,16 +242,16 @@ public sealed record SearchCandidate(PKM Entity, string? FilePath, int Box, int 
 /// <summary>One search result row.</summary>
 public sealed class SearchResultViewModel
 {
-    public SearchResultViewModel(SearchCandidate candidate, GameStrings strings)
+    public SearchResultViewModel(SearchCandidate candidate, bool isLegal, GameStrings strings)
     {
         Candidate = candidate;
         var pk = candidate.Entity;
-        Species = (uint)pk.Species < strings.specieslist.Length ? strings.specieslist[pk.Species] : $"#{pk.Species}";
+        Species = strings.SpeciesName(pk);
         Nickname = pk.Nickname == Species ? string.Empty : pk.Nickname;
-        Detail = $"Lv. {pk.CurrentLevel} · {NatureName(pk, strings)}"
+        Detail = $"Lv. {pk.CurrentLevel} · {strings.NatureName(pk.Nature)}"
                  + $" · IV {pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}";
         IsShiny = pk.IsShiny;
-        IsLegal = new LegalityAnalysis(pk).Valid;
+        IsLegal = isLegal;
         Sprite = SpriteService.GetPokemonSprite(pk);
         IsFromFile = candidate.FilePath is not null;
         Location = candidate.FilePath is { } path
@@ -258,7 +272,4 @@ public sealed class SearchResultViewModel
     public bool IsLegal { get; }
     public bool IsFromFile { get; }
     public Bitmap? Sprite { get; }
-
-    private static string NatureName(PKM pk, GameStrings strings) =>
-        (uint)pk.Nature < strings.natures.Length ? strings.natures[(int)pk.Nature] : pk.Nature.ToString();
 }

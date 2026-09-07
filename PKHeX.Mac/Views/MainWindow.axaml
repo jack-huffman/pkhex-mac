@@ -10,7 +10,7 @@
         mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="800"
         x:Class="PKHeX.Mac.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/avalonia-logo.ico"
+        Icon="/Assets/icon.png"
         Title="{Binding WindowTitle}"
         Width="1360" Height="860"
         MinWidth="1120" MinHeight="700"
@@ -31,6 +31,7 @@
                         <NativeMenu/>
                     </NativeMenuItem>
                     <NativeMenuItem Header="Export Save As…" Gesture="Cmd+S" Click="OnExportClicked"/>
+                    <NativeMenuItem Header="Close Save" Gesture="Cmd+W" Click="OnCloseTabClicked"/>
                     <NativeMenuItem Header="Revert to Saved File…" Click="OnRevertAllMenuClicked"/>
                     <NativeMenuItemSeparator/>
                     <NativeMenuItem Header="Import Showdown Set from Clipboard" Gesture="Cmd+Shift+I" Click="OnShowdownImportClicked"/>
@@ -64,37 +65,6 @@
     </Window.KeyBindings>
 
     <Window.Resources>
-        <!-- One definition of a move row, shared by all eight move pickers.
-             Eight hand-copied duplicates is how they drift apart. -->
-        <DataTemplate x:Key="MoveRowTemplate" x:DataType="vm:MoveChoice">
-            <Grid ColumnDefinitions="*,24,24,28,28" ColumnSpacing="6">
-                <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="{StaticResource FontBody}"
-                           MinWidth="70" VerticalAlignment="Center"
-                           TextTrimming="CharacterEllipsis"/>
-                <Panel Grid.Column="1" IsVisible="{Binding IsRealMove}">
-                    <Image Source="{Binding TypeIcon}" Width="20" Height="20"
-                           IsVisible="{Binding HasTypeIcon}"
-                           ToolTip.Tip="{Binding TypeName}"/>
-                    <!-- Stellar has no symbol; fall back to the colour chip -->
-                    <Border Classes="chip" Padding="5,2" MinHeight="17"
-                            Background="{Binding TypeBrush}"
-                            IsVisible="{Binding !HasTypeIcon}">
-                        <TextBlock Text="{Binding TypeName}" FontSize="{StaticResource FontMicro}" FontWeight="SemiBold"
-                                   Foreground="White"/>
-                    </Border>
-                </Panel>
-                <ctrl:MoveCategoryIcon Grid.Column="2" Category="{Binding CategoryKind}"
-                                       Width="20" Height="20"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                <TextBlock Grid.Column="3" Text="{Binding PowerText}" FontSize="{StaticResource FontMicro}"
-                           Classes="secondary" VerticalAlignment="Center"
-                           TextAlignment="Center" ToolTip.Tip="Base power"/>
-                <TextBlock Grid.Column="4" Text="{Binding AccuracyText}" FontSize="{StaticResource FontMicro}"
-                           Classes="secondary" VerticalAlignment="Center"
-                           TextAlignment="Center" ToolTip.Tip="Accuracy"/>
-            </Grid>
-        </DataTemplate>
-
         <!-- Type-matrix column width. The header, cells and totals are separate
              strips with no shared layout, so they must all use this. -->
         <x:Double x:Key="MatrixCellWidth">40</x:Double>
@@ -202,7 +172,7 @@
                                             Command="{Binding SaveState.ToggleLogCommand}"/>
                                     <Button Content="Revert All" FontSize="{StaticResource FontMicro}" Padding="8,3"
                                             ToolTip.Tip="Throw away every edit and reload the file from disk"
-                                            Click="OnRevertAllClicked"/>
+                                            Command="{Binding RequestRevertCommand}"/>
                                 </WrapPanel>
 
                                 <!-- Session log: what changed, newest first -->
@@ -216,7 +186,7 @@
                                                         <TextBlock Grid.Column="0" Text="{Binding TimeText}"
                                                                    FontSize="{StaticResource FontMicro}"
                                                                    Classes="secondary"
-                                                                   FontFamily="Menlo, monospace"/>
+                                                                   FontFamily="{StaticResource MonoFont}"/>
                                                         <TextBlock Grid.Column="1" Text="{Binding Description}"
                                                                    FontSize="{StaticResource FontMicro}"
                                                                    TextWrapping="Wrap"/>
@@ -270,7 +240,8 @@
                             <DataTemplate>
                                 <!-- Drop a dragged Pokémon here to move it to this box -->
                                 <TextBlock Text="{Binding}" FontSize="{StaticResource FontBody}" Background="Transparent"
-                                           PointerEntered="OnBoxNamePointerEntered"/>
+                                           PointerEntered="OnBoxNamePointerEntered"
+                                           PointerExited="OnBoxNamePointerExited"/>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
@@ -297,8 +268,8 @@
                 <!-- Open saves. Hidden until there is more than one, so nothing
                      changes for the usual case of editing a single file. -->
                 <Border DockPanel.Dock="Top" Classes="tabstrip"
-                        IsVisible="{Binding #RootWindow.ShowTabStrip}">
-                    <ItemsControl ItemsSource="{Binding #RootWindow.Tabs}">
+                        IsVisible="{Binding #RootWindow.Workspace.ShowTabStrip}">
+                    <ItemsControl ItemsSource="{Binding #RootWindow.Workspace.Tabs}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <!-- No gaps: tabs meet, as they do in a browser. -->
@@ -330,7 +301,7 @@
                                                 FontSize="{StaticResource FontMicro}"
                                                 VerticalAlignment="Center"
                                                 ToolTip.Tip="Close this save"
-                                                Click="OnTabCloseClicked"/>
+                                                Command="{Binding CloseCommand}"/>
                                     </Grid>
                                 </Border>
                             </DataTemplate>
@@ -349,7 +320,8 @@
                     <Panel>
 
                     <!-- Boxes view -->
-                    <ScrollViewer IsVisible="{Binding ShowBoxes}" Padding="18,14,10,14">
+                    <ScrollViewer x:Name="BoxesView" IsVisible="{Binding ShowBoxes}" Padding="18,14,10,14"
+                                  SizeChanged="OnBoxesViewSizeChanged">
                         <StackPanel>
                             <!-- Empty state -->
                             <StackPanel IsVisible="{Binding !HasSave}" HorizontalAlignment="Center"
@@ -467,7 +439,7 @@
                                                         <Button Classes="plain" Padding="6,4" Margin="0,0,0,2"
                                                                 HorizontalAlignment="Stretch"
                                                                 HorizontalContentAlignment="Left"
-                                                                Click="OnBoxProblemClicked"
+                                                                Command="{Binding SelectCommand}"
                                                                 ToolTip.Tip="{Binding Issue}">
                                                             <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="8">
                                                                 <Image Grid.Column="0" Source="{Binding Sprite}"
@@ -861,1012 +833,8 @@
                         </Border>
 
                         <Panel IsVisible="{Binding IsBoxesView}">
-                        <Border Padding="0"
-                                DataContext="{Binding Detail}"
-                                x:DataType="vm:PokemonDetailViewModel"
-                                IsVisible="{Binding HasPokemon}">
-                            <DockPanel Margin="14">
-                                <!-- Hero -->
-                                <StackPanel DockPanel.Dock="Top" Spacing="8">
-                                    <Button Content="✕" Padding="8,2" HorizontalAlignment="Right"
-                                            FontSize="{StaticResource FontBody}" Background="Transparent"
-                                            ToolTip.Tip="Close this Pokémon"
-                                            Click="OnCloseDetailClicked"/>
-                                    <Image Source="{Binding Artwork}" Height="150"
-                                           RenderOptions.BitmapInterpolationMode="HighQuality"/>
-                                    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-                                        <TextBlock Text="{Binding SpeciesName}" FontSize="{StaticResource FontTitle}" FontWeight="Bold" VerticalAlignment="Center"/>
-                                        <Border Classes="chip" Background="{DynamicResource SurfaceMutedBrush}" VerticalAlignment="Center">
-                                            <TextBlock Text="{Binding LevelBadge}" FontSize="{StaticResource FontMicro}" Classes="secondary"/>
-                                        </Border>
-                                    </StackPanel>
-                                    <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
-                                        <!-- The type symbols are self-explanatory, so no labels -->
-                                        <Image Source="{Binding Type1Icon}" Width="26" Height="26"
-                                               IsVisible="{Binding HasType1Icon}"
-                                               ToolTip.Tip="{Binding Type1Name}"/>
-                                        <Border Classes="chip" Background="{Binding Type1Brush}" Padding="7,2"
-                                                IsVisible="{Binding !HasType1Icon}">
-                                            <TextBlock Text="{Binding Type1Name}" FontSize="{StaticResource FontMicro}" FontWeight="SemiBold" Foreground="White"/>
-                                        </Border>
-
-                                        <Image Source="{Binding Type2Icon}" Width="26" Height="26"
-                                               IsVisible="{Binding HasType2Icon}"
-                                               ToolTip.Tip="{Binding Type2Name}"/>
-
-                                        <Image Source="{Binding ShinyIcon}" Width="20" Height="20"
-                                               IsVisible="{Binding IsShiny}" VerticalAlignment="Center"
-                                               ToolTip.Tip="Shiny"
-                                               RenderOptions.BitmapInterpolationMode="HighQuality"/>
-                                        <Border Classes="chip" Background="{DynamicResource LegalBgBrush}" IsVisible="{Binding IsLegal}">
-                                            <TextBlock Text="✓ Legal" FontSize="{StaticResource FontMicro}" FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource LegalFgBrush}"/>
-                                        </Border>
-                                        <Border Classes="chip" Background="{DynamicResource IllegalBgBrush}" IsVisible="{Binding !IsLegal}">
-                                            <TextBlock Text="✕ Issues" FontSize="{StaticResource FontMicro}" FontWeight="SemiBold"
-                                                       Foreground="{DynamicResource IllegalFgBrush}"/>
-                                        </Border>
-                                    </StackPanel>
-                                    <Border CornerRadius="8" Padding="10,8" Background="{DynamicResource IllegalBgBrush}"
-                                            IsVisible="{Binding !IsLegal}">
-                                        <StackPanel Spacing="8">
-                                            <TextBlock Text="{Binding LegalityReport}" FontSize="{StaticResource FontMicro}" TextWrapping="Wrap"
-                                                       MaxHeight="72" Foreground="{DynamicResource IllegalFgBrush}"/>
-                                            <Button Content="Fix moves &amp; relearn" FontSize="{StaticResource FontBody}" Padding="10,3"
-                                                    HorizontalAlignment="Left"
-                                                    ToolTip.Tip="Apply a legal moveset and the encounter's relearn moves. Met data is left alone — use Suggest on the Met tab for that."
-                                                    Command="{Binding SuggestAllCommand}"/>
-                                        </StackPanel>
-                                    </Border>
-                                    <TextBlock Text="{Binding SuggestionResult}" FontSize="{StaticResource FontMicro}" Classes="secondary"
-                                               TextWrapping="Wrap" IsVisible="{Binding SuggestionResult, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                                </StackPanel>
-
-                                <!-- Apply -->
-                                <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto"
-                                      ColumnSpacing="6" Margin="0,12,0,0">
-                                    <Button Grid.Column="0" Content="Apply Changes"
-                                            HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-                                            IsEnabled="{Binding IsDirty}" Classes="accent"
-                                            Click="OnApplyClicked"/>
-                                    <Button Grid.Column="1" Content="Revert"
-                                            IsEnabled="{Binding IsDirty}"
-                                            ToolTip.Tip="Discard the edits made here and re-read this Pokémon from the save"
-                                            Click="OnDetailRevertClicked"/>
-                                </Grid>
-
-                                <!-- Tabs -->
-                                <TabControl Margin="0,6,0,0" Padding="0,6,0,0">
-                                    <TabItem Header="Main">
-                                        <ScrollViewer>
-                                            <StackPanel Spacing="8" Margin="2,6,6,2">
-                                                <StackPanel>
-                                                    <TextBlock Classes="fieldLabel" Text="Species"/>
-                                                    <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding SpeciesChoices}"
-                                                              SelectedValue="{Binding SpeciesValue, Mode=TwoWay}"
-                                                              SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
-                                                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
-                                                </StackPanel>
-                                                <StackPanel IsVisible="{Binding HasForms}">
-                                                    <TextBlock Classes="fieldLabel" Text="Form"/>
-                                                    <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding FormChoices}"
-                                                              SelectedIndex="{Binding FormIndex, Mode=TwoWay}"/>
-                                                </StackPanel>
-                                                <StackPanel>
-                                                    <TextBlock Classes="fieldLabel" Text="Nickname"/>
-                                                    <TextBox Text="{Binding Nickname, Mode=TwoWay}"/>
-                                                </StackPanel>
-                                                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                                                    <StackPanel Grid.Column="0">
-                                                        <TextBlock Classes="fieldLabel" Text="Level"/>
-                                                        <NumericUpDown Value="{Binding Level, Mode=TwoWay}" Minimum="1" Maximum="100"
-                                                                       FormatString="0" Increment="1"/>
-                                                    </StackPanel>
-                                                    <StackPanel Grid.Column="1">
-                                                        <TextBlock Classes="fieldLabel" Text="Friendship"/>
-                                                        <NumericUpDown Value="{Binding Friendship, Mode=TwoWay}" Minimum="0" Maximum="255"
-                                                                       FormatString="0" Increment="1"/>
-                                                    </StackPanel>
-                                                </Grid>
-                                                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                                                    <StackPanel Grid.Column="0">
-                                                        <TextBlock Classes="fieldLabel" Text="Gender"/>
-                                                        <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding GenderChoices}"
-                                                                  SelectedIndex="{Binding GenderIndex, Mode=TwoWay}"
-                                                                  IsEnabled="{Binding CanEditGender}"/>
-                                                    </StackPanel>
-                                                    <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Margin="0,0,0,4">
-                                                        <CheckBox IsChecked="{Binding IsShiny, Mode=TwoWay}" Content="Shiny ★"/>
-                                                    </StackPanel>
-                                                </Grid>
-                                                <StackPanel>
-                                                    <TextBlock Classes="fieldLabel" Text="Nature"/>
-                                                    <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding NatureChoices}"
-                                                              SelectedValue="{Binding NatureValue, Mode=TwoWay}"
-                                                              SelectedValueBinding="{Binding Value, x:DataType=vm:NatureChoice}">
-                                                        <ComboBox.ItemTemplate>
-                                                        <DataTemplate x:DataType="vm:NatureChoice">
-                                                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                                                <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontBody}" MinWidth="76"/>
-                                                                <TextBlock Text="{Binding UpLabel}" FontSize="{StaticResource FontBody}" FontWeight="SemiBold"
-                                                                           Foreground="{x:Static vm:NatureChoice.UpBrush}"
-                                                                           VerticalAlignment="Center" IsVisible="{Binding HasModifiers}"/>
-                                                                <TextBlock Text="{Binding DownLabel}" FontSize="{StaticResource FontBody}" FontWeight="SemiBold"
-                                                                           Foreground="{x:Static vm:NatureChoice.DownBrush}"
-                                                                           VerticalAlignment="Center" IsVisible="{Binding HasModifiers}"/>
-                                                                <TextBlock Text="{Binding NeutralLabel}" FontSize="{StaticResource FontBody}" Classes="secondary"
-                                                                           VerticalAlignment="Center" IsVisible="{Binding IsNeutral}"/>
-                                                            </StackPanel>
-                                                        </DataTemplate>
-                                                    </ComboBox.ItemTemplate>
-                                                    </ComboBox>
-                                                </StackPanel>
-                                                <StackPanel>
-                                                    <TextBlock Classes="fieldLabel" Text="Ability"/>
-                                                    <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding AbilityChoices}"
-                                                              SelectedIndex="{Binding AbilityIndex, Mode=TwoWay}"
-                                                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
-                                                </StackPanel>
-                                                <StackPanel>
-                                                    <TextBlock Classes="fieldLabel" Text="Held Item"/>
-                                                    <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding ItemChoices}"
-                                                              SelectedValue="{Binding HeldItemValue, Mode=TwoWay}"
-                                                              SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
-                                                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
-                                                </StackPanel>
-                                                <StackPanel>
-                                                    <TextBlock Classes="fieldLabel" Text="Ball"/>
-                                                    <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding BallChoices}"
-                                                              SelectedValue="{Binding BallValue, Mode=TwoWay}"
-                                                              SelectedValueBinding="{Binding Value, x:DataType=vm:BallChoice}">
-                                                        <ComboBox.ItemTemplate>
-                                                            <DataTemplate x:DataType="vm:BallChoice">
-                                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                                    <Image Source="{Binding Sprite}" Width="20" Height="20"
-                                                                           VerticalAlignment="Center"
-                                                                           RenderOptions.BitmapInterpolationMode="HighQuality"/>
-                                                                    <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontBody}"
-                                                                               VerticalAlignment="Center"/>
-                                                                </StackPanel>
-                                                            </DataTemplate>
-                                                        </ComboBox.ItemTemplate>
-                                                    </ComboBox>
-                                                </StackPanel>
-                                                <StackPanel>
-                                                    <TextBlock Classes="fieldLabel" Text="Language"/>
-                                                    <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding LanguageChoices}"
-                                                              SelectedValue="{Binding LanguageValue, Mode=TwoWay}"
-                                                              SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
-                                                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
-                                                </StackPanel>
-                                                <StackPanel IsVisible="{Binding HasStatNature}">
-                                                    <TextBlock Classes="fieldLabel" Text="Stat Nature (Gen 8+ split)"/>
-                                                    <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding NatureChoices}"
-                                                              SelectedValue="{Binding StatNatureValue, Mode=TwoWay}"
-                                                              SelectedValueBinding="{Binding Value, x:DataType=vm:NatureChoice}">
-                                                        <ComboBox.ItemTemplate>
-                                                        <DataTemplate x:DataType="vm:NatureChoice">
-                                                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                                                <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontBody}" MinWidth="76"/>
-                                                                <TextBlock Text="{Binding UpLabel}" FontSize="{StaticResource FontBody}" FontWeight="SemiBold"
-                                                                           Foreground="{x:Static vm:NatureChoice.UpBrush}"
-                                                                           VerticalAlignment="Center" IsVisible="{Binding HasModifiers}"/>
-                                                                <TextBlock Text="{Binding DownLabel}" FontSize="{StaticResource FontBody}" FontWeight="SemiBold"
-                                                                           Foreground="{x:Static vm:NatureChoice.DownBrush}"
-                                                                           VerticalAlignment="Center" IsVisible="{Binding HasModifiers}"/>
-                                                                <TextBlock Text="{Binding NeutralLabel}" FontSize="{StaticResource FontBody}" Classes="secondary"
-                                                                           VerticalAlignment="Center" IsVisible="{Binding IsNeutral}"/>
-                                                            </StackPanel>
-                                                        </DataTemplate>
-                                                    </ComboBox.ItemTemplate>
-                                                    </ComboBox>
-                                                </StackPanel>
-                                                <StackPanel>
-                                                    <TextBlock Classes="fieldLabel" Text="Experience"/>
-                                                    <NumericUpDown Value="{Binding Experience, Mode=TwoWay}" Minimum="0"
-                                                                   Maximum="1640000" FormatString="0" Increment="1000"/>
-                                                </StackPanel>
-                                                <StackPanel IsVisible="{Binding FormArgumentVisible}">
-                                                    <TextBlock Classes="fieldLabel" Text="Form Argument"/>
-                                                    <NumericUpDown Value="{Binding FormArgument, Mode=TwoWay}" Minimum="0"
-                                                                   Maximum="4294967295" FormatString="0" Increment="1"/>
-                                                </StackPanel>
-                                                <Separator Margin="0,4"/>
-                                                <TextBlock Classes="sectionTitle" Text="POKÉRUS"/>
-                                                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                                                    <StackPanel Grid.Column="0">
-                                                        <TextBlock Classes="fieldLabel" Text="Strain"/>
-                                                        <NumericUpDown Value="{Binding PokerusStrain, Mode=TwoWay}" Minimum="0"
-                                                                       Maximum="15" FormatString="0" Increment="1"/>
-                                                    </StackPanel>
-                                                    <StackPanel Grid.Column="1">
-                                                        <TextBlock Classes="fieldLabel" Text="Days left"/>
-                                                        <NumericUpDown Value="{Binding PokerusDays, Mode=TwoWay}" Minimum="0"
-                                                                       Maximum="4" FormatString="0" Increment="1"/>
-                                                    </StackPanel>
-                                                </Grid>
-                                                <StackPanel Orientation="Horizontal" Spacing="16">
-                                                    <CheckBox IsChecked="{Binding IsEgg, Mode=TwoWay}" Content="Is Egg"/>
-                                                    <CheckBox IsChecked="{Binding IsFavorite, Mode=TwoWay}" Content="Favorite"
-                                                              IsVisible="{Binding SupportsFavorite}"/>
-                                                </StackPanel>
-                                                <Separator Margin="0,4"/>
-                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                                    <StackPanel Grid.Column="0">
-                                                        <TextBlock Classes="fieldLabel" Text="PID"/>
-                                                        <TextBlock Text="{Binding PidText}" FontFamily="Menlo, monospace" FontSize="{StaticResource FontBody}"/>
-                                                    </StackPanel>
-                                                    <Button Grid.Column="1" Content="Reroll" FontSize="{StaticResource FontBody}" Padding="8,3"
-                                                            VerticalAlignment="Bottom" Command="{Binding RerollPidCommand}"/>
-                                                </Grid>
-                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                                    <StackPanel Grid.Column="0">
-                                                        <TextBlock Classes="fieldLabel" Text="Encryption Constant"/>
-                                                        <TextBlock Text="{Binding EcText}" FontFamily="Menlo, monospace" FontSize="{StaticResource FontBody}"/>
-                                                    </StackPanel>
-                                                    <Button Grid.Column="1" Content="Reroll" FontSize="{StaticResource FontBody}" Padding="8,3"
-                                                            VerticalAlignment="Bottom" Command="{Binding RerollEncryptionConstantCommand}"/>
-                                                </Grid>
-                                            </StackPanel>
-                                        </ScrollViewer>
-                                    </TabItem>
-
-                                    <TabItem Header="Stats">
-                                        <ScrollViewer>
-                                            <StackPanel Spacing="6" Margin="2,6,6,2">
-                                                <!-- Nature, with the stat it raises / lowers -->
-                                                <StackPanel Spacing="4">
-                                                    <TextBlock Classes="fieldLabel" Text="Nature"/>
-                                                    <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding NatureChoices}"
-                                                              SelectedValue="{Binding NatureValue, Mode=TwoWay}"
-                                                              SelectedValueBinding="{Binding Value, x:DataType=vm:NatureChoice}">
-                                                        <ComboBox.ItemTemplate>
-                                                        <DataTemplate x:DataType="vm:NatureChoice">
-                                                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                                                <TextBlock Text="{Binding Name}" FontSize="{StaticResource FontBody}" MinWidth="76"/>
-                                                                <TextBlock Text="{Binding UpLabel}" FontSize="{StaticResource FontBody}" FontWeight="SemiBold"
-                                                                           Foreground="{x:Static vm:NatureChoice.UpBrush}"
-                                                                           VerticalAlignment="Center" IsVisible="{Binding HasModifiers}"/>
-                                                                <TextBlock Text="{Binding DownLabel}" FontSize="{StaticResource FontBody}" FontWeight="SemiBold"
-                                                                           Foreground="{x:Static vm:NatureChoice.DownBrush}"
-                                                                           VerticalAlignment="Center" IsVisible="{Binding HasModifiers}"/>
-                                                                <TextBlock Text="{Binding NeutralLabel}" FontSize="{StaticResource FontBody}" Classes="secondary"
-                                                                           VerticalAlignment="Center" IsVisible="{Binding IsNeutral}"/>
-                                                            </StackPanel>
-                                                        </DataTemplate>
-                                                    </ComboBox.ItemTemplate>
-                                                    </ComboBox>
-                                                </StackPanel>
-
-                                                <!-- Shared EV pool -->
-                                                <StackPanel Spacing="4" Margin="0,4,0,0">
-                                                    <DockPanel>
-                                                        <TextBlock DockPanel.Dock="Left" Classes="sectionTitle" Text="EV BUDGET" Margin="0,0,0,0"/>
-                                                        <TextBlock DockPanel.Dock="Right" Text="{Binding EvBudgetText}" FontSize="{StaticResource FontBody}"
-                                                                   HorizontalAlignment="Right"
-                                                                   Foreground="{DynamicResource TextSecondaryBrush}"/>
-                                                    </DockPanel>
-                                                    <ProgressBar Classes="meter" Value="{Binding EvBudgetPercent}"
-                                                                 Foreground="{DynamicResource MeterEvBrush}"
-                                                                 Margin="0,0,10,0"/>
-                                                    <TextBlock Text="Sliders stop at whatever the 510-point pool has left."
-                                                               FontSize="{StaticResource FontMicro}" Classes="secondary"
-                                                               IsVisible="{Binding !EvOverLimit}"/>
-                                                    <TextBlock Text="This spread exceeds the game's 510 EV limit and will be flagged as illegal."
-                                                               FontSize="{StaticResource FontMicro}" TextWrapping="Wrap"
-                                                               Foreground="{DynamicResource IllegalFgBrush}"
-                                                               IsVisible="{Binding EvOverLimit}"/>
-                                                </StackPanel>
-
-                                                <Separator Margin="0,6"/>
-
-                                                <!-- ProDex-style rows: label, value, magnitude bar; IV/EV inline -->
-                                                <ItemsControl ItemsSource="{Binding Stats}">
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate x:DataType="vm:StatEditRowViewModel">
-                                                            <Grid ColumnDefinitions="66,44,*" RowDefinitions="Auto,Auto"
-                                                                  ColumnSpacing="8" RowSpacing="2" Margin="0,0,0,9">
-
-                                                                <!-- Fixed label column so every nature arrow lines up -->
-                                                                <Grid Grid.Row="0" Grid.Column="0" ColumnDefinitions="44,*"
-                                                                      VerticalAlignment="Center">
-                                                                    <TextBlock Grid.Column="0" Text="{Binding ShortLabel}"
-                                                                               FontSize="{StaticResource FontBody}" FontWeight="Bold"
-                                                                               Foreground="{Binding LabelBrush}"
-                                                                               VerticalAlignment="Center"/>
-                                                                    <TextBlock Grid.Column="1" Text="{Binding NatureBadge}" FontSize="{StaticResource FontMicro}"
-                                                                               IsVisible="{Binding HasNatureBadge}"
-                                                                               Foreground="{Binding NatureBadgeBrush}"
-                                                                               VerticalAlignment="Center"/>
-                                                                </Grid>
-                                                                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding Stat}"
-                                                                           FontSize="{StaticResource FontBody}" FontWeight="SemiBold"
-                                                                           VerticalAlignment="Center"/>
-                                                                <ProgressBar Grid.Row="0" Grid.Column="2" Classes="statbar"
-                                                                             Value="{Binding StatBarPercent}"
-                                                                             Foreground="{Binding BarBrush}"
-                                                                             VerticalAlignment="Center" Margin="0,0,10,0"/>
-
-                                                                <!-- IV / EV inputs, tucked under the bar -->
-                                                                <StackPanel Grid.Row="1" Grid.Column="2" Orientation="Horizontal"
-                                                                            Spacing="6" HorizontalAlignment="Left">
-                                                                    <TextBlock Text="IV" FontSize="{StaticResource FontMicro}" Classes="secondary" VerticalAlignment="Center"/>
-                                                                    <TextBox Classes="statNum" Text="{Binding Iv, Mode=TwoWay}"/>
-                                                                    <TextBlock Text="EV" FontSize="{StaticResource FontMicro}" Classes="secondary"
-                                                                               VerticalAlignment="Center" Margin="6,0,0,0"/>
-                                                                    <TextBox Classes="statNum" Text="{Binding Ev, Mode=TwoWay}"/>
-                                                                </StackPanel>
-                                                            </Grid>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-
-                                                <!-- Totals: species base-stat total, and the live in-battle sum -->
-                                                <Separator Margin="0,2,0,6"/>
-                                                <Grid ColumnDefinitions="66,44,*" ColumnSpacing="8" Margin="0,0,0,5"
-                                                      ToolTip.Tip="Base stat total — a constant for this species, the number dex apps show">
-                                                    <TextBlock Grid.Column="0" Text="BST" FontSize="{StaticResource FontBody}" FontWeight="Bold"
-                                                               Foreground="{DynamicResource TextSecondaryBrush}"
-                                                               VerticalAlignment="Center"/>
-                                                    <TextBlock Grid.Column="1" Text="{Binding BaseStatTotal}" FontSize="{StaticResource FontBody}"
-                                                               FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                                    <ProgressBar Grid.Column="2" Classes="statbar"
-                                                                 Value="{Binding BaseStatTotalPercent}"
-                                                                 Foreground="{DynamicResource TextSecondaryBrush}"
-                                                                 VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                                </Grid>
-                                                <Grid ColumnDefinitions="66,44,*" ColumnSpacing="8" Margin="0,0,0,6"
-                                                      ToolTip.Tip="Sum of this Pokémon's actual stats at its current level, IVs, EVs and nature">
-                                                    <TextBlock Grid.Column="0" Text="TOT" FontSize="{StaticResource FontBody}" FontWeight="Bold"
-                                                               Foreground="{DynamicResource TextSecondaryBrush}"
-                                                               VerticalAlignment="Center"/>
-                                                    <TextBlock Grid.Column="1" Text="{Binding StatTotal}" FontSize="{StaticResource FontBody}"
-                                                               FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                                    <ProgressBar Grid.Column="2" Classes="statbar"
-                                                                 Value="{Binding StatTotalPercent}"
-                                                                 Foreground="{DynamicResource TextSecondaryBrush}"
-                                                                 VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                                </Grid>
-
-                                                                                                <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,6,0,0">
-                                                    <Button Content="Max IVs" Command="{Binding MaxIVsCommand}" FontSize="{StaticResource FontBody}"/>
-                                                    <Button Content="Clear EVs" Command="{Binding ClearEVsCommand}" FontSize="{StaticResource FontBody}"/>
-                                                    <Button Content="Heal" Command="{Binding HealPokemonCommand}" FontSize="{StaticResource FontBody}"/>
-                                                </StackPanel>
-
-                                                <!-- Hyper training (bottle caps) -->
-                                                <StackPanel IsVisible="{Binding SupportsHyperTraining}" Spacing="6" Margin="0,10,0,0">
-                                                    <Separator/>
-                                                    <TextBlock Classes="sectionTitle" Text="HYPER TRAINING"/>
-                                                    <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto" ColumnSpacing="4" RowSpacing="2">
-                                                        <CheckBox Grid.Row="0" Grid.Column="0" Content="HP" FontSize="{StaticResource FontBody}" IsChecked="{Binding HtHp, Mode=TwoWay}"/>
-                                                        <CheckBox Grid.Row="0" Grid.Column="1" Content="Atk" FontSize="{StaticResource FontBody}" IsChecked="{Binding HtAtk, Mode=TwoWay}"/>
-                                                        <CheckBox Grid.Row="0" Grid.Column="2" Content="Def" FontSize="{StaticResource FontBody}" IsChecked="{Binding HtDef, Mode=TwoWay}"/>
-                                                        <CheckBox Grid.Row="1" Grid.Column="0" Content="SpA" FontSize="{StaticResource FontBody}" IsChecked="{Binding HtSpa, Mode=TwoWay}"/>
-                                                        <CheckBox Grid.Row="1" Grid.Column="1" Content="SpD" FontSize="{StaticResource FontBody}" IsChecked="{Binding HtSpd, Mode=TwoWay}"/>
-                                                        <CheckBox Grid.Row="1" Grid.Column="2" Content="Spe" FontSize="{StaticResource FontBody}" IsChecked="{Binding HtSpe, Mode=TwoWay}"/>
-                                                    </Grid>
-                                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                                        <Button Content="Train all" FontSize="{StaticResource FontBody}" Command="{Binding MaxHyperTrainingCommand}"/>
-                                                        <Button Content="Clear" FontSize="{StaticResource FontBody}" Command="{Binding ClearHyperTrainingCommand}"/>
-                                                    </StackPanel>
-                                                </StackPanel>
-
-                                                <!-- Dynamax and Gigantamax (Sword/Shield) -->
-                                                <StackPanel IsVisible="{Binding SupportsDynamax}" Spacing="8" Margin="0,10,0,0">
-                                                    <Separator/>
-                                                    <TextBlock Classes="sectionTitle" Text="DYNAMAX"/>
-                                                    <Grid ColumnDefinitions="*,110" ColumnSpacing="10">
-                                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
-                                                            <TextBlock Classes="fieldLabel" Text="Dynamax Level"/>
-                                                            <TextBlock Text="Raised with Dynamax Candy; ten is the maximum."
-                                                                       FontSize="{StaticResource FontMicro}"
-                                                                       Classes="secondary" TextWrapping="Wrap"/>
-                                                        </StackPanel>
-                                                        <NumericUpDown Grid.Column="1" VerticalAlignment="Top"
-                                                                       Value="{Binding DynamaxLevel, Mode=TwoWay}"
-                                                                       Minimum="0" Maximum="10"
-                                                                       FormatString="0" Increment="1"/>
-                                                    </Grid>
-                                                    <CheckBox IsChecked="{Binding CanGigantamax, Mode=TwoWay}"
-                                                              IsVisible="{Binding SupportsGigantamax}"
-                                                              FontSize="{StaticResource FontBody}"
-                                                              Content="Gigantamax Factor"/>
-                                                    <TextBlock IsVisible="{Binding SupportsGigantamax}"
-                                                               FontSize="{StaticResource FontMicro}" Classes="secondary"
-                                                               TextWrapping="Wrap"
-                                                               Text="Only species with a Gigantamax form can use this, and the factor is what lets them take it."/>
-                                                </StackPanel>
-
-                                                <!-- Tera type (Scarlet/Violet) -->
-                                                <StackPanel IsVisible="{Binding SupportsTeraType}" Spacing="8" Margin="0,10,0,0">
-                                                    <Separator/>
-                                                    <TextBlock Classes="sectionTitle" Text="TERA TYPE"/>
-                                                    <StackPanel>
-                                                        <TextBlock Classes="fieldLabel" Text="Original"/>
-                                                        <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding TeraTypeChoices}"
-                                                                  SelectedValue="{Binding TeraTypeOriginalValue, Mode=TwoWay}"
-                                                                  SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
-                                                                  DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
-                                                    </StackPanel>
-                                                    <StackPanel>
-                                                        <TextBlock Classes="fieldLabel" Text="Override (Tera Shard change)"/>
-                                                        <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding TeraTypeOverrideChoices}"
-                                                                  SelectedValue="{Binding TeraTypeOverrideValue, Mode=TwoWay}"
-                                                                  SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
-                                                                  DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
-                                                    </StackPanel>
-                                                </StackPanel>
-
-                                                <!-- Size -->
-                                                <StackPanel IsVisible="{Binding SupportsScalars}" Spacing="8" Margin="0,10,0,0">
-                                                    <Separator/>
-                                                    <TextBlock Classes="sectionTitle" Text="SIZE"/>
-                                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                                                        <StackPanel Grid.Column="0">
-                                                            <TextBlock Classes="fieldLabel" Text="Height"/>
-                                                            <NumericUpDown Value="{Binding HeightScalar, Mode=TwoWay}" Minimum="0"
-                                                                           Maximum="255" FormatString="0" Increment="1"/>
-                                                        </StackPanel>
-                                                        <StackPanel Grid.Column="1">
-                                                            <TextBlock Classes="fieldLabel" Text="Weight"/>
-                                                            <NumericUpDown Value="{Binding WeightScalar, Mode=TwoWay}" Minimum="0"
-                                                                           Maximum="255" FormatString="0" Increment="1"/>
-                                                        </StackPanel>
-                                                    </Grid>
-                                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" IsVisible="{Binding SupportsScale}">
-                                                        <StackPanel Grid.Column="0">
-                                                            <TextBlock Classes="fieldLabel" Text="Scale (drives Jumbo / Mini marks)"/>
-                                                            <NumericUpDown Value="{Binding Scale, Mode=TwoWay}" Minimum="0"
-                                                                           Maximum="255" FormatString="0" Increment="1"/>
-                                                        </StackPanel>
-                                                        <Button Grid.Column="1" Content="Random" FontSize="{StaticResource FontBody}" Padding="8,3"
-                                                                VerticalAlignment="Bottom" Command="{Binding RandomizeScaleCommand}"/>
-                                                    </Grid>
-                                                    <TextBlock Text="{Binding SizeSummary}" FontSize="{StaticResource FontBody}" Classes="secondary"/>
-                                                </StackPanel>
-                                            </StackPanel>
-                                        </ScrollViewer>
-                                    </TabItem>
-
-                                    <TabItem Header="Moves">
-                                        <ScrollViewer>
-                                            <StackPanel Spacing="8" Margin="2,6,6,2">
-                                                <TextBlock Classes="sectionTitle" Text="MOVES" Margin="0"/>
-                                                <Grid ColumnDefinitions="*,50,40" ColumnSpacing="8" Margin="0,0,0,-2">
-                                                    <TextBlock Grid.Column="1" Text="PP Ups" FontSize="{StaticResource FontMicro}" Classes="secondary"
-                                                               TextAlignment="Center"/>
-                                                    <TextBlock Grid.Column="2" Text="PP" FontSize="{StaticResource FontMicro}" Classes="secondary"
-                                                               TextAlignment="Center"/>
-                                                </Grid>
-                                                <Grid ColumnDefinitions="*,22,22,50,40" ColumnSpacing="8">
-                                                    <AutoCompleteBox Grid.Column="0" HorizontalAlignment="Stretch"
-                                                                     ItemsSource="{Binding MoveChoices}"
-                                                                     SelectedItem="{Binding SelectedMove1, Mode=TwoWay}"
-                                                                     FilterMode="Contains" MinimumPrefixLength="1"
-                                                                     MaxDropDownHeight="320"
-                                                                     PlaceholderText="Type a move name…"
-                                                                     ItemTemplate="{StaticResource MoveRowTemplate}">
-                                                    </AutoCompleteBox>
-                                                    <!-- Type and category of the chosen move, since a text field
-                                                         cannot show them the way the dropdown row does -->
-                                                    <Image Grid.Column="1" Source="{Binding SelectedMove1.TypeIcon}"
-                                                           Width="20" Height="20" VerticalAlignment="Center"
-                                                           ToolTip.Tip="{Binding SelectedMove1.TypeName}"/>
-                                                    <ctrl:MoveCategoryIcon Grid.Column="2"
-                                                                           Category="{Binding SelectedMove1.CategoryKind}"
-                                                                           Width="20" Height="20"
-                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                                           ToolTip.Tip="{Binding SelectedMove1.StatLine}"/>
-                                                    <TextBox Grid.Column="3" Classes="statNum" Text="{Binding PpUps1, Mode=TwoWay}"
-                                                             ToolTip.Tip="PP Ups applied (0-3)"/>
-                                                    <TextBlock Grid.Column="4" Text="{Binding Pp1}" FontSize="{StaticResource FontMicro}"
-                                                               Classes="secondary" VerticalAlignment="Center" TextAlignment="Center"/>
-                                                </Grid>
-                                                <Grid ColumnDefinitions="*,22,22,50,40" ColumnSpacing="8">
-                                                    <AutoCompleteBox Grid.Column="0" HorizontalAlignment="Stretch"
-                                                                     ItemsSource="{Binding MoveChoices}"
-                                                                     SelectedItem="{Binding SelectedMove2, Mode=TwoWay}"
-                                                                     FilterMode="Contains" MinimumPrefixLength="1"
-                                                                     MaxDropDownHeight="320"
-                                                                     PlaceholderText="Type a move name…"
-                                                                     ItemTemplate="{StaticResource MoveRowTemplate}">
-                                                    </AutoCompleteBox>
-                                                    <!-- Type and category of the chosen move, since a text field
-                                                         cannot show them the way the dropdown row does -->
-                                                    <Image Grid.Column="1" Source="{Binding SelectedMove2.TypeIcon}"
-                                                           Width="20" Height="20" VerticalAlignment="Center"
-                                                           ToolTip.Tip="{Binding SelectedMove2.TypeName}"/>
-                                                    <ctrl:MoveCategoryIcon Grid.Column="2"
-                                                                           Category="{Binding SelectedMove2.CategoryKind}"
-                                                                           Width="20" Height="20"
-                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                                           ToolTip.Tip="{Binding SelectedMove2.StatLine}"/>
-                                                    <TextBox Grid.Column="3" Classes="statNum" Text="{Binding PpUps2, Mode=TwoWay}"
-                                                             ToolTip.Tip="PP Ups applied (0-3)"/>
-                                                    <TextBlock Grid.Column="4" Text="{Binding Pp2}" FontSize="{StaticResource FontMicro}"
-                                                               Classes="secondary" VerticalAlignment="Center" TextAlignment="Center"/>
-                                                </Grid>
-                                                <Grid ColumnDefinitions="*,22,22,50,40" ColumnSpacing="8">
-                                                    <AutoCompleteBox Grid.Column="0" HorizontalAlignment="Stretch"
-                                                                     ItemsSource="{Binding MoveChoices}"
-                                                                     SelectedItem="{Binding SelectedMove3, Mode=TwoWay}"
-                                                                     FilterMode="Contains" MinimumPrefixLength="1"
-                                                                     MaxDropDownHeight="320"
-                                                                     PlaceholderText="Type a move name…"
-                                                                     ItemTemplate="{StaticResource MoveRowTemplate}">
-                                                    </AutoCompleteBox>
-                                                    <!-- Type and category of the chosen move, since a text field
-                                                         cannot show them the way the dropdown row does -->
-                                                    <Image Grid.Column="1" Source="{Binding SelectedMove3.TypeIcon}"
-                                                           Width="20" Height="20" VerticalAlignment="Center"
-                                                           ToolTip.Tip="{Binding SelectedMove3.TypeName}"/>
-                                                    <ctrl:MoveCategoryIcon Grid.Column="2"
-                                                                           Category="{Binding SelectedMove3.CategoryKind}"
-                                                                           Width="20" Height="20"
-                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                                           ToolTip.Tip="{Binding SelectedMove3.StatLine}"/>
-                                                    <TextBox Grid.Column="3" Classes="statNum" Text="{Binding PpUps3, Mode=TwoWay}"
-                                                             ToolTip.Tip="PP Ups applied (0-3)"/>
-                                                    <TextBlock Grid.Column="4" Text="{Binding Pp3}" FontSize="{StaticResource FontMicro}"
-                                                               Classes="secondary" VerticalAlignment="Center" TextAlignment="Center"/>
-                                                </Grid>
-                                                <Grid ColumnDefinitions="*,22,22,50,40" ColumnSpacing="8">
-                                                    <AutoCompleteBox Grid.Column="0" HorizontalAlignment="Stretch"
-                                                                     ItemsSource="{Binding MoveChoices}"
-                                                                     SelectedItem="{Binding SelectedMove4, Mode=TwoWay}"
-                                                                     FilterMode="Contains" MinimumPrefixLength="1"
-                                                                     MaxDropDownHeight="320"
-                                                                     PlaceholderText="Type a move name…"
-                                                                     ItemTemplate="{StaticResource MoveRowTemplate}">
-                                                    </AutoCompleteBox>
-                                                    <!-- Type and category of the chosen move, since a text field
-                                                         cannot show them the way the dropdown row does -->
-                                                    <Image Grid.Column="1" Source="{Binding SelectedMove4.TypeIcon}"
-                                                           Width="20" Height="20" VerticalAlignment="Center"
-                                                           ToolTip.Tip="{Binding SelectedMove4.TypeName}"/>
-                                                    <ctrl:MoveCategoryIcon Grid.Column="2"
-                                                                           Category="{Binding SelectedMove4.CategoryKind}"
-                                                                           Width="20" Height="20"
-                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                                           ToolTip.Tip="{Binding SelectedMove4.StatLine}"/>
-                                                    <TextBox Grid.Column="3" Classes="statNum" Text="{Binding PpUps4, Mode=TwoWay}"
-                                                             ToolTip.Tip="PP Ups applied (0-3)"/>
-                                                    <TextBlock Grid.Column="4" Text="{Binding Pp4}" FontSize="{StaticResource FontMicro}"
-                                                               Classes="secondary" VerticalAlignment="Center" TextAlignment="Center"/>
-                                                </Grid>
-
-                                                <StackPanel IsVisible="{Binding HasRelearnMoves}">
-                                                    <TextBlock Classes="sectionTitle" Text="RELEARN MOVES" Margin="2,10,0,6"/>
-                                                    <StackPanel Spacing="8">
-                                                        <AutoCompleteBox HorizontalAlignment="Stretch"
-                                                                         ItemsSource="{Binding MoveChoices}"
-                                                                         SelectedItem="{Binding SelectedRelearn1, Mode=TwoWay}"
-                                                                         FilterMode="Contains" MinimumPrefixLength="1"
-                                                                         MaxDropDownHeight="320"
-                                                                         PlaceholderText="Type a move name…"
-                                                                     ItemTemplate="{StaticResource MoveRowTemplate}">
-                                                        </AutoCompleteBox>
-                                                        <AutoCompleteBox HorizontalAlignment="Stretch"
-                                                                         ItemsSource="{Binding MoveChoices}"
-                                                                         SelectedItem="{Binding SelectedRelearn2, Mode=TwoWay}"
-                                                                         FilterMode="Contains" MinimumPrefixLength="1"
-                                                                         MaxDropDownHeight="320"
-                                                                         PlaceholderText="Type a move name…"
-                                                                     ItemTemplate="{StaticResource MoveRowTemplate}">
-                                                        </AutoCompleteBox>
-                                                        <AutoCompleteBox HorizontalAlignment="Stretch"
-                                                                         ItemsSource="{Binding MoveChoices}"
-                                                                         SelectedItem="{Binding SelectedRelearn3, Mode=TwoWay}"
-                                                                         FilterMode="Contains" MinimumPrefixLength="1"
-                                                                         MaxDropDownHeight="320"
-                                                                         PlaceholderText="Type a move name…"
-                                                                     ItemTemplate="{StaticResource MoveRowTemplate}">
-                                                        </AutoCompleteBox>
-                                                        <AutoCompleteBox HorizontalAlignment="Stretch"
-                                                                         ItemsSource="{Binding MoveChoices}"
-                                                                         SelectedItem="{Binding SelectedRelearn4, Mode=TwoWay}"
-                                                                         FilterMode="Contains" MinimumPrefixLength="1"
-                                                                         MaxDropDownHeight="320"
-                                                                         PlaceholderText="Type a move name…"
-                                                                     ItemTemplate="{StaticResource MoveRowTemplate}">
-                                                        </AutoCompleteBox>
-                                                    </StackPanel>
-                                                </StackPanel>
-
-                                                <!-- Technical Records (TM history) -->
-                                                <StackPanel Spacing="6" Margin="0,12,0,0"
-                                                            DataContext="{Binding TechRecords}" x:DataType="vm:TechRecordViewModel"
-                                                            IsVisible="{Binding IsSupported}">
-                                                    <Separator/>
-                                                    <DockPanel>
-                                                        <TextBlock DockPanel.Dock="Left" Classes="sectionTitle" Text="TECHNICAL RECORDS" Margin="0"/>
-                                                        <TextBlock DockPanel.Dock="Right" Text="{Binding Summary}" FontSize="{StaticResource FontMicro}"
-                                                                   Classes="secondary" HorizontalAlignment="Right" VerticalAlignment="Center"/>
-                                                    </DockPanel>
-                                                    <TextBox Text="{Binding SearchText, Mode=TwoWay}" FontSize="{StaticResource FontBody}"
-                                                             PlaceholderText="Search machine moves…"/>
-                                                    <DockPanel>
-                                                        <CheckBox DockPanel.Dock="Left" IsChecked="{Binding LearnedOnly, Mode=TwoWay}"
-                                                                  Content="Learned only" FontSize="{StaticResource FontBody}"/>
-                                                    </DockPanel>
-                                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                                        <Button Content="All legal" FontSize="{StaticResource FontBody}" Padding="8,3"
-                                                                ToolTip.Tip="Mark the records this Pokémon could legally have used"
-                                                                Command="{Binding SetAllLegalCommand}"/>
-                                                        <Button Content="All" FontSize="{StaticResource FontBody}" Padding="8,3" Command="{Binding SetAllCommand}"/>
-                                                        <Button Content="None" FontSize="{StaticResource FontBody}" Padding="8,3" Command="{Binding ClearAllCommand}"/>
-                                                    </StackPanel>
-                                                    <ScrollViewer MaxHeight="260">
-                                                        <ItemsControl ItemsSource="{Binding Rows}">
-                                                            <ItemsControl.ItemTemplate>
-                                                                <DataTemplate x:DataType="vm:TechRecordRowViewModel">
-                                                                    <CheckBox Content="{Binding MoveName}" FontSize="{StaticResource FontBody}"
-                                                                              IsChecked="{Binding Learned, Mode=TwoWay}"
-                                                                              Margin="0,1"/>
-                                                                </DataTemplate>
-                                                            </ItemsControl.ItemTemplate>
-                                                        </ItemsControl>
-                                                    </ScrollViewer>
-                                                </StackPanel>
-                                            </StackPanel>
-                                        </ScrollViewer>
-                                    </TabItem>
-
-                                    <TabItem Header="Met">
-                                        <ScrollViewer>
-                                            <StackPanel Spacing="8" Margin="2,6,6,2">
-                                                <StackPanel>
-                                                    <TextBlock Classes="fieldLabel" Text="Origin Game"/>
-                                                    <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding VersionChoices}"
-                                                              SelectedValue="{Binding VersionValue, Mode=TwoWay}"
-                                                              SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
-                                                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
-                                                </StackPanel>
-
-                                                <!-- Transfer / HOME: what makes a foreign-version Pokémon legal -->
-                                                <Border CornerRadius="10" Padding="12" Margin="0,2,0,2"
-                                                        Background="{DynamicResource SurfaceMutedBrush}">
-                                                    <StackPanel Spacing="8">
-                                                        <TextBlock Classes="sectionTitle" Text="TRANSFER &amp; POKÉMON HOME" Margin="0"/>
-                                                        <TextBlock Text="{Binding TransferSummary}" FontSize="{StaticResource FontMicro}"
-                                                                   Classes="secondary" TextWrapping="Wrap"/>
-                                                        <Button Content="Mark as traded into this save" FontSize="{StaticResource FontBody}"
-                                                                Padding="10,3" HorizontalAlignment="Stretch"
-                                                                HorizontalContentAlignment="Center"
-                                                                ToolTip.Tip="Sets this save's trainer as the handling trainer, leaving the original trainer intact — what receiving a trade does."
-                                                                Command="{Binding MarkAsTradedCommand}"/>
-
-                                                    </StackPanel>
-                                                </Border>
-                                                <StackPanel>
-                                                    <DockPanel>
-                                                        <TextBlock DockPanel.Dock="Left" Classes="fieldLabel" Text="Met Location"/>
-                                                        <Button DockPanel.Dock="Right" Content="Suggest" FontSize="{StaticResource FontMicro}" Padding="8,1"
-                                                                HorizontalAlignment="Right"
-                                                                ToolTip.Tip="Use the met location and level the legality engine expects"
-                                                                Command="{Binding SuggestMetInfoCommand}"/>
-                                                    </DockPanel>
-                                                    <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding MetLocationChoices}"
-                                                              SelectedValue="{Binding MetLocationValue, Mode=TwoWay}"
-                                                              SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
-                                                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
-                                                </StackPanel>
-                                                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                                                    <StackPanel Grid.Column="0">
-                                                        <TextBlock Classes="fieldLabel" Text="Met Level"/>
-                                                        <NumericUpDown Value="{Binding MetLevel, Mode=TwoWay}" Minimum="0" Maximum="100"
-                                                                       FormatString="0" Increment="1"/>
-                                                    </StackPanel>
-                                                    <StackPanel Grid.Column="1" VerticalAlignment="Bottom" Margin="0,0,0,4">
-                                                        <CheckBox IsChecked="{Binding FatefulEncounter, Mode=TwoWay}" Content="Fateful"/>
-                                                    </StackPanel>
-                                                </Grid>
-                                                <StackPanel>
-                                                    <TextBlock Classes="fieldLabel" Text="Met Date"/>
-                                                    <DatePicker SelectedDate="{Binding MetDate, Mode=TwoWay}" HorizontalAlignment="Stretch"/>
-                                                </StackPanel>
-                                                <StackPanel IsVisible="{Binding SupportsObedience}">
-                                                    <TextBlock Classes="fieldLabel" Text="Obedience Level"/>
-                                                    <NumericUpDown Value="{Binding ObedienceLevel, Mode=TwoWay}" Minimum="0"
-                                                                   Maximum="100" FormatString="0" Increment="1"/>
-                                                </StackPanel>
-                                                <StackPanel IsVisible="{Binding SupportsBattleVersion}">
-                                                    <TextBlock Classes="fieldLabel" Text="Battle Version (reset for ranked)"/>
-                                                    <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding VersionChoices}"
-                                                              SelectedValue="{Binding BattleVersionValue, Mode=TwoWay}"
-                                                              SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
-                                                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
-                                                </StackPanel>
-
-                                                <Separator Margin="0,6"/>
-                                                <TextBlock Classes="sectionTitle" Text="EGG DATA"/>
-                                                <StackPanel>
-                                                    <TextBlock Classes="fieldLabel" Text="Egg Met Location"/>
-                                                    <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding MetLocationChoices}"
-                                                              SelectedValue="{Binding EggLocationValue, Mode=TwoWay}"
-                                                              SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
-                                                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
-                                                </StackPanel>
-                                                <StackPanel>
-                                                    <TextBlock Classes="fieldLabel" Text="Egg Met Date"/>
-                                                    <DatePicker SelectedDate="{Binding EggMetDate, Mode=TwoWay}" HorizontalAlignment="Stretch"/>
-                                                </StackPanel>
-
-                                                <Separator Margin="0,6"/>
-                                                <TextBlock Classes="sectionTitle" Text="ORIGINAL TRAINER"/>
-                                                <StackPanel>
-                                                    <TextBlock Classes="fieldLabel" Text="OT Name"/>
-                                                    <TextBox Text="{Binding OtName, Mode=TwoWay}"/>
-                                                </StackPanel>
-                                                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                                                    <StackPanel Grid.Column="0">
-                                                        <TextBlock Classes="fieldLabel" Text="TID"/>
-                                                        <NumericUpDown Value="{Binding DisplayTid, Mode=TwoWay}" Minimum="0" Maximum="999999"
-                                                                       FormatString="0" Increment="1"/>
-                                                    </StackPanel>
-                                                    <StackPanel Grid.Column="1">
-                                                        <TextBlock Classes="fieldLabel" Text="SID"/>
-                                                        <NumericUpDown Value="{Binding DisplaySid, Mode=TwoWay}" Minimum="0" Maximum="999999"
-                                                                       FormatString="0" Increment="1"/>
-                                                    </StackPanel>
-                                                </Grid>
-                                                <StackPanel>
-                                                    <TextBlock Classes="fieldLabel" Text="OT Gender"/>
-                                                    <ComboBox HorizontalAlignment="Stretch" SelectedIndex="{Binding OtGenderIndex, Mode=TwoWay}">
-                                                        <ComboBoxItem Content="♂ Male"/>
-                                                        <ComboBoxItem Content="♀ Female"/>
-                                                    </ComboBox>
-                                                </StackPanel>
-
-                                                <!-- HOME identifier lives at the end: rarely edited, and it fingerprints the save -->
-                                                <StackPanel IsVisible="{Binding SupportsHomeTracker}" Spacing="8">
-                                                    <Separator Margin="0,6"/>
-                                                    <TextBlock Classes="sectionTitle" Text="POKÉMON HOME"/>
-                                                    <StackPanel DataContext="{Binding History}" x:DataType="vm:PokemonHistoryViewModel"
-                                                                Spacing="6">
-                                                        <CheckBox IsChecked="{Binding HideTracker, Mode=TwoWay}" FontSize="{StaticResource FontBody}"
-                                                                  Content="Hide tracker (it identifies your save)"/>
-                                                        <StackPanel IsVisible="{Binding !HideTracker}">
-                                                            <TextBlock Classes="fieldLabel" Text="HOME Tracker (16 hex digits)"/>
-                                                            <TextBox Text="{Binding TrackerText, Mode=TwoWay}"
-                                                                     FontFamily="Menlo, monospace" MaxLength="16"
-                                                                     PlaceholderText="0123456789ABCDEF"/>
-                                                        </StackPanel>
-                                                    </StackPanel>
-                                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                                        <Button Content="Generate tracker" FontSize="{StaticResource FontBody}" Padding="8,3"
-                                                                ToolTip.Tip="Give this Pokémon a plausible tracker, as a real HOME transfer would"
-                                                                Command="{Binding GenerateHomeTrackerCommand}"/>
-                                                        <Button Content="Clear" FontSize="{StaticResource FontBody}" Padding="8,3"
-                                                                Command="{Binding ClearHomeTrackerCommand}"/>
-                                                    </StackPanel>
-                                                    <TextBlock Text="{Binding TransferSummary}" FontSize="{StaticResource FontMicro}"
-                                                               Classes="secondary" TextWrapping="Wrap"/>
-                                                </StackPanel>
-                                            </StackPanel>
-                                        </ScrollViewer>
-                                    </TabItem>
-
-                                    <!-- ══════ Trainer &amp; History ══════ -->
-                                    <TabItem Header="Trainer">
-                                        <ScrollViewer>
-                                            <StackPanel Spacing="8" Margin="2,6,6,2"
-                                                        DataContext="{Binding History}" x:DataType="vm:PokemonHistoryViewModel">
-
-                                                <!-- Who holds it -->
-                                                <StackPanel IsVisible="{Binding SupportsHandler}" Spacing="6">
-                                                    <TextBlock Classes="sectionTitle" Text="CURRENT HANDLER"/>
-                                                    <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding HandlerChoices}"
-                                                              SelectedIndex="{Binding CurrentHandlerIndex, Mode=TwoWay}"/>
-                                                    <TextBlock Text="{Binding HandlerSummary}" FontSize="{StaticResource FontBody}" Classes="secondary"
-                                                               TextWrapping="Wrap"/>
-                                                </StackPanel>
-
-                                                <!-- Handling trainer -->
-                                                <StackPanel IsVisible="{Binding SupportsHandler}" Spacing="8">
-                                                    <Separator Margin="0,4"/>
-                                                    <TextBlock Classes="sectionTitle" Text="HANDLING TRAINER"/>
-                                                    <StackPanel>
-                                                        <TextBlock Classes="fieldLabel" Text="Name"/>
-                                                        <TextBox Text="{Binding HtName, Mode=TwoWay}"/>
-                                                    </StackPanel>
-                                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                                                        <StackPanel Grid.Column="0">
-                                                            <TextBlock Classes="fieldLabel" Text="Gender"/>
-                                                            <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding GenderChoices}"
-                                                                      SelectedIndex="{Binding HtGenderIndex, Mode=TwoWay}"/>
-                                                        </StackPanel>
-                                                        <StackPanel Grid.Column="1">
-                                                            <TextBlock Classes="fieldLabel" Text="Friendship"/>
-                                                            <NumericUpDown Value="{Binding HtFriendship, Mode=TwoWay}" Minimum="0"
-                                                                           Maximum="255" FormatString="0" Increment="1"/>
-                                                        </StackPanel>
-                                                    </Grid>
-                                                    <StackPanel IsVisible="{Binding SupportsHandlerLanguage}">
-                                                        <TextBlock Classes="fieldLabel" Text="Language"/>
-                                                        <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding LanguageChoices}"
-                                                                  SelectedValue="{Binding HtLanguageValue, Mode=TwoWay}"
-                                                                  SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
-                                                                  DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
-                                                    </StackPanel>
-                                                </StackPanel>
-
-                                                <!-- Memories -->
-                                                <StackPanel IsVisible="{Binding SupportsMemories}" Spacing="8">
-                                                    <Separator Margin="0,4"/>
-                                                    <DockPanel>
-                                                        <TextBlock DockPanel.Dock="Left" Classes="sectionTitle" Text="MEMORIES"/>
-                                                        <Button DockPanel.Dock="Right" Content="Clear" FontSize="{StaticResource FontBody}" Padding="8,2"
-                                                                HorizontalAlignment="Right" Command="{Binding ClearMemoriesCommand}"/>
-                                                    </DockPanel>
-
-                                                    <TextBlock Classes="fieldLabel" Text="Original Trainer memory"/>
-                                                    <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding MemoryChoices}"
-                                                              SelectedValue="{Binding OtMemory, Mode=TwoWay}"
-                                                              SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
-                                                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
-                                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                                                        <ComboBox Grid.Column="0" HorizontalAlignment="Stretch" ItemsSource="{Binding IntensityChoices}"
-                                                                  SelectedValue="{Binding OtMemoryIntensity, Mode=TwoWay}"
-                                                                  SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
-                                                                  DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
-                                                        <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" ItemsSource="{Binding FeelingChoices}"
-                                                                  SelectedValue="{Binding OtMemoryFeeling, Mode=TwoWay}"
-                                                                  SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
-                                                                  DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
-                                                    </Grid>
-                                                    <TextBlock Text="{Binding OtMemoryText}" FontSize="{StaticResource FontMicro}" Classes="secondary" TextWrapping="Wrap"/>
-
-                                                    <TextBlock Classes="fieldLabel" Text="Handling Trainer memory" Margin="0,6,0,0"/>
-                                                    <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding MemoryChoices}"
-                                                              SelectedValue="{Binding HtMemory, Mode=TwoWay}"
-                                                              SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
-                                                              DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
-                                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
-                                                        <ComboBox Grid.Column="0" HorizontalAlignment="Stretch" ItemsSource="{Binding IntensityChoices}"
-                                                                  SelectedValue="{Binding HtMemoryIntensity, Mode=TwoWay}"
-                                                                  SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
-                                                                  DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
-                                                        <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" ItemsSource="{Binding FeelingChoices}"
-                                                                  SelectedValue="{Binding HtMemoryFeeling, Mode=TwoWay}"
-                                                                  SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
-                                                                  DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
-                                                    </Grid>
-                                                    <TextBlock Text="{Binding HtMemoryText}" FontSize="{StaticResource FontMicro}" Classes="secondary" TextWrapping="Wrap"/>
-                                                </StackPanel>
-
-                                                <!-- Markings -->
-                                                <StackPanel IsVisible="{Binding SupportsMarkings}" Spacing="6">
-                                                    <Separator Margin="0,4"/>
-                                                    <TextBlock Classes="sectionTitle" Text="MARKINGS"/>
-                                                    <ItemsControl ItemsSource="{Binding Markings}">
-                                                        <ItemsControl.ItemTemplate>
-                                                            <DataTemplate x:DataType="vm:MarkingRowViewModel">
-                                                                <Grid ColumnDefinitions="72,*" ColumnSpacing="8" Margin="0,2">
-                                                                    <TextBlock Grid.Column="0" Text="{Binding Name}" FontSize="{StaticResource FontBody}"
-                                                                               Classes="secondary" VerticalAlignment="Center"/>
-                                                                    <ComboBox Grid.Column="1" HorizontalAlignment="Stretch" FontSize="{StaticResource FontBody}"
-                                                                              ItemsSource="{Binding Choices}"
-                                                                              SelectedIndex="{Binding Value, Mode=TwoWay}"/>
-                                                                </Grid>
-                                                            </DataTemplate>
-                                                        </ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
-                                                </StackPanel>
-
-                                                <!-- Contest stats -->
-                                                <StackPanel IsVisible="{Binding SupportsContest}" Spacing="6">
-                                                    <Separator Margin="0,4"/>
-                                                    <DockPanel>
-                                                        <TextBlock DockPanel.Dock="Left" Classes="sectionTitle" Text="CONTEST STATS"/>
-                                                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6"
-                                                                    HorizontalAlignment="Right">
-                                                            <Button Content="Max" FontSize="{StaticResource FontBody}" Padding="8,2" Command="{Binding MaxContestCommand}"/>
-                                                            <Button Content="Clear" FontSize="{StaticResource FontBody}" Padding="8,2" Command="{Binding ClearContestCommand}"/>
-                                                        </StackPanel>
-                                                    </DockPanel>
-                                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="8" RowDefinitions="Auto,Auto,Auto" RowSpacing="6">
-                                                        <StackPanel Grid.Row="0" Grid.Column="0">
-                                                            <TextBlock Classes="fieldLabel" Text="Cool"/>
-                                                            <NumericUpDown Value="{Binding ContestCool, Mode=TwoWay}" Minimum="0" Maximum="255" FormatString="0" Increment="5"/>
-                                                        </StackPanel>
-                                                        <StackPanel Grid.Row="0" Grid.Column="1">
-                                                            <TextBlock Classes="fieldLabel" Text="Beauty"/>
-                                                            <NumericUpDown Value="{Binding ContestBeauty, Mode=TwoWay}" Minimum="0" Maximum="255" FormatString="0" Increment="5"/>
-                                                        </StackPanel>
-                                                        <StackPanel Grid.Row="1" Grid.Column="0">
-                                                            <TextBlock Classes="fieldLabel" Text="Cute"/>
-                                                            <NumericUpDown Value="{Binding ContestCute, Mode=TwoWay}" Minimum="0" Maximum="255" FormatString="0" Increment="5"/>
-                                                        </StackPanel>
-                                                        <StackPanel Grid.Row="1" Grid.Column="1">
-                                                            <TextBlock Classes="fieldLabel" Text="Smart"/>
-                                                            <NumericUpDown Value="{Binding ContestSmart, Mode=TwoWay}" Minimum="0" Maximum="255" FormatString="0" Increment="5"/>
-                                                        </StackPanel>
-                                                        <StackPanel Grid.Row="2" Grid.Column="0">
-                                                            <TextBlock Classes="fieldLabel" Text="Tough"/>
-                                                            <NumericUpDown Value="{Binding ContestTough, Mode=TwoWay}" Minimum="0" Maximum="255" FormatString="0" Increment="5"/>
-                                                        </StackPanel>
-                                                        <StackPanel Grid.Row="2" Grid.Column="1">
-                                                            <TextBlock Classes="fieldLabel" Text="Sheen"/>
-                                                            <NumericUpDown Value="{Binding ContestSheen, Mode=TwoWay}" Minimum="0" Maximum="255" FormatString="0" Increment="5"/>
-                                                        </StackPanel>
-                                                    </Grid>
-                                                </StackPanel>
-
-                                                <!-- HOME tracker -->
-                                                <StackPanel IsVisible="{Binding SupportsTracker}" Spacing="6">
-                                                    <Separator Margin="0,4"/>
-                                                    <TextBlock Classes="sectionTitle" Text="POKÉMON HOME"/>
-                                                    <CheckBox IsChecked="{Binding HideTracker, Mode=TwoWay}"
-                                                              Content="Hide tracker (it identifies your save)"/>
-                                                    <StackPanel IsVisible="{Binding !HideTracker}">
-                                                        <TextBlock Classes="fieldLabel" Text="HOME Tracker (16 hex digits)"/>
-                                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                                            <TextBox Grid.Column="0" Text="{Binding TrackerText, Mode=TwoWay}"
-                                                                     FontFamily="Menlo, monospace" MaxLength="16"
-                                                                     PlaceholderText="0123456789ABCDEF"/>
-                                                            <Button Grid.Column="1" Content="Zero" FontSize="{StaticResource FontBody}" Padding="8,3"
-                                                                    Command="{Binding ClearTrackerCommand}"/>
-                                                        </Grid>
-                                                    </StackPanel>
-                                                </StackPanel>
-                                            </StackPanel>
-                                        </ScrollViewer>
-                                    </TabItem>
-
-                                    <!-- ══════ Ribbons &amp; Marks ══════ -->
-                                    <TabItem Header="Ribbons">
-                                        <DockPanel DataContext="{Binding Ribbons}" x:DataType="vm:RibbonsViewModel"
-                                                   Margin="2,6,6,2">
-                                            <StackPanel DockPanel.Dock="Top" Spacing="8">
-                                                <TextBox Text="{Binding SearchText, Mode=TwoWay}" PlaceholderText="Search ribbons &amp; marks…"/>
-                                                <DockPanel>
-                                                    <CheckBox DockPanel.Dock="Left" IsChecked="{Binding OwnedOnly, Mode=TwoWay}"
-                                                              Content="Owned only" FontSize="{StaticResource FontBody}"/>
-                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding Summary}" FontSize="{StaticResource FontBody}"
-                                                               Classes="secondary" HorizontalAlignment="Right" VerticalAlignment="Center"/>
-                                                </DockPanel>
-                                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <Button Content="Give all legal" FontSize="{StaticResource FontBody}" Command="{Binding GiveAllLegalCommand}"/>
-                                                    <Button Content="Remove all" FontSize="{StaticResource FontBody}" Command="{Binding RemoveAllCommand}"/>
-                                                </StackPanel>
-                                            </StackPanel>
-
-                                            <StackPanel DockPanel.Dock="Bottom" IsVisible="{Binding SupportsAffixed}" Margin="0,8,0,0">
-                                                <TextBlock Classes="fieldLabel" Text="Affixed ribbon (shown in-game)"/>
-                                                <ComboBox HorizontalAlignment="Stretch" ItemsSource="{Binding AffixedChoices}"
-                                                          SelectedValue="{Binding AffixedValue, Mode=TwoWay}"
-                                                          SelectedValueBinding="{Binding Value, x:DataType=core:ComboItem}"
-                                                          DisplayMemberBinding="{Binding Text, x:DataType=core:ComboItem}"/>
-                                            </StackPanel>
-
-                                            <ScrollViewer Margin="0,8,0,0">
-                                                <ItemsControl ItemsSource="{Binding Rows}">
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate x:DataType="vm:RibbonRowViewModel">
-                                                            <Grid ColumnDefinitions="*,76" ColumnSpacing="6" Margin="0,1">
-                                                                <CheckBox Grid.Column="0" FontSize="{StaticResource FontBody}"
-                                                                          Content="{Binding DisplayName}"
-                                                                          IsChecked="{Binding HasRibbon, Mode=TwoWay}"
-                                                                          IsVisible="{Binding IsFlag}"/>
-                                                                <TextBlock Grid.Column="0" FontSize="{StaticResource FontBody}" VerticalAlignment="Center"
-                                                                           Text="{Binding DisplayName}"
-                                                                           IsVisible="{Binding IsCounter}"/>
-                                                                <NumericUpDown Grid.Column="1" ShowButtonSpinner="False"
-                                                                               Value="{Binding Count, Mode=TwoWay}" Minimum="0"
-                                                                               Maximum="{Binding MaxCount}" FormatString="0"
-                                                                               IsVisible="{Binding IsCounter}"/>
-                                                            </Grid>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                            </ScrollViewer>
-                                        </DockPanel>
-                                    </TabItem>
-                                </TabControl>
-                            </DockPanel>
-                        </Border>
+                        <!-- The Pokémon inspector. See Views/Panels/InspectorPanel.axaml -->
+                        <panels:InspectorPanel DataContext="{Binding Detail}"/>
                         </Panel>
                     </Panel>
                     </DockPanel>
@@ -1875,7 +843,7 @@
         </Grid>
 
             <!-- ══════ Revert confirmation ══════ -->
-            <Border IsVisible="{Binding IsRevertPromptOpen}" Background="#B0000000">
+            <Border IsVisible="{Binding IsRevertPromptOpen}" Background="{DynamicResource ScrimBrush}">
                 <Border Classes="card" Width="440" Padding="20"
                         HorizontalAlignment="Center" VerticalAlignment="Center">
                     <StackPanel Spacing="12">
@@ -1896,7 +864,7 @@
             </Border>
 
             <!-- ══════ Review before export ══════ -->
-            <Border IsVisible="{Binding Review.IsOpen}" Background="#B0000000">
+            <Border IsVisible="{Binding Review.IsOpen}" Background="{DynamicResource ScrimBrush}">
                 <Border Classes="card" Width="620" MaxHeight="560" Padding="20"
                         HorizontalAlignment="Center" VerticalAlignment="Center">
                     <DockPanel DataContext="{Binding Review}" x:DataType="vm:ExportReviewViewModel">
@@ -1955,7 +923,7 @@
             </Border>
 
             <!-- ══════ Command palette ══════ -->
-            <Border IsVisible="{Binding Palette.IsOpen}" Background="#90000000">
+            <Border IsVisible="{Binding Palette.IsOpen}" Background="{DynamicResource ScrimBrush}">
                 <Border Classes="card" Width="560" Padding="0" Margin="0,90,0,0"
                         HorizontalAlignment="Center" VerticalAlignment="Top">
                     <DockPanel DataContext="{Binding Palette}" x:DataType="vm:CommandPaletteViewModel">
@@ -1988,7 +956,7 @@
             </Border>
 
             <!-- ══════ Close confirmation ══════ -->
-            <Border IsVisible="{Binding IsClosePromptOpen}" Background="#B0000000">
+            <Border IsVisible="{Binding IsClosePromptOpen}" Background="{DynamicResource ScrimBrush}">
                 <Border Classes="card" Width="440" Padding="20"
                         HorizontalAlignment="Center" VerticalAlignment="Center">
                     <StackPanel Spacing="12">
@@ -2005,7 +973,7 @@
                                    FontSize="{StaticResource FontBody}" TextWrapping="Wrap"
                                    Foreground="{DynamicResource IllegalFgBrush}"/>
                         <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
-                            <Button Content="Cancel" Click="OnCloseCancelClicked"/>
+                            <Button Content="Cancel" Command="{Binding CancelCloseCommand}"/>
                             <Button Content="Discard and Close" Click="OnCloseDiscardClicked"/>
                             <Button Content="Export…" Classes="accent" Click="OnCloseExportClicked"/>
                         </StackPanel>

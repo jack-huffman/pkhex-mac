@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
@@ -16,11 +15,11 @@ namespace PKHeX.Mac.ViewModels;
 /// <summary>
 /// Runs <see cref="IntegrityAudit"/> and presents its findings worst-first.
 /// </summary>
-public partial class IntegrityAuditViewModel : ObservableObject
+public sealed partial class IntegrityAuditViewModel : ObservableObject, IDisposable
 {
     private readonly SaveFile _sav;
     private readonly GameStrings _strings;
-    private CancellationTokenSource? _cts;
+    private readonly BackgroundRefresh _refresh = new();
     private AuditResult? _result;
 
     public IntegrityAuditViewModel(SaveFile sav, GameStrings strings)
@@ -41,47 +40,41 @@ public partial class IntegrityAuditViewModel : ObservableObject
     partial void OnIncludeInformationalChanged(bool value) => Populate();
 
     [RelayCommand]
-    public async Task RunAsync()
+    private async Task RunAsync()
     {
         if (IsRunning)
             return;
-        _cts?.Cancel();
-        _cts = new CancellationTokenSource();
-        var token = _cts.Token;
 
         IsRunning = true;
         Summary = "Comparing every stored Pokémon…";
         Findings.Clear();
         OnPropertyChanged(nameof(HasFindings));
 
-        try
+        // Copy the slots on the UI thread; the comparison and legality work run off it.
+        var entries = IntegrityAudit.Collect(_sav, _strings);
+        var outcome = await _refresh.RunAsync(token => IntegrityAudit.Analyze(entries, _strings, token));
+        if (outcome.IsSuperseded)
+            return; // Cancel() already reported; a newer run owns the state
+
+        IsRunning = false;
+        HasRun = true;
+        if (outcome.Error is { } error)
         {
-            // Legality analysis dominates the cost, so keep it off the UI thread.
-            _result = await Task.Run(() => IntegrityAudit.Run(_sav, _strings, token), token);
-            if (token.IsCancellationRequested)
-                return;
-            Populate();
+            Summary = $"Audit failed: {error.Message}";
+            return;
         }
-        catch (OperationCanceledException)
-        {
-            Summary = "Audit cancelled.";
-        }
-        catch (Exception ex)
-        {
-            Summary = $"Audit failed: {ex.Message}";
-        }
-        finally
-        {
-            IsRunning = false;
-            HasRun = true;
-        }
+        _result = outcome.Result;
+        Populate();
     }
 
     [RelayCommand]
-    public void Cancel()
+    private void Cancel()
     {
-        _cts?.Cancel();
+        if (!IsRunning)
+            return;
+        _refresh.Cancel();
         IsRunning = false;
+        HasRun = true;
         Summary = "Audit cancelled.";
     }
 
@@ -105,15 +98,15 @@ public partial class IntegrityAuditViewModel : ObservableObject
             : $"Compared {_result.Scanned} Pokémon — {real} finding{(real == 1 ? string.Empty : "s")} worth a look"
               + $", plus {_result.Findings.Count - real} informational.";
     }
+
+    public void Dispose() => _refresh.Dispose();
 }
 
 /// <summary>One finding, with its severity styling and the Pokémon it names.</summary>
 public sealed class AuditFindingViewModel
 {
-    private static readonly IBrush Conclusive = new SolidColorBrush(Color.Parse("#FF6B5B"));
-    private static readonly IBrush Strong = new SolidColorBrush(Color.Parse("#E0A33D"));
-    private static readonly IBrush Notable = new SolidColorBrush(Color.Parse("#D8C05A"));
-    private static readonly IBrush Info = new SolidColorBrush(Color.Parse("#8FA6B8"));
+    /// <summary>Long informational lists are collapsed; the interesting ones are short.</summary>
+    private const int MaxEntriesShown = 12;
 
     public AuditFindingViewModel(AuditFinding finding)
     {
@@ -128,14 +121,13 @@ public sealed class AuditFindingViewModel
         };
         SeverityBrush = finding.Severity switch
         {
-            AuditSeverity.Conclusive => Conclusive,
-            AuditSeverity.Strong => Strong,
-            AuditSeverity.Notable => Notable,
-            _ => Info,
+            AuditSeverity.Conclusive => Palette.Severe,
+            AuditSeverity.Strong => Palette.Warning,
+            AuditSeverity.Notable => Palette.Notable,
+            _ => Palette.Muted,
         };
 
-        // Long informational lists are collapsed; the interesting ones are short.
-        var shown = finding.Entries.Count > 12 ? finding.Entries.Take(12).ToList() : finding.Entries;
+        var shown = finding.Entries.Count > MaxEntriesShown ? finding.Entries.Take(MaxEntriesShown).ToList() : finding.Entries;
         Entries = shown.Select(e => new AuditEntryViewModel(e)).ToList();
         Overflow = finding.Entries.Count > shown.Count
             ? $"…and {finding.Entries.Count - shown.Count} more"

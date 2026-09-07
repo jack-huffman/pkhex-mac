@@ -10,14 +10,16 @@ namespace PKHeX.Mac.ViewModels;
 /// </summary>
 public partial class SlotViewModel : ObservableObject
 {
+    /// <summary>The value of <see cref="Box"/> for party slots.</summary>
+    public const int PartyBox = -1;
+
     /// <summary>
-    /// Which box this slot belongs to; -1 for the party. Settable because a second box
-    /// can be shown below the first, so a slot's box is no longer implied by whichever
-    /// box is currently selected.
+    /// Which box this slot belongs to; <see cref="PartyBox"/> for the party. Settable
+    /// because the grid's slot objects are reused as the current box changes.
     /// </summary>
-    public int Box { get; internal set; }      // -1 for party
+    public int Box { get; internal set; }
     public int Slot { get; }
-    public bool IsParty => Box < 0;
+    public bool IsParty => Box == PartyBox;
 
     [ObservableProperty] private Bitmap? _sprite;
     [ObservableProperty] private Bitmap? _ballSprite;
@@ -59,7 +61,7 @@ public partial class SlotViewModel : ObservableObject
         BallSprite = SpriteService.GetBallSprite(pk.Ball);
         ShinyOverlay = pk.IsShiny ? SpriteService.GetOverlay("rare_icon") : null;
 
-        var species = (uint)pk.Species < strings.specieslist.Length ? strings.specieslist[pk.Species] : $"#{pk.Species}";
+        var species = strings.SpeciesName(pk);
         var name = pk.Nickname == species ? species : $"{pk.Nickname} ({species})";
         ToolTipText = $"{name}\nLv. {pk.CurrentLevel}{(pk.IsShiny ? " ★" : string.Empty)}";
     }

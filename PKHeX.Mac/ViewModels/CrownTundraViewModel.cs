@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Binary;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
@@ -14,15 +15,20 @@ namespace PKHeX.Mac.ViewModels;
 /// </summary>
 /// <remarks>
 /// Most of these blocks have no name in PKHeX. They were recovered by brute-forcing the
-/// FNV-1a-64 hash the game uses for block keys, so this file derives every key from the
-/// internal name rather than pasting a magic constant — the derivation stays checkable,
-/// and <c>CrownTundraTests</c> asserts it against the keys PKHeX does document.
+/// FNV-1a-64 hash the game uses for block keys, so this file looks every block up by its
+/// internal name — through the same hashing lookup the engine itself uses — rather than
+/// pasting a magic constant. <c>CrownTundraTests</c> pins each name against the keys
+/// PKHeX does document.
 /// </remarks>
 public partial class CrownTundraViewModel : ObservableObject
 {
     private readonly SAV8SWSH? _sav;
     private readonly Action _onChanged;
     private bool _loading;
+
+    /// <summary>The game shows streaks as three digits; the endless record grows further.</summary>
+    private const int MaxStreak = 999;
+    private const int MaxEndlessStreak = 999_999;
 
     /// <summary>Seed the game uses to pick rentals and the encounters along an adventure.</summary>
     private const uint KSeed = SaveBlockAccessor8SWSH.KMaxLairRentalChoiceSeed;
@@ -93,7 +99,7 @@ public partial class CrownTundraViewModel : ObservableObject
 
     private void Add(ObservableCollection<BlockFlagViewModel> into, string name, string label)
     {
-        if (_sav is null || !_sav.Blocks.TryGetBlock(SwshBlockKey.From(name), out var block))
+        if (_sav is null || !_sav.Blocks.TryGetBlock(name, out var block))
             return;
         if (!block.Type.IsBoolean())
             return;
@@ -108,7 +114,16 @@ public partial class CrownTundraViewModel : ObservableObject
     public ObservableCollection<BlockFlagViewModel> Tournament { get; } = [];
 
     [ObservableProperty] private string _seedText = string.Empty;
-    [ObservableProperty] private int _disconnectStreak;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSeedError))]
+    private string _seedError = string.Empty;
+
+    public bool HasSeedError => SeedError.Length > 0;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasEntryFee))]
+    private int _disconnectStreak;
     [ObservableProperty] private int _endlessStreak;
     [ObservableProperty] private string _notedSpecies = string.Empty;
     [ObservableProperty] private string _peoniaHint = string.Empty;
@@ -163,8 +178,8 @@ public partial class CrownTundraViewModel : ObservableObject
         if (_sav is null)
             return;
         Span<byte> bytes = stackalloc byte[8];
-        System.Security.Cryptography.RandomNumberGenerator.Fill(bytes);
-        var seed = System.Buffers.Binary.BinaryPrimitives.ReadUInt64LittleEndian(bytes);
+        Random.Shared.NextBytes(bytes);
+        var seed = BinaryPrimitives.ReadUInt64LittleEndian(bytes);
         _sav.Blocks.GetBlock(KSeed).SetValue(seed);
         _loading = true;
         SeedText = FormatSeed(seed);
@@ -173,12 +188,12 @@ public partial class CrownTundraViewModel : ObservableObject
         _onChanged();
     }
 
-    /// <summary>Makes every legendary catchable again by clearing all 48 capture flags.</summary>
+    /// <summary>Makes every legendary catchable again by clearing all 48 capture flags, as one change.</summary>
     [RelayCommand]
     public void ClearAllCaught()
     {
         foreach (var flag in Legendaries)
-            flag.Value = false;
+            flag.SetQuietly(false);
         RefreshSummary();
         Status = "Every legendary is available to catch again.";
         _onChanged();
@@ -191,17 +206,20 @@ public partial class CrownTundraViewModel : ObservableObject
         if (_loading || _sav is null)
             return;
         if (!TryParseSeed(value, out var seed))
+        {
+            SeedError = "Seeds are 16 hex digits.";
             return;
+        }
+        SeedError = string.Empty;
         _sav.Blocks.GetBlock(KSeed).SetValue(seed);
         _onChanged();
     }
 
     partial void OnDisconnectStreakChanged(int value)
     {
-        OnPropertyChanged(nameof(HasEntryFee));
         if (_loading || _sav is null)
             return;
-        _sav.Blocks.GetBlock(KDisconnect).SetValue((uint)Math.Clamp(value, 0, 999));
+        _sav.Blocks.GetBlock(KDisconnect).SetValue((uint)Math.Clamp(value, 0, MaxStreak));
         _onChanged();
     }
 
@@ -209,26 +227,24 @@ public partial class CrownTundraViewModel : ObservableObject
     {
         if (_loading || _sav is null)
             return;
-        _sav.Blocks.GetBlock(KEndless).SetValue((uint)Math.Clamp(value, 0, 999999));
+        _sav.Blocks.GetBlock(KEndless).SetValue((uint)Math.Clamp(value, 0, MaxEndlessStreak));
         _onChanged();
     }
 
-    private ulong GetU64(uint key) => Convert.ToUInt64(_sav!.Blocks.GetBlock(key).GetValue());
-    private uint GetU32(uint key) => Convert.ToUInt32(_sav!.Blocks.GetBlock(key).GetValue());
+    private ulong GetU64(uint key) => Convert.ToUInt64(_sav!.Blocks.GetBlock(key).GetValue(), CultureInfo.InvariantCulture);
+    private uint GetU32(uint key) => Convert.ToUInt32(_sav!.Blocks.GetBlock(key).GetValue(), CultureInfo.InvariantCulture);
 
     private static string FormatSeed(ulong seed) => $"0x{seed:X16}";
 
-    /// <summary>Accepts the hex form shown in the box, or a plain decimal value.</summary>
+    /// <summary>Accepts the hex form shown in the box, with or without the 0x prefix.</summary>
     public static bool TryParseSeed(string text, out ulong seed)
     {
         seed = 0;
         var trimmed = text.Trim();
-        if (trimmed.Length == 0)
-            return false;
         if (trimmed.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-            return ulong.TryParse(trimmed.AsSpan(2), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out seed);
-        return ulong.TryParse(trimmed, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out seed)
-            || ulong.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out seed);
+            trimmed = trimmed[2..];
+        return trimmed.Length > 0
+               && ulong.TryParse(trimmed, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out seed);
     }
 
     private string DescribeNoted(GameStrings strings)
@@ -244,33 +260,12 @@ public partial class CrownTundraViewModel : ObservableObject
         species == 0 || species >= strings.specieslist.Length ? "none" : strings.specieslist[species];
 }
 
-/// <summary>Computes a Sword/Shield save block key from its internal name.</summary>
-/// <remarks>
-/// The game keys every block by the low 32 bits of the FNV-1a-64 hash of a name string,
-/// the same scheme <see cref="SaveBlockAccessor8SWSH"/> relies on.
-/// </remarks>
-public static class SwshBlockKey
-{
-    private const ulong OffsetBasis = 0xCBF29CE484222645;
-    private const ulong Prime = 0x00000100000001B3;
-
-    public static uint From(ReadOnlySpan<char> name)
-    {
-        var hash = OffsetBasis;
-        foreach (var c in name)
-        {
-            hash ^= c;
-            hash *= Prime;
-        }
-        return (uint)hash;
-    }
-}
-
 /// <summary>One boolean save block, presented as a checkbox.</summary>
 public partial class BlockFlagViewModel : ObservableObject
 {
     private readonly SCBlock _block;
     private readonly Action _onChanged;
+    private bool _loading;
 
     public BlockFlagViewModel(SCBlock block, string label, string internalName, Action onChanged)
     {
@@ -290,10 +285,21 @@ public partial class BlockFlagViewModel : ObservableObject
 
     partial void OnValueChanged(bool value)
     {
+        if (_loading)
+            return;
         var wanted = value ? SCTypeCode.Bool2 : SCTypeCode.Bool1;
         if (_block.Type == wanted)
             return;
         _block.ChangeBooleanType(wanted);
         _onChanged();
+    }
+
+    /// <summary>Writes the flag without reporting it, for bulk edits that report once.</summary>
+    internal void SetQuietly(bool value)
+    {
+        _block.ChangeBooleanType(value ? SCTypeCode.Bool2 : SCTypeCode.Bool1);
+        _loading = true;
+        Value = value;
+        _loading = false;
     }
 }

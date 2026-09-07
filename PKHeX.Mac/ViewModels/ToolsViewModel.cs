@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -12,24 +13,23 @@ using PKHeX.Mac.Services;
 namespace PKHeX.Mac.ViewModels;
 
 /// <summary>
-/// Save-wide tools: PKHeX's batch editor (bulk property edits driven by text
-/// instructions), a box report listing every stored Pokémon, and team analysis.
+/// Save-wide tools: a box report listing every stored Pokémon, team analysis, the
+/// breeding planner and the integrity audit.
 /// </summary>
-public partial class ToolsViewModel : ObservableObject
+public sealed partial class ToolsViewModel : ObservableObject, IDisposable
 {
     private readonly SaveFile _sav;
     private readonly GameStrings _strings;
-    private readonly Action _onChanged;
+    private readonly BackgroundRefresh _refresh = new();
 
-    public ToolsViewModel(SaveFile sav, GameStrings strings, Action onChanged)
+    public ToolsViewModel(SaveFile sav, GameStrings strings)
     {
         _sav = sav;
         _strings = strings;
-        _onChanged = onChanged;
         Team = new TeamAnalysisViewModel(sav, strings);
         Breeding = new BreedingViewModel(sav, strings);
         Integrity = new IntegrityAuditViewModel(sav, strings);
-        BuildReport();
+        _ = BuildReportAsync();
     }
 
     /// <summary>Type coverage and shared weaknesses for the party or a box.</summary>
@@ -51,26 +51,49 @@ public partial class ToolsViewModel : ObservableObject
     [ObservableProperty] private string _reportSearch = string.Empty;
     [ObservableProperty] private bool _illegalOnly;
     [ObservableProperty] private string _reportSummary = string.Empty;
+    [ObservableProperty] private bool _isBuildingReport;
 
     partial void OnReportSearchChanged(string value) => FilterReport();
     partial void OnIllegalOnlyChanged(bool value) => FilterReport();
 
-    private void BuildReport()
+    /// <summary>
+    /// Re-reads every stored Pokémon. The legality verdicts — up to a thousand of them on a
+    /// full Scarlet/Violet save — are computed off the UI thread from a snapshot; the rows,
+    /// which load sprites, are built back on it.
+    /// </summary>
+    [RelayCommand]
+    private async Task BuildReportAsync()
     {
-        _allRows.Clear();
-        if (_sav.HasBox)
+        IsBuildingReport = true;
+        ReportSummary = "Reading every stored Pokémon…";
+
+        var boxNames = BoxUtil.GetBoxNames(_sav);
+        var slots = _sav.EnumerateOccupiedSlots().Where(s => !s.IsParty).ToList();
+        var outcome = await _refresh.RunAsync(token =>
         {
-            for (int box = 0; box < _sav.BoxCount; box++)
+            var verdicts = new bool[slots.Count];
+            for (int i = 0; i < slots.Count; i++)
             {
-                var boxName = box < BoxUtil.GetBoxNames(_sav).Length ? BoxUtil.GetBoxNames(_sav)[box] : $"Box {box + 1}";
-                for (int slot = 0; slot < _sav.BoxSlotCount; slot++)
-                {
-                    var pk = _sav.GetBoxSlotAtIndex(box, slot);
-                    if (pk.Species == 0)
-                        continue;
-                    _allRows.Add(new ReportRowViewModel(pk, boxName, slot, _strings));
-                }
+                token.ThrowIfCancellationRequested();
+                verdicts[i] = new LegalityAnalysis(slots[i].Entity).Valid;
             }
+            return verdicts;
+        });
+        if (outcome.IsSuperseded)
+            return;
+
+        IsBuildingReport = false;
+        if (outcome.Result is not { } legal)
+        {
+            ReportSummary = "The legality check failed while building the report.";
+            return;
+        }
+
+        _allRows.Clear();
+        for (int i = 0; i < slots.Count; i++)
+        {
+            var boxName = (uint)slots[i].Box < boxNames.Length ? boxNames[slots[i].Box] : $"Box {slots[i].Box + 1}";
+            _allRows.Add(new ReportRowViewModel(slots[i].Entity, boxName, slots[i].Slot, legal[i], _strings));
         }
         FilterReport();
     }
@@ -100,29 +123,33 @@ public partial class ToolsViewModel : ObservableObject
             sb.AppendLine(r.ToTsv());
         return sb.ToString();
     }
+
+    public void Dispose()
+    {
+        _refresh.Dispose();
+        Integrity.Dispose();
+    }
 }
 
 /// <summary>One row of the box report.</summary>
 public sealed class ReportRowViewModel
 {
-    public ReportRowViewModel(PKM pk, string boxName, int slot, GameStrings strings)
+    public ReportRowViewModel(PKM pk, string boxName, int slot, bool isLegal, GameStrings strings)
     {
         BoxName = boxName;
         SlotText = $"{slot + 1}";
-        Species = (uint)pk.Species < strings.specieslist.Length ? strings.specieslist[pk.Species] : $"#{pk.Species}";
+        Species = strings.SpeciesName(pk);
         Nickname = pk.Nickname;
         Level = pk.CurrentLevel;
-        Nature = (uint)pk.Nature < strings.natures.Length ? strings.natures[(int)pk.Nature] : pk.Nature.ToString();
-        Ability = (uint)pk.Ability < strings.abilitylist.Length ? strings.abilitylist[pk.Ability] : $"#{pk.Ability}";
-        HeldItem = pk.HeldItem == 0
-            ? "—"
-            : (uint)pk.HeldItem < strings.itemlist.Length ? strings.itemlist[pk.HeldItem] : $"#{pk.HeldItem}";
+        Nature = strings.NatureName(pk.Nature);
+        Ability = strings.AbilityName(pk.Ability);
+        HeldItem = pk.HeldItem == 0 ? "—" : strings.ItemName(pk.HeldItem);
         IsShiny = pk.IsShiny;
         OtName = pk.OriginalTrainerName;
         Ivs = $"{pk.IV_HP}/{pk.IV_ATK}/{pk.IV_DEF}/{pk.IV_SPA}/{pk.IV_SPD}/{pk.IV_SPE}";
         Evs = $"{pk.EV_HP}/{pk.EV_ATK}/{pk.EV_DEF}/{pk.EV_SPA}/{pk.EV_SPD}/{pk.EV_SPE}";
         Sprite = SpriteService.GetPokemonSprite(pk);
-        IsLegal = new LegalityAnalysis(pk).Valid;
+        IsLegal = isLegal;
     }
 
     public string BoxName { get; }

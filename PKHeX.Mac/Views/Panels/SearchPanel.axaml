@@ -6,7 +6,7 @@
              x:Class="PKHeX.Mac.Views.Panels.SearchPanel"
              x:DataType="vm:MainWindowViewModel">
 
-    <Border Classes="card" IsVisible="{Binding IsSearchView}" Margin="18,14,18,14">
+    <Border Classes="card" Margin="18,14,18,14">
         <DockPanel DataContext="{Binding Search}" x:DataType="vm:SearchViewModel">
             <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12">
                 <TextBlock DockPanel.Dock="Left" Text="Search" FontSize="{StaticResource FontTitle}" FontWeight="Bold"
@@ -107,7 +107,7 @@
                                        ToolTip.Tip="{Binding FullPath}"/>
                             <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="4"
                                         VerticalAlignment="Center">
-                                <TextBlock Text="★" FontSize="{StaticResource FontBody}" Foreground="Gold"
+                                <TextBlock Text="★" FontSize="{StaticResource FontBody}" Foreground="{DynamicResource ShinyBrush}"
                                            IsVisible="{Binding IsShiny}"/>
                                 <TextBlock Text="✓" FontSize="{StaticResource FontBody}" IsVisible="{Binding IsLegal}"
                                            Foreground="{DynamicResource LegalFgBrush}"/>

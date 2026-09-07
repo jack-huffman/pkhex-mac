@@ -2,12 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Globalization;
-using System.Linq;
 using System.Reflection;
-using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using PKHeX.Core;
+using PKHeX.Mac.Services;
 
 namespace PKHeX.Mac.ViewModels;
 
@@ -143,27 +142,8 @@ public partial class TrainerStyleViewModel : ObservableObject
     }
 
     /// <summary>"BaseballClub1SmugElegantPurchased" → "Baseball club 1 smug elegant".</summary>
-    internal static string Prettify(string name)
-    {
-        foreach (var suffix in new[] { "Purchased", "Unread" })
-        {
-            if (name.EndsWith(suffix, StringComparison.Ordinal) && name.Length > suffix.Length)
-                name = name[..^suffix.Length];
-        }
-
-        var sb = new StringBuilder(name.Length + 8);
-        for (int i = 0; i < name.Length; i++)
-        {
-            var c = name[i];
-            var boundary = i > 0
-                && (char.IsUpper(c) || char.IsDigit(c) != char.IsDigit(name[i - 1]))
-                && !(char.IsUpper(c) && char.IsUpper(name[i - 1]));
-            if (boundary)
-                sb.Append(' ');
-            sb.Append(i == 0 ? char.ToUpperInvariant(c) : char.ToLowerInvariant(c));
-        }
-        return sb.ToString();
-    }
+    internal static string Prettify(string name) =>
+        DisplayNames.FromPascalCase(DisplayNames.WithoutSuffix(DisplayNames.WithoutSuffix(name, "Purchased"), "Unread"));
 }
 
 /// <summary>One opaque outfit or appearance slot, edited as hex.</summary>
@@ -192,16 +172,16 @@ public partial class StyleFieldViewModel : ObservableObject
     public string Label { get; }
 
     /// <summary>Hex ids want a monospace field; small indexes read better proportional.</summary>
-    public Avalonia.Media.FontFamily FieldFont =>
-        _hex ? new Avalonia.Media.FontFamily("Menlo, monospace") : Avalonia.Media.FontFamily.Default;
+    public bool IsHex => _hex;
 
     [ObservableProperty] private string _hexText = string.Empty;
-    [ObservableProperty] private string _error = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasError))]
+    private string _error = string.Empty;
 
     /// <summary>Drives the field's error styling; the text itself goes in a tooltip.</summary>
     public bool HasError => Error.Length > 0;
-
-    partial void OnErrorChanged(string value) => OnPropertyChanged(nameof(HasError));
 
     private ulong RawValue() => _is64 ? (ulong)_prop.GetValue(_owner)! : (uint)_prop.GetValue(_owner)!;
 
@@ -274,5 +254,12 @@ public partial class StyleToggleViewModel : ObservableObject
             return;
         _prop.SetValue(_owner, value);
         _onChanged();
+    }
+
+    /// <summary>Writes the flag without reporting it, for bulk edits that report once.</summary>
+    internal void SetQuietly(bool value)
+    {
+        _prop.SetValue(_owner, value);
+        Reload();
     }
 }

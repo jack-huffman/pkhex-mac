@@ -34,8 +34,7 @@ public partial class PokedexViewModel : ObservableObject
         {
             if (!sav.Personal.IsSpeciesInGame(species))
                 continue; // not in this game's dex at all
-            var name = (uint)species < strings.specieslist.Length ? strings.specieslist[species] : $"#{species}";
-            var row = new DexRowViewModel(this, species, name);
+            var row = new DexRowViewModel(this, species, strings.SpeciesName(species));
             row.Reload(sav);
             _all.Add(row);
         }
@@ -72,7 +71,7 @@ public partial class PokedexViewModel : ObservableObject
                 continue;
             if (query.Length != 0
                 && !row.Name.Contains(query, StringComparison.OrdinalIgnoreCase)
-                && !row.Number.ToString().Contains(query))
+                && !row.NumberText.Contains(query, StringComparison.Ordinal))
                 continue;
             Rows.Add(row);
         }
@@ -89,11 +88,18 @@ public partial class PokedexViewModel : ObservableObject
     internal SaveFile Save => _sav;
     internal GameStrings Strings => _strings;
 
+    /// <summary>Registers or clears a whole entry — every form and gender — and records the change.</summary>
     internal void Write(ushort species, bool value)
     {
         DexAccessor.SetEntry(_sav, species, value, ShinyToo);
         _onChanged();
     }
+
+    /// <summary>
+    /// Records a change a row wrote itself. Rows edit single flags and must not go through
+    /// <see cref="Write"/>, which would re-register every form and undo the edit.
+    /// </summary>
+    internal void NotifyChanged() => _onChanged();
 
     /// <summary>Re-reads every row from the save after a bulk change.</summary>
     private void ReloadAll()
@@ -160,6 +166,9 @@ public partial class PokedexViewModel : ObservableObject
 /// </summary>
 public partial class DexRowViewModel : ObservableObject
 {
+    /// <summary>The dex stores form flags in a 32-bit field, so later forms have no bit.</summary>
+    private const int MaxFormsTracked = 32;
+
     private static readonly string[] GenderNames = ["Male", "Female", "Genderless"];
     private static readonly string[] LanguageNames =
         ["Japanese", "English", "French", "Italian", "German", "Spanish", "Korean", "Chinese S", "Chinese T"];
@@ -230,10 +239,10 @@ public partial class DexRowViewModel : ObservableObject
         var strings = _parent.Strings;
         var formNames = FormConverter.GetFormList(Number, strings.types, strings.forms,
             GameInfo.GenderSymbolUnicode, EntityContext.Gen9);
-        for (byte f = 0; f < formNames.Length && f < 32; f++)
+        for (byte f = 0; f < formNames.Length && f < MaxFormsTracked; f++)
         {
             var label = string.IsNullOrWhiteSpace(formNames[f]) ? $"Form {f}" : formNames[f];
-            Forms.Add(new DexFormRowViewModel(sv, Number, f, label));
+            Forms.Add(new DexFormRowViewModel(sv, Number, f, label, _parent.NotifyChanged));
         }
 
         for (byte g = 0; g < GenderNames.Length; g++)
@@ -242,7 +251,8 @@ public partial class DexRowViewModel : ObservableObject
             Genders.Add(new DexFlagViewModel(
                 GenderNames[g],
                 Dex9Detail.GetGenderSeen(sv, Number, gender),
-                v => Dex9Detail.SetGenderSeen(sv, Number, gender, v)));
+                v => Dex9Detail.SetGenderSeen(sv, Number, gender, v),
+                _parent.NotifyChanged));
         }
 
         if (HasLanguages)
@@ -253,7 +263,8 @@ public partial class DexRowViewModel : ObservableObject
                 Languages.Add(new DexFlagViewModel(
                     LanguageNames[i],
                     Dex9Detail.GetLanguage(sv, Number, index),
-                    v => Dex9Detail.SetLanguage(sv, Number, index, v)));
+                    v => Dex9Detail.SetLanguage(sv, Number, index, v),
+                    _parent.NotifyChanged));
             }
         }
     }
@@ -263,8 +274,11 @@ public partial class DexRowViewModel : ObservableObject
         if (_loading)
             return;
         _parent.Write(Number, value);
+        // Registering the whole entry also decides the seen and shiny flags.
         _loading = true;
         Seen = value || Seen;
+        if (_parent.Save is SAV9SV sv && SupportsDetail)
+            ShinySeen = Dex9Detail.GetShinySeen(sv, Number);
         _loading = false;
         _parent.RefreshSummary();
         if (_detailBuilt)
@@ -276,7 +290,7 @@ public partial class DexRowViewModel : ObservableObject
         if (_loading || _parent.Save is not SAV9SV sv || !SupportsDetail)
             return;
         Dex9Detail.SetShinySeen(sv, Number, value);
-        _parent.Write(Number, Caught); // reuse the change notification
+        _parent.NotifyChanged();
     }
 }
 
@@ -286,13 +300,15 @@ public partial class DexFormRowViewModel : ObservableObject
     private readonly SAV9SV _sav;
     private readonly ushort _species;
     private readonly byte _form;
+    private readonly Action _onChanged;
     private bool _loading;
 
-    public DexFormRowViewModel(SAV9SV sav, ushort species, byte form, string label)
+    public DexFormRowViewModel(SAV9SV sav, ushort species, byte form, string label, Action onChanged)
     {
         _sav = sav;
         _species = species;
         _form = form;
+        _onChanged = onChanged;
         Label = label;
         _loading = true;
         Seen = Dex9Detail.GetFormSeen(sav, species, form);
@@ -310,6 +326,7 @@ public partial class DexFormRowViewModel : ObservableObject
         if (_loading)
             return;
         Dex9Detail.SetFormSeen(_sav, _species, _form, value);
+        _onChanged();
     }
 
     partial void OnObtainedChanged(bool value)
@@ -317,6 +334,7 @@ public partial class DexFormRowViewModel : ObservableObject
         if (_loading)
             return;
         Dex9Detail.SetFormObtained(_sav, _species, _form, value);
+        _onChanged();
     }
 }
 
@@ -324,12 +342,14 @@ public partial class DexFormRowViewModel : ObservableObject
 public partial class DexFlagViewModel : ObservableObject
 {
     private readonly Action<bool> _write;
+    private readonly Action _onChanged;
     private bool _loading;
 
-    public DexFlagViewModel(string label, bool value, Action<bool> write)
+    public DexFlagViewModel(string label, bool value, Action<bool> write, Action onChanged)
     {
         Label = label;
         _write = write;
+        _onChanged = onChanged;
         _loading = true;
         Value = value;
         _loading = false;
@@ -344,5 +364,6 @@ public partial class DexFlagViewModel : ObservableObject
         if (_loading)
             return;
         _write(value);
+        _onChanged();
     }
 }

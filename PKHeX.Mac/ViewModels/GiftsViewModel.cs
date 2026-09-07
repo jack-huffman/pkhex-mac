@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Linq;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -24,7 +25,6 @@ public partial class GiftsViewModel : ObservableObject
     private readonly GameStrings _strings;
     private readonly List<GiftTileViewModel> _allTiles;
     private List<GiftTileViewModel> _matches = [];
-    private GiftTileViewModel? _selectedTile;
     private bool _suppressFilter;
 
     public GiftsViewModel(SaveFile sav, GameStrings strings)
@@ -40,8 +40,8 @@ public partial class GiftsViewModel : ObservableObject
                 // Actually attempt the transfer once up front (~100ms for the whole
                 // archive) so "can this save accept it" is exact rather than guessed,
                 // and the reason is ready before the user clicks.
-                TryConvert(g, sav, out _, out var reason);
-                return new GiftTileViewModel(g, SpeciesNameOf(g.Species), reason);
+                TryConvert(g, sav, strings, out _, out var reason);
+                return new GiftTileViewModel(g, strings.SpeciesName(g.Species), reason);
             })
             .ToList();
 
@@ -95,7 +95,7 @@ public partial class GiftsViewModel : ObservableObject
     private int? SelectedGeneration =>
         SelectedGenerationIndex <= 0 || SelectedGenerationIndex >= GenerationChoices.Count
             ? null
-            : int.Parse(GenerationChoices[SelectedGenerationIndex].AsSpan("Generation ".Length));
+            : int.Parse(GenerationChoices[SelectedGenerationIndex].AsSpan("Generation ".Length), CultureInfo.InvariantCulture);
 
     private void RebuildGameChoices()
     {
@@ -123,7 +123,7 @@ public partial class GiftsViewModel : ObservableObject
         if (_suppressFilter)
             return;
 
-        _selectedTile = null;
+        SelectedTile = null;
         Tiles.Clear();
         Result = null;
         PreviewReady?.Invoke(null);
@@ -163,31 +163,20 @@ public partial class GiftsViewModel : ObservableObject
             : string.Empty;
     }
 
-    /// <summary>Bound by the results list; routes through the same selection logic.</summary>
-    public GiftTileViewModel? SelectedTile
-    {
-        get => _selectedTile;
-        set
-        {
-            if (!ReferenceEquals(_selectedTile, value))
-                SelectTile(value);
-            OnPropertyChanged();
-        }
-    }
+    /// <summary>The tile the results list has selected; picking one converts it for preview.</summary>
+    [ObservableProperty] private GiftTileViewModel? _selectedTile;
 
-    [RelayCommand]
-    public void SelectTile(GiftTileViewModel? tile)
+    partial void OnSelectedTileChanged(GiftTileViewModel? oldValue, GiftTileViewModel? newValue)
     {
-        if (_selectedTile is not null)
-            _selectedTile.IsSelected = false;
-        _selectedTile = tile;
-        if (tile is null)
+        if (oldValue is not null)
+            oldValue.IsSelected = false;
+        if (newValue is null)
         {
             PreviewReady?.Invoke(null);
             return;
         }
-        tile.IsSelected = true;
-        Convert(tile);
+        newValue.IsSelected = true;
+        ConvertForPreview(newValue);
     }
 
     [RelayCommand]
@@ -204,7 +193,7 @@ public partial class GiftsViewModel : ObservableObject
         ApplyFilter();
     }
 
-    private void Convert(GiftTileViewModel tile)
+    private void ConvertForPreview(GiftTileViewModel tile)
     {
         Result = null;
         if (!tile.IsAddable)
@@ -213,7 +202,7 @@ public partial class GiftsViewModel : ObservableObject
             Blocked?.Invoke(tile.BlockedReason);
             return;
         }
-        if (!TryConvert(tile.Gift, _sav, out var pk, out var reason) || pk is null)
+        if (!TryConvert(tile.Gift, _sav, _strings, out var pk, out var reason) || pk is null)
         {
             var message = reason ?? "This gift could not be converted.";
             StatusText = message;
@@ -229,7 +218,7 @@ public partial class GiftsViewModel : ObservableObject
     /// Attempts to bring a gift into the save. Returns true with the entity on
     /// success; false with a human-readable reason otherwise.
     /// </summary>
-    private static bool TryConvert(MysteryGift gift, SaveFile sav, out PKM? result, out string? reason)
+    private static bool TryConvert(MysteryGift gift, SaveFile sav, GameStrings strings, out PKM? result, out string? reason)
     {
         result = null;
         reason = null;
@@ -242,9 +231,7 @@ public partial class GiftsViewModel : ObservableObject
                 if (pk is null)
                 {
                     var game = GameInfo.GetVersionName(sav.Version);
-                    var name = (uint)gift.Species < GameInfo.GetStrings("en").specieslist.Length
-                        ? GameInfo.GetStrings("en").specieslist[gift.Species]
-                        : $"#{gift.Species}";
+                    var name = strings.SpeciesName(gift.Species);
                     reason = res == EntityConverterResult.IncompatibleSpecies
                         ? $"This {name} comes from {gift.Version} and cannot be transferred into {game}."
                         : $"{name} cannot be brought into {game} ({res}).";
@@ -256,15 +243,13 @@ public partial class GiftsViewModel : ObservableObject
             result = pk;
             return true;
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is ArgumentException or IndexOutOfRangeException or NotSupportedException or InvalidOperationException)
         {
+            // Gift templates from another generation can refuse to materialise for this save.
             reason = $"Could not convert this gift: {ex.Message}";
             return false;
         }
     }
-
-    private string SpeciesNameOf(ushort species) =>
-        (uint)species < _strings.specieslist.Length ? _strings.specieslist[species] : $"#{species}";
 }
 
 /// <summary>One gift tile: sprite, species, event title, and origin.</summary>
