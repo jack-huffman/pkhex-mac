@@ -11,6 +11,7 @@
 
 **A native macOS front-end for [PKHeX](https://github.com/kwsch/PKHeX).**
 
+[![CI](https://github.com/jack-huffman/pkhex-mac/actions/workflows/ci.yml/badge.svg)](https://github.com/jack-huffman/pkhex-mac/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-macOS%2012%2B%20(Apple%20Silicon)-lightgrey.svg)](#building)
 [![.NET](https://img.shields.io/badge/.NET-10-512BD4.svg)](https://dotnet.microsoft.com/download/dotnet/10.0)
@@ -30,10 +31,12 @@ Upstream is a **git submodule pinned to a commit**, not a fork and not a vendore
 Kurt's code is duplicated here. Everything in this repository is the UI layer.
 
 ```text
-PKHeX.Mac/          the interface — views, view models, services
-PKHeX.Mac.Tests/    177 tests covering the parts that aren't PKHeX.Core's job
-upstream/PKHeX/     submodule → github.com/kwsch/PKHeX
-scripts/            update upstream, sync sprites, package the .app
+PKHeX.Mac/Services/     pure logic: save diffing, the integrity audit, the type chart, transfers
+PKHeX.Mac/ViewModels/   one view model per editor; a session per open save, a workspace of sessions
+PKHeX.Mac/Views/        the window and its panels — pickers, clipboard and drag live here, nothing else
+PKHeX.Mac.Tests/        unit tests for everything that isn't PKHeX.Core's job
+upstream/PKHeX/         submodule → github.com/kwsch/PKHeX
+scripts/                update upstream, sync sprites, package the .app
 ```
 
 ## What this isn't
@@ -58,8 +61,9 @@ The parts that aren't just Windows Forms redrawn.
 
 ### Several saves at once
 
-Saves open in tabs, browser-style. A Pokémon can be sent from one open save to another, with
-the format conversion that implies handled on the way across.
+Saves open in tabs, browser-style (⌘W closes one). A Pokémon can be sent from one open save
+to another, with the format conversion that implies handled on the way across. Closing the
+window checks every tab for unsaved work, not just the one in front.
 
 ### Nothing gets written by surprise
 
@@ -88,7 +92,8 @@ about to overwrite.
 ### Quality of life
 
 - **Command palette** — type to go anywhere, including straight to a specific editor tab
-- Remembers your window, your box, and which saves you had open
+- Remembers your window, your box, and which saves you had open (in
+  `~/Library/Application Support/PKHeX.Mac`)
 - Full keyboard control of the grids
 - Type-ahead move fields instead of scrolling a 693-entry dropdown
 - The interface hides what a save doesn't have, rather than showing something that then
@@ -117,9 +122,14 @@ Requires [.NET 10](https://dotnet.microsoft.com/download/dotnet/10.0) and an App
 ```sh
 git clone --recurse-submodules https://github.com/jack-huffman/pkhex-mac.git
 cd pkhex-mac
-dotnet build PKHeX.Mac -c Debug
-dotnet run  --project PKHeX.Mac
+dotnet build PKHeX.Mac.slnx
+dotnet test  PKHeX.Mac.Tests
+dotnet run   --project PKHeX.Mac
 ```
+
+Analyzers run at `latest-recommended` with warnings as errors, and formatting is checked
+against the root `.editorconfig`; CI runs the same three steps on every push. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for how the code is organised and the conventions it keeps.
 
 Build a distributable, self-contained bundle:
 
