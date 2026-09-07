@@ -130,6 +130,8 @@ public sealed partial class MainWindowViewModel
                 }
                 Extras ??= new GameExtrasViewModel(sav, () => NoteChange("Save structure edited"));
                 Mail ??= new MailViewModel(sav, _strings, () => NoteChange("Mail updated"));
+                // Held mail is addressed by party position, which the box grid can change.
+                Mail.Reload();
                 HallOfFame ??= new HallOfFameViewModel(sav, _strings, () => NoteChange("Hall of Fame updated"));
                 break;
             case "raids":

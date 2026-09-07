@@ -21,6 +21,11 @@ namespace PKHeX.Mac.ViewModels;
 /// and the party slot is then re-saved — calling the save-file write path on held
 /// mail would target offset -1 and corrupt the file, so the two are kept distinct.
 ///
+/// Held mail is addressed by <em>party position</em>, which the box grid can change
+/// underneath this view: deleting a party member shifts everyone after it up. The
+/// rows are therefore rebuilt by <see cref="Reload"/> whenever the view is opened,
+/// rather than trusting positions captured when the editor was first built.
+///
 /// Gen 4 and 5 messages are word codes rather than text, so only the games that store
 /// real strings expose an editable message.
 /// </remarks>
@@ -32,14 +37,36 @@ public partial class MailViewModel : ObservableObject
     private const int MailboxSlots45 = 20;
 
     private readonly SaveFile _sav;
+    private readonly GameStrings _strings;
     private readonly Action _onChanged;
     private bool _bulk;
 
     public MailViewModel(SaveFile sav, GameStrings strings, Action onChanged)
     {
         _sav = sav;
+        _strings = strings;
         _onChanged = onChanged;
+        Build();
+        IsSupported = Rows.Count > 0;
+        RefreshSummary();
+    }
 
+    /// <summary>
+    /// Re-reads every slot from the save. Called when the view opens, because held mail
+    /// is addressed by party position and the party can be reordered elsewhere.
+    /// </summary>
+    public void Reload()
+    {
+        Rows.Clear();
+        Build();
+        RefreshSummary();
+        OnPropertyChanged(nameof(Visible));
+    }
+
+    private void Build()
+    {
+        var sav = _sav;
+        var strings = _strings;
         switch (sav)
         {
             case SAV2 sav2:
@@ -82,9 +109,6 @@ public partial class MailViewModel : ObservableObject
                     Add(sav5.GetMail(j), $"Mailbox {j + 1}", -1, strings);
                 break;
         }
-
-        IsSupported = Rows.Count > 0;
-        RefreshSummary();
     }
 
     private void Add(MailDetail mail, string label, int partyIndex, GameStrings strings) =>
@@ -144,6 +168,13 @@ public partial class MailRowViewModel : ObservableObject
 
     /// <summary>Party slot this mail is carried by, or -1 for mailbox mail.</summary>
     private readonly int _partyIndex;
+
+    /// <summary>
+    /// The species that occupied the party slot when this row was read, so a write can
+    /// tell that the party has been reordered underneath it.
+    /// </summary>
+    private readonly ushort _carrierSpecies;
+
     private bool _loading;
 
     public MailRowViewModel(MailViewModel parent, SaveFile sav, MailDetail mail, string label,
@@ -154,6 +185,9 @@ public partial class MailRowViewModel : ObservableObject
         _mail = mail;
         _strings = strings;
         _partyIndex = partyIndex;
+        _carrierSpecies = partyIndex >= 0 && partyIndex < sav.PartyCount
+            ? sav.GetPartySlotAtIndex(partyIndex).Species
+            : (ushort)0;
         Label = label;
         IsHeldMail = partyIndex >= 0;
 
@@ -272,7 +306,18 @@ public partial class MailRowViewModel : ObservableObject
     {
         if (IsHeldMail)
         {
+            if (_partyIndex >= _sav.PartyCount)
+            {
+                _parent.Status = "That party member is gone; reopen Mail to see the current party.";
+                return;
+            }
             var pk = _sav.GetPartySlotAtIndex(_partyIndex);
+            // Writing mail onto whoever now occupies the slot would corrupt a bystander.
+            if (pk.Species != _carrierSpecies)
+            {
+                _parent.Status = "The party changed since this was read; reopen Mail to edit the right Pokémon.";
+                return;
+            }
             switch (pk)
             {
                 case PK4 pk4:

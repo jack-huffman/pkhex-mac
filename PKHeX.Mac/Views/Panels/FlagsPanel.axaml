@@ -127,7 +127,7 @@
                                               IsChecked="{Binding BoolValue, Mode=TwoWay}"/>
                                     <TextBox Grid.Column="3" FontSize="{StaticResource FontBody}" Height="24" Padding="6,2"
                                              IsVisible="{Binding IsScalar}"
-                                             Text="{Binding TextValue, Mode=TwoWay}"/>
+                                             Text="{Binding TextValue, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"/>
                                     <TextBlock Grid.Column="3" Text="{Binding OpaqueText}" FontSize="{StaticResource FontMicro}"
                                                Classes="secondary" VerticalAlignment="Center"
                                                IsVisible="{Binding IsOpaque}"/>

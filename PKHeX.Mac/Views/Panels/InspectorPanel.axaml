@@ -804,7 +804,7 @@
                                               Content="Hide tracker (it identifies your save)"/>
                                     <StackPanel IsVisible="{Binding !HideTracker}">
                                         <TextBlock Classes="fieldLabel" Text="HOME Tracker (16 hex digits)"/>
-                                        <TextBox Text="{Binding TrackerText, Mode=TwoWay}"
+                                        <TextBox Text="{Binding TrackerText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                                                  FontFamily="{StaticResource MonoFont}" MaxLength="16"
                                                  PlaceholderText="0123456789ABCDEF"/>
                                     </StackPanel>
@@ -978,7 +978,7 @@
                                 <StackPanel IsVisible="{Binding !HideTracker}">
                                     <TextBlock Classes="fieldLabel" Text="HOME Tracker (16 hex digits)"/>
                                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                        <TextBox Grid.Column="0" Text="{Binding TrackerText, Mode=TwoWay}"
+                                        <TextBox Grid.Column="0" Text="{Binding TrackerText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                                                  FontFamily="{StaticResource MonoFont}" MaxLength="16"
                                                  PlaceholderText="0123456789ABCDEF"/>
                                         <Button Grid.Column="1" Content="Zero" FontSize="{StaticResource FontBody}" Padding="8,3"

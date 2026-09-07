@@ -182,12 +182,18 @@ public partial class DexRowViewModel : ObservableObject
         _parent = parent;
         Number = species;
         Name = name;
-        Sprite = SpriteService.GetSprite(species, 0, 0, 0, shiny: false, EntityContext.None);
     }
 
     public ushort Number { get; }
     public string Name { get; }
-    public Bitmap? Sprite { get; }
+
+    /// <summary>
+    /// Built on first read rather than up front: a full dex is a thousand rows, and
+    /// loading every sprite before the list is shown is most of the pause on opening it.
+    /// </summary>
+    public Bitmap? Sprite => _sprite ??= SpriteService.GetSprite(Number, 0, 0, 0, shiny: false, EntityContext.None);
+
+    private Bitmap? _sprite;
     public string NumberText => $"#{Number:0000}";
 
     [ObservableProperty] private bool _seen;

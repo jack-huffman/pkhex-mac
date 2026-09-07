@@ -269,9 +269,6 @@ public partial class GiftTileViewModel : ObservableObject
         IsAddable = isAddable;
         LevelText = gift.IsEgg ? "Egg" : $"Lv. {gift.Level}";
         OriginText = $"Gen {Generation} · {GameName}";
-        Sprite = gift.IsEgg
-            ? SpriteService.GetEggSprite(slot: true)
-            : SpriteService.GetSprite(gift.Species, gift.Form, gift.Gender, 0, gift.IsShiny, gift.Context);
         ShinyOverlay = gift.IsShiny ? SpriteService.GetOverlay("rare_icon") : null;
         Description = string.IsNullOrWhiteSpace(CardTitle) ? speciesName : $"{speciesName} — {CardTitle}";
         ToolTipText = $"{Description}\n{LevelText} · {OriginText}"
@@ -291,7 +288,16 @@ public partial class GiftTileViewModel : ObservableObject
     public bool IsEgg { get; }
     public bool IsAddable { get; }
     public string BlockedReason { get; }
-    public Bitmap? Sprite { get; }
+    /// <summary>
+    /// Built on first read: the archive is thousands of gifts and only a page is on
+    /// screen, so loading every sprite up front is pure delay on opening the view.
+    /// </summary>
+    public Bitmap? Sprite => _sprite ??= Gift.IsEgg
+        ? SpriteService.GetEggSprite(slot: true)
+        : SpriteService.GetSprite(Gift.Species, Gift.Form, Gift.Gender, 0, Gift.IsShiny, Gift.Context);
+
+    private Bitmap? _sprite;
+
     public Bitmap? ShinyOverlay { get; }
 
     /// <summary>Gifts this save cannot accept are dimmed rather than hidden.</summary>

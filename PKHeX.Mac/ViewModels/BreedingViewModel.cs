@@ -277,7 +277,6 @@ public sealed class PartnerViewModel
         Name = strings.SpeciesName(species);
         How = how;
         IsDirect = isDirect;
-        Sprite = SpriteService.GetSprite(species, 0, 0, 0, shiny: false, EntityContext.None);
     }
 
     public ushort Species { get; }
@@ -287,5 +286,8 @@ public sealed class PartnerViewModel
     /// <summary>True when it learns the move itself, rather than needing it bred on first.</summary>
     public bool IsDirect { get; }
 
-    public Bitmap? Sprite { get; }
+    /// <summary>Built on first read; a partner search can list hundreds of species.</summary>
+    public Bitmap? Sprite => _sprite ??= SpriteService.GetSprite(Species, 0, 0, 0, shiny: false, EntityContext.None);
+
+    private Bitmap? _sprite;
 }

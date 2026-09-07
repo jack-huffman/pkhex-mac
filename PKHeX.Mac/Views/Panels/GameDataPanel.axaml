@@ -31,7 +31,7 @@
                                     IsVisible="{Binding HasSeed}">
                             <TextBlock Text="Egg seed" FontSize="{StaticResource FontBody}" Classes="secondary"
                                        VerticalAlignment="Center"/>
-                            <TextBox Text="{Binding SeedText, Mode=TwoWay}" MinWidth="180"
+                            <TextBox Text="{Binding SeedText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" MinWidth="180"
                                      FontSize="{StaticResource FontBody}" FontFamily="{StaticResource MonoFont}"/>
                             <TextBlock Text="{Binding SeedError}" FontSize="{StaticResource FontMicro}"
                                        Foreground="{DynamicResource IllegalFgBrush}"
@@ -350,30 +350,30 @@
                                         <Grid ColumnDefinitions="Auto,150,Auto,100,Auto,100" ColumnSpacing="8">
                                             <TextBlock Grid.Column="0" Text="From" FontSize="{StaticResource FontBody}"
                                                        Classes="secondary" VerticalAlignment="Center"/>
-                                            <TextBox Grid.Column="1" Text="{Binding AuthorName, Mode=TwoWay}"
+                                            <TextBox Grid.Column="1" Text="{Binding AuthorName, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                                                      FontSize="{StaticResource FontBody}"/>
                                             <TextBlock Grid.Column="2" Text="TID" FontSize="{StaticResource FontBody}"
                                                        Classes="secondary" VerticalAlignment="Center"/>
-                                            <TextBox Grid.Column="3" Text="{Binding AuthorTid, Mode=TwoWay}"
+                                            <TextBox Grid.Column="3" Text="{Binding AuthorTid, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                                                      FontSize="{StaticResource FontBody}"/>
                                             <TextBlock Grid.Column="4" Text="SID" FontSize="{StaticResource FontBody}"
                                                        Classes="secondary" VerticalAlignment="Center"/>
-                                            <TextBox Grid.Column="5" Text="{Binding AuthorSid, Mode=TwoWay}"
+                                            <TextBox Grid.Column="5" Text="{Binding AuthorSid, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                                                      FontSize="{StaticResource FontBody}"/>
                                         </Grid>
                                         <Grid ColumnDefinitions="Auto,100,Auto,100,*" ColumnSpacing="8">
                                             <TextBlock Grid.Column="0" Text="Pictured species" FontSize="{StaticResource FontBody}"
                                                        Classes="secondary" VerticalAlignment="Center"/>
-                                            <TextBox Grid.Column="1" Text="{Binding AppearSpecies, Mode=TwoWay}"
+                                            <TextBox Grid.Column="1" Text="{Binding AppearSpecies, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                                                      FontSize="{StaticResource FontBody}"/>
                                             <TextBlock Grid.Column="2" Text="Stationery" FontSize="{StaticResource FontBody}"
                                                        Classes="secondary" VerticalAlignment="Center"/>
-                                            <TextBox Grid.Column="3" Text="{Binding MailType, Mode=TwoWay}"
+                                            <TextBox Grid.Column="3" Text="{Binding MailType, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                                                      FontSize="{StaticResource FontBody}"/>
                                         </Grid>
                                         <StackPanel Spacing="4" IsVisible="{Binding SupportsText}">
                                             <TextBlock Text="Message" FontSize="{StaticResource FontBody}" Classes="secondary"/>
-                                            <TextBox Text="{Binding MessageText, Mode=TwoWay}" FontSize="{StaticResource FontBody}"/>
+                                            <TextBox Text="{Binding MessageText, Mode=TwoWay, UpdateSourceTrigger=LostFocus}" FontSize="{StaticResource FontBody}"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>
@@ -433,10 +433,10 @@
                                                               ItemsSource="{Binding EnumNames}"
                                                               SelectedIndex="{Binding EnumIndex, Mode=TwoWay}"/>
                                                     <TextBox Grid.Column="1" IsVisible="{Binding IsNumeric}"
-                                                             Text="{Binding TextValue, Mode=TwoWay}"
+                                                             Text="{Binding TextValue, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                                                              FontSize="{StaticResource FontBody}" FontFamily="{StaticResource MonoFont}"/>
                                                     <TextBox Grid.Column="1" IsVisible="{Binding IsText}"
-                                                             Text="{Binding TextValue, Mode=TwoWay}"
+                                                             Text="{Binding TextValue, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
                                                              FontSize="{StaticResource FontBody}"/>
                                                     <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8"
                                                                 VerticalAlignment="Center">

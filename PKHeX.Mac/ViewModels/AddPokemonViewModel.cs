@@ -142,12 +142,16 @@ public sealed class SpeciesChoice
     {
         Value = value;
         Name = name;
-        Sprite = SpriteService.GetSprite((ushort)value, 0, 0, 0, shiny: false, EntityContext.None);
     }
 
     public int Value { get; }
     public string Name { get; }
-    public Avalonia.Media.Imaging.Bitmap? Sprite { get; }
+
+    /// <summary>Built on first read; the picker holds every species in the game.</summary>
+    public Avalonia.Media.Imaging.Bitmap? Sprite =>
+        _sprite ??= SpriteService.GetSprite((ushort)Value, 0, 0, 0, shiny: false, EntityContext.None);
+
+    private Avalonia.Media.Imaging.Bitmap? _sprite;
 
     /// <summary>The autocomplete box matches and displays on this.</summary>
     public override string ToString() => Name;
