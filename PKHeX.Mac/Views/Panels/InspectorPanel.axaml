@@ -311,6 +311,14 @@
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
                                 </ComboBox>
+                                <!-- Which nature the stat arrows below are following. Worth
+                                     spelling out only when a Mint makes that a different
+                                     nature from the one picked above. -->
+                                <TextBlock Text="{Binding NatureEffectText}"
+                                           FontSize="{StaticResource FontMicro}"
+                                           TextWrapping="Wrap"
+                                           IsVisible="{Binding HasMintedNature}"
+                                           Foreground="{DynamicResource MeterEvBrush}"/>
                             </StackPanel>
 
                             <!-- Shared EV pool -->

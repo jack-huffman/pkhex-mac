@@ -276,6 +276,9 @@ public partial class PokemonDetailViewModel : ObservableObject
     [ObservableProperty] private double _evBudgetPercent;
     [ObservableProperty] private bool _evOverLimit;
     [ObservableProperty] private string _natureEffectText = string.Empty;
+
+    /// <summary>True when a Mint makes the stats follow a nature other than the Pokémon's own.</summary>
+    [ObservableProperty] private bool _hasMintedNature;
     [ObservableProperty] private int _statTotal;
     [ObservableProperty] private double _statTotalPercent;
     [ObservableProperty] private int _baseStatTotal;
@@ -555,10 +558,16 @@ public partial class PokemonDetailViewModel : ObservableObject
         for (int i = 0; i < Stats.Count; i++)
             Stats[i].SetNatureEffect(neutral ? 0 : i == upRow ? 1 : i == dnRow ? -1 : 0);
 
+        // The arrows follow the stat nature. A Mint makes that a different nature from the
+        // one in the picker, which otherwise just looks like the arrows are wrong.
+        HasMintedNature = _pk.Nature != nature;
         var natureName = _strings.NatureName(nature);
-        NatureEffectText = neutral
+        var effect = neutral
             ? $"{natureName} — no stat changes"
             : $"{natureName} — raises {StatEditRowViewModel.LabelFor(upRow)}, lowers {StatEditRowViewModel.LabelFor(dnRow)}";
+        NatureEffectText = HasMintedNature
+            ? $"{effect}. A Mint is applied, so the arrows follow {natureName} rather than this Pokémon's own {_strings.NatureName(_pk.Nature)} nature."
+            : effect;
     }
 
     private void RunLegality(PKM p)
@@ -652,7 +661,19 @@ public partial class PokemonDetailViewModel : ObservableObject
     {
         if (_loading || _pk is null)
             return;
+        // From Gen 8 the nature the stats follow is stored separately, so a Mint can hold
+        // it apart from the Pokémon's own nature. Without a Mint the two are the same
+        // value and must move together: leaving the stat nature behind here would apply a
+        // Mint nobody asked for, and the stat arrows would stop matching this picker.
+        var isMinted = _pk.StatAlignment != _pk.Nature;
         _pk.Nature = (Nature)value;
+        if (!isMinted)
+        {
+            _pk.StatAlignment = (Nature)value;
+            _loading = true;
+            StatNatureValue = value;
+            _loading = false;
+        }
         RefreshStats();
         MarkDirty();
     }
