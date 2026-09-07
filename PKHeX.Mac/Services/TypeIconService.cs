@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Avalonia;
 using Avalonia.Media;
@@ -24,17 +25,25 @@ public static class TypeIconService
         IImage? image = null;
         if ((uint)typeId < TypeIconData.Shapes.Length)
         {
-            var group = new DrawingGroup();
-            foreach (var (fill, data) in TypeIconData.Shapes[typeId])
+            try
             {
-                group.Children.Add(new GeometryDrawing
+                var group = new DrawingGroup();
+                foreach (var (fill, data) in TypeIconData.Shapes[typeId])
                 {
-                    Brush = new SolidColorBrush(Color.Parse(fill)),
-                    Geometry = Geometry.Parse(data),
-                });
+                    group.Children.Add(new GeometryDrawing
+                    {
+                        Brush = new SolidColorBrush(Color.Parse(fill)),
+                        Geometry = Geometry.Parse(data),
+                    });
+                }
+                // The source artwork is drawn on a 256x256 canvas.
+                image = new DrawingImage { Drawing = group };
             }
-            // The source artwork is drawn on a 256x256 canvas.
-            image = new DrawingImage { Drawing = group };
+            catch (InvalidOperationException)
+            {
+                // Geometry needs a render platform. Without one — unit tests — the
+                // callers fall back to the flat colour chip, as they do for Stellar.
+            }
         }
         Cache[typeId] = image;
         return image;

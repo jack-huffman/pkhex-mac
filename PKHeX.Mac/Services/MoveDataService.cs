@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text.Json;
-using Avalonia;
 using Avalonia.Media;
 using Avalonia.Platform;
 
@@ -58,8 +58,8 @@ public static class MoveDataService
         /// </summary>
         public double EffectivePower => (Power ?? 0) * ExpectedHits * CritMultiplier;
 
-        public string PowerText => Power?.ToString() ?? "—";
-        public string AccuracyText => Accuracy?.ToString() ?? "—";
+        public string PowerText => Power?.ToString(CultureInfo.InvariantCulture) ?? "—";
+        public string AccuracyText => Accuracy?.ToString(CultureInfo.InvariantCulture) ?? "—";
 
         public string CategoryLabel => Category switch
         {
@@ -72,15 +72,11 @@ public static class MoveDataService
 
     private static readonly Lazy<Dictionary<int, MoveFacts>> Table = new(Load);
 
-    public static readonly IBrush PhysicalBrush = new SolidColorBrush(Color.Parse("#E0733D"));
-    public static readonly IBrush SpecialBrush = new SolidColorBrush(Color.Parse("#5C8FD6"));
-    public static readonly IBrush StatusBrush = new SolidColorBrush(Color.Parse("#8E8E93"));
-
     public static IBrush BrushFor(Category category) => category switch
     {
-        Category.Physical => PhysicalBrush,
-        Category.Special => SpecialBrush,
-        _ => StatusBrush,
+        Category.Physical => Palette.Physical,
+        Category.Special => Palette.Special,
+        _ => Palette.Status,
     };
 
     /// <summary>Facts for a move id; empty values when the table has no entry.</summary>

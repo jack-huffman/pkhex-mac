@@ -12,27 +12,36 @@ namespace PKHeX.Mac.Services;
 /// <remarks>
 /// All of this is knowable only by opening all thirty slots one at a time, which is
 /// why it is worth surfacing. Legality dominates the cost — roughly 1.5ms per entity —
-/// so callers should run this off the UI thread.
+/// so callers snapshot the box on the UI thread with <see cref="Snapshot"/> and run
+/// <see cref="Analyze(BoxSnapshot, GameStrings, CancellationToken)"/> off it. The snapshot holds copies, so edits made meanwhile
+/// cannot tear a read.
 /// </remarks>
 public static class BoxInsights
 {
-    public static BoxSummary Analyze(SaveFile sav, int box, GameStrings strings,
-                                     CancellationToken token = default)
+    /// <summary>Copies of the box's occupied slots, taken on the thread that owns the save.</summary>
+    public static BoxSnapshot Snapshot(SaveFile sav, int box)
     {
         if (!sav.HasBox || (uint)box >= sav.BoxCount)
-            return BoxSummary.Empty;
-
-        var capacity = sav.BoxSlotCount;
+            return new BoxSnapshot(0, []);
         var present = new List<(PKM Entity, int Slot)>();
-        for (int slot = 0; slot < capacity; slot++)
+        for (int slot = 0; slot < sav.BoxSlotCount; slot++)
         {
-            if (token.IsCancellationRequested)
-                return BoxSummary.Empty;
             var pk = sav.GetBoxSlotAtIndex(box, slot);
             if (pk.Species != 0)
                 present.Add((pk, slot));
         }
+        return new BoxSnapshot(sav.BoxSlotCount, present);
+    }
 
+    /// <summary>Convenience for callers on the owning thread that do not need to split the work.</summary>
+    public static BoxSummary Analyze(SaveFile sav, int box, GameStrings strings, CancellationToken token = default) =>
+        Analyze(Snapshot(sav, box), strings, token);
+
+    public static BoxSummary Analyze(BoxSnapshot snapshot, GameStrings strings, CancellationToken token = default)
+    {
+        var (capacity, present) = snapshot;
+        if (capacity == 0)
+            return BoxSummary.Empty;
         if (present.Count == 0)
             return new BoxSummary(0, capacity, 0, string.Empty, string.Empty, [], false);
 
@@ -53,40 +62,27 @@ public static class BoxInsights
         var problems = new List<BoxProblem>();
         foreach (var (entity, slot) in present)
         {
-            if (token.IsCancellationRequested)
-                return BoxSummary.Empty;
+            token.ThrowIfCancellationRequested();
             try
             {
                 var la = new LegalityAnalysis(entity);
                 if (la.Valid)
                     continue;
-                problems.Add(new BoxProblem(Name(entity, strings), slot, FirstIssue(la), entity));
+                problems.Add(new BoxProblem(strings.SpeciesName(entity), slot, LegalitySummary.FirstIssue(la), entity));
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 // An entity the analyser cannot parse is itself worth reporting.
-                problems.Add(new BoxProblem(Name(entity, strings), slot, ex.Message, entity));
+                problems.Add(new BoxProblem(strings.SpeciesName(entity), slot, ex.Message, entity));
             }
         }
 
         return new BoxSummary(present.Count, capacity, shiny, levelText, originText, problems, true);
     }
-
-    private static string Name(PKM pk, GameStrings strings) =>
-        (uint)pk.Species < strings.specieslist.Length ? strings.specieslist[pk.Species] : $"#{pk.Species}";
-
-    /// <summary>The first real line of the report, which is the most specific complaint.</summary>
-    private static string FirstIssue(LegalityAnalysis la)
-    {
-        foreach (var line in la.Report().Split('\n'))
-        {
-            var trimmed = line.Trim();
-            if (trimmed.Length > 0 && !trimmed.StartsWith("Valid", StringComparison.Ordinal))
-                return trimmed;
-        }
-        return "Fails a legality check.";
-    }
 }
+
+/// <summary>The occupied slots of one box, copied out of the save.</summary>
+public sealed record BoxSnapshot(int Capacity, IReadOnlyList<(PKM Entity, int Slot)> Present);
 
 /// <summary>What a box contains, and what is wrong with it.</summary>
 public sealed record BoxSummary(int Filled, int Capacity, int Shiny, string LevelText,

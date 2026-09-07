@@ -104,14 +104,14 @@ public static class Dex9Detail
                 sv.Zukan.DexPaldea.Get(species).SetIsGenderSeen(gender, value);
                 break;
             case Block.Kitakami:
-            {
-                var entry = sv.Zukan.DexKitakami.Get(species);
-                var mask = entry.FlagsGenderSeen;
-                entry.FlagsGenderSeen = value
-                    ? (byte)(mask | (1 << gender))
-                    : (byte)(mask & ~(1 << gender));
-                break;
-            }
+                {
+                    var entry = sv.Zukan.DexKitakami.Get(species);
+                    var mask = entry.FlagsGenderSeen;
+                    entry.FlagsGenderSeen = value
+                        ? (byte)(mask | (1 << gender))
+                        : (byte)(mask & ~(1 << gender));
+                    break;
+                }
         }
     }
 
@@ -132,12 +132,12 @@ public static class Dex9Detail
                 sv.Zukan.DexPaldea.Get(species).SetSeenIsShiny(value);
                 break;
             case Block.Kitakami:
-            {
-                var entry = sv.Zukan.DexKitakami.Get(species);
-                var mask = entry.FlagsShinySeen;
-                entry.FlagsShinySeen = value ? (byte)(mask | 0b10) : (byte)(mask & ~0b10);
-                break;
-            }
+                {
+                    var entry = sv.Zukan.DexKitakami.Get(species);
+                    var mask = entry.FlagsShinySeen;
+                    entry.FlagsShinySeen = value ? (byte)(mask | 0b10) : (byte)(mask & ~0b10);
+                    break;
+                }
         }
     }
 

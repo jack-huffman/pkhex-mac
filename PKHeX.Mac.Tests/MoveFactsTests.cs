@@ -1,10 +1,9 @@
 using PKHeX.Mac.Services;
 using Xunit;
 
+using Category = PKHeX.Mac.Services.MoveDataService.Category;
+
 namespace PKHeX.Mac.Tests;
-
-using Category = MoveDataService.Category;
-
 /// <summary>
 /// Effective power decides which move the coverage view recommends. Getting it wrong
 /// once already hid Surging Strikes behind a weaker move, so the arithmetic is pinned.

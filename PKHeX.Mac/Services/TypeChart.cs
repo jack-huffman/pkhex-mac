@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using PKHeX.Core;
 
 namespace PKHeX.Mac.Services;
 
@@ -31,8 +29,8 @@ public static class TypeChart
     {
         var t = new double[TypeCount, TypeCount];
         for (int a = 0; a < TypeCount; a++)
-        for (int d = 0; d < TypeCount; d++)
-            t[a, d] = 1.0;
+            for (int d = 0; d < TypeCount; d++)
+                t[a, d] = 1.0;
 
         void Set(int attacker, double value, params int[] defenders)
         {
@@ -40,34 +38,34 @@ public static class TypeChart
                 t[attacker, d] = value;
         }
 
-        Set(Normal, 0.5, Rock, Steel);              Set(Normal, 0, Ghost);
+        Set(Normal, 0.5, Rock, Steel); Set(Normal, 0, Ghost);
         Set(Fighting, 2, Normal, Rock, Steel, Ice, Dark);
         Set(Fighting, 0.5, Flying, Poison, Bug, Psychic, Fairy);
         Set(Fighting, 0, Ghost);
-        Set(Flying, 2, Fighting, Bug, Grass);        Set(Flying, 0.5, Rock, Steel, Electric);
-        Set(Poison, 2, Grass, Fairy);                Set(Poison, 0.5, Poison, Ground, Rock, Ghost);
+        Set(Flying, 2, Fighting, Bug, Grass); Set(Flying, 0.5, Rock, Steel, Electric);
+        Set(Poison, 2, Grass, Fairy); Set(Poison, 0.5, Poison, Ground, Rock, Ghost);
         Set(Poison, 0, Steel);
         Set(Ground, 2, Poison, Rock, Steel, Fire, Electric);
-        Set(Ground, 0.5, Bug, Grass);                Set(Ground, 0, Flying);
-        Set(Rock, 2, Flying, Bug, Fire, Ice);        Set(Rock, 0.5, Fighting, Ground, Steel);
+        Set(Ground, 0.5, Bug, Grass); Set(Ground, 0, Flying);
+        Set(Rock, 2, Flying, Bug, Fire, Ice); Set(Rock, 0.5, Fighting, Ground, Steel);
         Set(Bug, 2, Grass, Psychic, Dark);
         Set(Bug, 0.5, Fighting, Flying, Poison, Ghost, Steel, Fire, Fairy);
-        Set(Ghost, 2, Ghost, Psychic);               Set(Ghost, 0.5, Dark);
+        Set(Ghost, 2, Ghost, Psychic); Set(Ghost, 0.5, Dark);
         Set(Ghost, 0, Normal);
-        Set(Steel, 2, Rock, Ice, Fairy);             Set(Steel, 0.5, Steel, Fire, Water, Electric);
-        Set(Fire, 2, Bug, Steel, Grass, Ice);        Set(Fire, 0.5, Rock, Fire, Water, Dragon);
-        Set(Water, 2, Ground, Rock, Fire);           Set(Water, 0.5, Water, Grass, Dragon);
+        Set(Steel, 2, Rock, Ice, Fairy); Set(Steel, 0.5, Steel, Fire, Water, Electric);
+        Set(Fire, 2, Bug, Steel, Grass, Ice); Set(Fire, 0.5, Rock, Fire, Water, Dragon);
+        Set(Water, 2, Ground, Rock, Fire); Set(Water, 0.5, Water, Grass, Dragon);
         Set(Grass, 2, Ground, Rock, Water);
         Set(Grass, 0.5, Flying, Poison, Bug, Steel, Fire, Grass, Dragon);
-        Set(Electric, 2, Flying, Water);             Set(Electric, 0.5, Grass, Electric, Dragon);
+        Set(Electric, 2, Flying, Water); Set(Electric, 0.5, Grass, Electric, Dragon);
         Set(Electric, 0, Ground);
-        Set(Psychic, 2, Fighting, Poison);           Set(Psychic, 0.5, Steel, Psychic);
+        Set(Psychic, 2, Fighting, Poison); Set(Psychic, 0.5, Steel, Psychic);
         Set(Psychic, 0, Dark);
-        Set(Ice, 2, Flying, Ground, Grass, Dragon);  Set(Ice, 0.5, Steel, Fire, Water, Ice);
-        Set(Dragon, 2, Dragon);                      Set(Dragon, 0.5, Steel);
+        Set(Ice, 2, Flying, Ground, Grass, Dragon); Set(Ice, 0.5, Steel, Fire, Water, Ice);
+        Set(Dragon, 2, Dragon); Set(Dragon, 0.5, Steel);
         Set(Dragon, 0, Fairy);
-        Set(Dark, 2, Ghost, Psychic);                Set(Dark, 0.5, Fighting, Dark, Fairy);
-        Set(Fairy, 2, Fighting, Dragon, Dark);       Set(Fairy, 0.5, Poison, Steel, Fire);
+        Set(Dark, 2, Ghost, Psychic); Set(Dark, 0.5, Fighting, Dark, Fairy);
+        Set(Fairy, 2, Fighting, Dragon, Dark); Set(Fairy, 0.5, Poison, Steel, Fire);
         return t;
     }
 

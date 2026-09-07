@@ -92,9 +92,8 @@ public static class SaveDiff
             changes.Add(new SaveChange(ChangeKind.Entity, where, $"{nowName}: {Describe(now, before)}", now));
     }
 
-    private static string Name(PKM pk, GameStrings strings) => pk.Species == 0
-        ? "nothing"
-        : (uint)pk.Species < strings.specieslist.Length ? strings.specieslist[pk.Species] : $"#{pk.Species}";
+    private static string Name(PKM pk, GameStrings strings) =>
+        pk.Species == 0 ? "nothing" : strings.SpeciesName(pk);
 
     /// <summary>Names the fields that actually moved, rather than saying "edited".</summary>
     private static string Describe(PKM now, PKM before)
@@ -140,7 +139,7 @@ public static class SaveDiff
         if (live is not ISCBlockArray a || pristine is not ISCBlockArray b)
             return;
 
-        var names = TryNames(live);
+        var names = SCBlockNames.For(a);
         var previous = b.AllBlocks.ToDictionary(x => x.Key);
         // Box and party contents are reported per Pokémon above; repeating them as raw
         // blocks would bury the useful rows under two enormous ones.
@@ -155,41 +154,13 @@ public static class SaveDiff
             if (block.Type == was.Type && block.Data.SequenceEqual(was.Data))
                 continue;
 
-            var name = names?.GetValueOrDefault(block.Key);
+            var name = names.GetValueOrDefault(block.Key);
             if (name is not null && entityBlocks.Contains(name))
                 continue;
 
             changes.Add(new SaveChange(ChangeKind.SaveData,
                 name ?? $"Block {block.Key:X8}",
                 DescribeBlock(block, was), null));
-        }
-    }
-
-    private static Dictionary<uint, string>? TryNames(SaveFile sav)
-    {
-        try
-        {
-            SCBlockMetadata? meta = sav switch
-            {
-                SAV9SV sv => new SCBlockMetadata(sv.Blocks, [], []),
-                SAV8SWSH swsh => new SCBlockMetadata(swsh.Blocks, [], []),
-                SAV8LA la => new SCBlockMetadata(la.Blocks, [], []),
-                SAV9ZA za => new SCBlockMetadata(za.Blocks, [], []),
-                _ => null,
-            };
-            if (meta is null || sav is not ISCBlockArray array)
-                return null;
-            var map = new Dictionary<uint, string>();
-            foreach (var block in array.AllBlocks)
-            {
-                if (meta.GetBlockName(block, out _) is { } name)
-                    map[block.Key] = name;
-            }
-            return map;
-        }
-        catch
-        {
-            return null;
         }
     }
 

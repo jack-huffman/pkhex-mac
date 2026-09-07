@@ -86,8 +86,10 @@ public class BoxInsightsTests
     [Fact]
     public void CancellationStopsEarly()
     {
+        // A cancelled pass throws rather than returning a half-built summary; the
+        // BackgroundRefresh helper turns that into "superseded" for the view model.
         using var cts = new CancellationTokenSource();
         cts.Cancel();
-        Assert.False(BoxInsights.Analyze(SaveWith((1, 5, false)), 0, Strings, cts.Token).HasContents);
+        Assert.Throws<OperationCanceledException>(() => BoxInsights.Analyze(SaveWith((1, 5, false)), 0, Strings, cts.Token));
     }
 }

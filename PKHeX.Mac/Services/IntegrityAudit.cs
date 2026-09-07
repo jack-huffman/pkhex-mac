@@ -18,18 +18,33 @@ namespace PKHeX.Mac.Services;
 /// Nothing here is an accusation. A shared identifier is reported with how unlikely it
 /// is and what usually explains it; fixed-seed event distributions genuinely do hand
 /// the same PID to everyone who claims them, so the caveats matter.
+///
+/// The save is read once, on the thread that owns it, by <see cref="Collect"/>; the
+/// expensive comparison in <see cref="Analyze"/> then works on copies and can run anywhere.
 /// </remarks>
 public static class IntegrityAudit
 {
-    /// <summary>Runs every check. Cheap enough for a full save, but off the UI thread.</summary>
-    public static AuditResult Run(SaveFile sav, GameStrings strings, CancellationToken token = default)
+    /// <summary>Runs every check on the calling thread. Convenient for tests and small saves.</summary>
+    public static AuditResult Run(SaveFile sav, GameStrings strings, CancellationToken token = default) =>
+        Analyze(Collect(sav, strings), strings, token);
+
+    /// <summary>Copies every stored Pokémon out of the save, so analysis can leave the UI thread.</summary>
+    public static IReadOnlyList<AuditEntity> Collect(SaveFile sav, GameStrings strings)
     {
-        var entries = Collect(sav, strings, token);
+        var list = new List<AuditEntity>();
+        foreach (var slot in sav.EnumerateOccupiedSlots())
+            list.Add(new AuditEntity(slot.Entity, strings.SpeciesName(slot.Entity), slot.Location));
+        return list;
+    }
+
+    /// <summary>Runs every check over a snapshot. Legality dominates the cost.</summary>
+    public static AuditResult Analyze(IReadOnlyList<AuditEntity> entries, GameStrings strings, CancellationToken token = default)
+    {
         var findings = new List<AuditFinding>();
         if (entries.Count == 0)
             return new AuditResult(0, findings);
 
-        findings.AddRange(FindSharedIdentifiers(entries, sav));
+        findings.AddRange(FindSharedIdentifiers(entries));
         findings.AddRange(FindIllegal(entries, token));
         findings.AddRange(FindIvConcentration(entries));
         findings.AddRange(FindMetClusters(entries, strings));
@@ -41,36 +56,6 @@ public static class IntegrityAudit
         return new AuditResult(entries.Count, findings);
     }
 
-    private static List<AuditEntity> Collect(SaveFile sav, GameStrings strings, CancellationToken token)
-    {
-        var list = new List<AuditEntity>();
-        if (sav.HasBox)
-        {
-            for (int box = 0; box < sav.BoxCount && !token.IsCancellationRequested; box++)
-            {
-                for (int slot = 0; slot < sav.BoxSlotCount; slot++)
-                {
-                    var pk = sav.GetBoxSlotAtIndex(box, slot);
-                    if (pk.Species != 0)
-                        list.Add(new AuditEntity(pk, Describe(pk, strings), $"Box {box + 1}, slot {slot + 1}"));
-                }
-            }
-        }
-        if (sav.HasParty)
-        {
-            for (int i = 0; i < sav.PartyCount; i++)
-            {
-                var pk = sav.GetPartySlotAtIndex(i);
-                if (pk.Species != 0)
-                    list.Add(new AuditEntity(pk, Describe(pk, strings), $"Party, slot {i + 1}"));
-            }
-        }
-        return list;
-    }
-
-    private static string Describe(PKM pk, GameStrings strings) =>
-        (uint)pk.Species < strings.specieslist.Length ? strings.specieslist[pk.Species] : $"#{pk.Species}";
-
     // =====================================================================
     // Shared identifiers
     // =====================================================================
@@ -80,7 +65,7 @@ public static class IntegrityAudit
     /// describes each cluster by everything its members have in common. Clustering
     /// first avoids reporting one cloned pair four times over.
     /// </summary>
-    private static IEnumerable<AuditFinding> FindSharedIdentifiers(List<AuditEntity> entries, SaveFile sav)
+    private static IEnumerable<AuditFinding> FindSharedIdentifiers(IReadOnlyList<AuditEntity> entries)
     {
         // Before Gen 6 there is no separate encryption constant: PKHeX returns the PID
         // for it, so treating the two as independent evidence would double-count one
@@ -172,7 +157,7 @@ public static class IntegrityAudit
                + "so two such Pokémon can legitimately match.";
     }
 
-    private static void LinkBy<T>(List<AuditEntity> entries, DisjointSet union,
+    private static void LinkBy<T>(IReadOnlyList<AuditEntity> entries, DisjointSet union,
                                   Func<AuditEntity, T> key, bool skipZero = false)
         where T : notnull
     {
@@ -199,19 +184,18 @@ public static class IntegrityAudit
     // Per-entity legality, reported as one group
     // =====================================================================
 
-    private static IEnumerable<AuditFinding> FindIllegal(List<AuditEntity> entries, CancellationToken token)
+    private static IEnumerable<AuditFinding> FindIllegal(IReadOnlyList<AuditEntity> entries, CancellationToken token)
     {
         var bad = new List<AuditEntity>();
         foreach (var entry in entries)
         {
-            if (token.IsCancellationRequested)
-                break;
+            token.ThrowIfCancellationRequested();
             try
             {
                 if (!new LegalityAnalysis(entry.Entity).Valid)
                     bad.Add(entry);
             }
-            catch
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 bad.Add(entry); // an entity the analyser cannot even parse is itself a finding
             }
@@ -230,7 +214,7 @@ public static class IntegrityAudit
     // Statistical shape — informational, never a defect on its own
     // =====================================================================
 
-    private static IEnumerable<AuditFinding> FindIvConcentration(List<AuditEntity> entries)
+    private static IEnumerable<AuditFinding> FindIvConcentration(IReadOnlyList<AuditEntity> entries)
     {
         var flawless = entries.Where(e => IvKey(e) == "31/31/31/31/31/31").ToList();
         if (flawless.Count < 3)
@@ -245,22 +229,28 @@ public static class IntegrityAudit
             flawless.Select(f => f.ToEntry()).ToList());
     }
 
-    private static IEnumerable<AuditFinding> FindMetClusters(List<AuditEntity> entries, GameStrings strings)
+    private static IEnumerable<AuditFinding> FindMetClusters(IReadOnlyList<AuditEntity> entries, GameStrings strings)
     {
+        // Location ids are only meaningful within a game, so the same number in two
+        // versions is two different places and must not be clustered together.
         var clusters = entries
             .Where(e => e.Entity.MetLocation != 0)
-            .GroupBy(e => (e.Entity.MetLocation, e.Entity.MetYear, e.Entity.MetMonth, e.Entity.MetDay))
+            .GroupBy(e => (e.Entity.Version, e.Entity.MetLocation, e.Entity.MetYear, e.Entity.MetMonth, e.Entity.MetDay))
             .Where(g => g.Count() >= 4)
             .OrderByDescending(g => g.Count())
             .Take(5);
 
         foreach (var cluster in clusters)
         {
-            var (loc, year, month, day) = cluster.Key;
+            var (version, loc, year, month, day) = cluster.Key;
             var members = cluster.ToList();
+            var sample = members[0].Entity;
+            var place = strings.GetLocationName(false, loc, sample.Format, sample.Generation, version);
+            if (string.IsNullOrEmpty(place))
+                place = $"location {loc}";
             yield return new AuditFinding(
                 $"{members.Count} met at the same place on the same day",
-                $"Location {loc} on {2000 + year:0000}-{month:00}-{day:00}. Entirely normal for an outbreak "
+                $"{place} on {2000 + year:0000}-{month:00}-{day:00}. Entirely normal for an outbreak "
                 + "or a raid session; listed so a batch that was generated in one go is easy to spot.",
                 AuditSeverity.Info,
                 members.Select(m => m.ToEntry()).ToList());

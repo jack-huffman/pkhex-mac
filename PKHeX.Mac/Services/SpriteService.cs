@@ -13,6 +13,9 @@ namespace PKHeX.Mac.Services;
 public static class SpriteService
 {
     private const string AssetRoot = "avares://PKHeX.Mac/Assets/img";
+
+    // Sprites are only ever requested from the UI thread — background passes hand back
+    // plain data and the view models build rows from it — so plain dictionaries suffice.
     private static readonly Dictionary<string, Bitmap?> Cache = new();
 
     // Species whose sprite ignores the current form.
@@ -459,10 +462,18 @@ public static class SpriteService
 
         var uri = new Uri($"{AssetRoot}/{relativePath}");
         Bitmap? bmp = null;
-        if (AssetLoader.Exists(uri))
+        try
         {
-            using var stream = AssetLoader.Open(uri);
-            bmp = new Bitmap(stream);
+            if (AssetLoader.Exists(uri))
+            {
+                using var stream = AssetLoader.Open(uri);
+                bmp = new Bitmap(stream);
+            }
+        }
+        catch (InvalidOperationException)
+        {
+            // No Avalonia platform is running — unit tests, for instance. View models
+            // still work; they simply have no images.
         }
         Cache[relativePath] = bmp;
         return bmp;

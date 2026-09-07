@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using PKHeX.Core;
 
 namespace PKHeX.Mac.Services;
@@ -26,28 +27,10 @@ public sealed class Sv9Progress
         foreach (var block in array.AllBlocks)
             _byKey[block.Key] = block;
 
-        // PKHeX's own labels, for blocks whose game-side name we don't know.
-        try
-        {
-            SCBlockMetadata? meta = sav switch
-            {
-                SAV9SV sv => new SCBlockMetadata(sv.Blocks, [], []),
-                SAV9ZA za => new SCBlockMetadata(za.Blocks, [], []),
-                _ => null,
-            };
-            if (meta is null)
-                return;
-            foreach (var block in array.AllBlocks)
-            {
-                var name = meta.GetBlockName(block, out _);
-                if (name is not null)
-                    _byName[name] = block;
-            }
-        }
-        catch
-        {
-            // Metadata is optional; hashed names still resolve.
-        }
+        // PKHeX's own labels, for blocks whose game-side name we don't know. Optional:
+        // hashed names still resolve without them.
+        foreach (var (key, name) in SCBlockNames.For(array))
+            _byName[name] = _byKey[key];
     }
 
     public SCBlock? Find(string blockName)
@@ -73,7 +56,7 @@ public sealed class Sv9Progress
     // ---- Integer values ----
 
     public int GetInt(string blockName) =>
-        Find(blockName) is { } b && b.HasValue() ? Convert.ToInt32(b.GetValue()) : 0;
+        Find(blockName) is { } b && b.HasValue() ? Convert.ToInt32(b.GetValue(), CultureInfo.InvariantCulture) : 0;
 
     public bool SetInt(string blockName, int value)
     {

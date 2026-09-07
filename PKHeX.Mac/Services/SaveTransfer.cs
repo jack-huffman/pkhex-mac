@@ -1,4 +1,3 @@
-using System;
 using PKHeX.Core;
 
 namespace PKHeX.Mac.Services;
@@ -16,6 +15,9 @@ namespace PKHeX.Mac.Services;
 public static class SaveTransfer
 {
     /// <summary>Works out what would happen, without changing anything.</summary>
+    /// <param name="source">The Pokémon to send; it is cloned, never modified.</param>
+    /// <param name="destination">The save it would land in.</param>
+    /// <param name="strings">Names for the messages.</param>
     /// <param name="assignHomeTracker">
     /// Give the result a Pokémon HOME tracker. Anything that has genuinely moved between
     /// games carries one, and without it the destination rightly calls the Pokémon
@@ -25,9 +27,7 @@ public static class SaveTransfer
     public static TransferPlan Plan(PKM source, SaveFile destination, GameStrings strings,
                                     bool assignHomeTracker = false)
     {
-        var name = (uint)source.Species < strings.specieslist.Length
-            ? strings.specieslist[source.Species]
-            : $"#{source.Species}";
+        var name = strings.SpeciesName(source);
 
         if (source.Species == 0)
             return TransferPlan.Blocked(name, "That slot is empty.");
@@ -54,13 +54,14 @@ public static class SaveTransfer
         var assigned = false;
         if (assignHomeTracker && lacksTracker && converted is IHomeTrack track)
         {
-            track.Tracker = NewTracker();
+            track.Tracker = HomeTracker.NewRandom();
             assigned = true;
         }
         converted.RefreshChecksum();
 
         var legality = new LegalityAnalysis(converted);
-        return new TransferPlan(name, converted, result, legality.Valid, FirstIssue(legality), null)
+        var issue = LegalitySummary.FirstIssue(legality, "Fails a legality check in the destination game.");
+        return new TransferPlan(name, converted, result, legality.Valid, issue, null)
         {
             NeedsHomeTracker = lacksTracker && !assigned,
             HomeTrackerAssigned = assigned,
@@ -95,18 +96,6 @@ public static class SaveTransfer
         return false;
     }
 
-    /// <summary>
-    /// A fresh 64-bit tracker. Uniqueness matters: the integrity audit flags several
-    /// Pokémon sharing one, because HOME issues each exactly once.
-    /// </summary>
-    private static ulong NewTracker()
-    {
-        Span<byte> bytes = stackalloc byte[8];
-        System.Security.Cryptography.RandomNumberGenerator.Fill(bytes);
-        var value = BitConverter.ToUInt64(bytes);
-        return value == 0 ? 1 : value;   // zero means "no tracker"
-    }
-
     private static string Explain(EntityConverterResult result, string name, SaveFile destination) => result switch
     {
         EntityConverterResult.NoTransferRoute =>
@@ -120,19 +109,6 @@ public static class SaveTransfer
             "The two games use incompatible language encodings.",
         _ => $"The conversion failed ({result}).",
     };
-
-    private static string FirstIssue(LegalityAnalysis analysis)
-    {
-        if (analysis.Valid)
-            return string.Empty;
-        foreach (var line in analysis.Report().Split('\n'))
-        {
-            var trimmed = line.Trim();
-            if (trimmed.Length > 0 && !trimmed.StartsWith("Valid", StringComparison.Ordinal))
-                return trimmed;
-        }
-        return "Fails a legality check in the destination game.";
-    }
 }
 
 /// <summary>What a transfer would produce, or why it cannot happen.</summary>
