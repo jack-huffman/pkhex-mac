@@ -1,0 +1,15 @@
+version: 2
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      avalonia:
+        patterns: ['Avalonia*']
+      tests:
+        patterns: ['xunit*', 'Microsoft.NET.Test.Sdk']
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

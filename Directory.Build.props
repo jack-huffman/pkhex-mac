@@ -1,13 +1,29 @@
 <Project>
+  <!--
+    Applies to PKHeX.Mac and PKHeX.Mac.Tests only. The upstream submodule carries its own
+    Directory.Build.props, and MSBuild stops at the nearest one, so nothing here reaches
+    PKHeX.Core.
+  -->
   <PropertyGroup>
-    <Version>26.07.07</Version>
+    <Version>1.0.0</Version>
     <LangVersion>14</LangVersion>
     <Nullable>enable</Nullable>
     <NeutralLanguage>en</NeutralLanguage>
-    <Product>PKHeX</Product>
-    <Company>Project Pokémon</Company>
-    <Authors>Kaphotics</Authors>
-    <Copyright>Kaphotics</Copyright>
-    <SourceRevisionId>$([System.DateTime]::UtcNow.ToString("yyMMddHHmmss"))</SourceRevisionId>
+    <Product>PKHeX for Mac</Product>
+    <Authors>Jack Huffman</Authors>
+    <Company>Jack Huffman</Company>
+    <Copyright>UI © Jack Huffman. Engine (PKHeX.Core) © Kaphotics. GPL-3.0.</Copyright>
+    <RepositoryUrl>https://github.com/jack-huffman/pkhex-mac</RepositoryUrl>
+    <PackageLicenseExpression>GPL-3.0-only</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <!-- Unused-using detection (IDE0005) only runs in the build when the compiler is asked
+         for a documentation file. Missing XML comments on public members are not an error. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 </Project>

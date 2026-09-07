@@ -6,3 +6,6 @@ PKHeX.Mac/Assets/hires/
 .claude/
 test-save-*.sav
 dist/
+.vs/
+.idea/
+TestResults/

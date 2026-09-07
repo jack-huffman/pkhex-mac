@@ -1,26 +1,24 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
-    <ApplicationManifest>app.manifest</ApplicationManifest>
-      <!-- Bindings are checked at build time. Without this a typo or a renamed view
+    <!-- Bindings are checked at build time. Without this a typo or a renamed view
          model member fails silently at runtime, which has cost this project real bugs. -->
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Models\" />
     <AvaloniaResource Include="Assets\**" />
     <!-- High-res sprites are loaded from disk at runtime, not embedded (~400MB). -->
     <AvaloniaResource Remove="Assets\hires\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="12.1.1" />
-    <PackageReference Include="Avalonia.Desktop" Version="12.1.1" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.1" />
-    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.1" />
+    <PackageReference Include="Avalonia" Version="12.1.2" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.2" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.2" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.2" />
     <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.3">
       <IncludeAssets Condition="'$(Configuration)' != 'Debug'">None</IncludeAssets>
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>

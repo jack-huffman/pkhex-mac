@@ -5,18 +5,17 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
-    <!-- The app is an Avalonia exe; referencing it is fine for the pure services and
-         view models under test, none of which need a rendering surface. -->
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
-    <PackageReference Include="xunit" Version="2.9.2" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The app is an Avalonia executable. Referencing it directly is fine: the services and
+         view models under test need no rendering surface. -->
     <ProjectReference Include="../PKHeX.Mac/PKHeX.Mac.csproj" />
   </ItemGroup>
 

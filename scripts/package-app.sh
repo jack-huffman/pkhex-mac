@@ -20,6 +20,12 @@ done
 APP="dist/PKHeX.app"
 PUBLISH="PKHeX.Mac/bin/Release/net10.0/osx-arm64/publish"
 
+# The bundle's version is the app's own (Directory.Build.props); the engine version is
+# recorded alongside it so a bug report can say which PKHeX.Core it was built against.
+APP_VERSION=$(dotnet msbuild PKHeX.Mac/PKHeX.Mac.csproj -getProperty:Version -nologo | tr -d '[:space:]')
+CORE_VERSION=$(sed -nE 's/.*<Version>([^<]+)<\/Version>.*/\1/p' upstream/PKHeX/Directory.Build.props | head -1)
+echo "==> PKHeX for Mac ${APP_VERSION} (PKHeX.Core ${CORE_VERSION})"
+
 echo "==> Publishing (Release, osx-arm64, self-contained)..."
 dotnet publish PKHeX.Mac -c Release -r osx-arm64 --self-contained \
   -p:PublishSingleFile=false -p:DebugType=none | tail -2
@@ -46,7 +52,7 @@ if [[ -f icon.png ]]; then
   iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
 fi
 
-cat > "$APP/Contents/Info.plist" <<'PLIST'
+cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -55,8 +61,10 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
     <key>CFBundleDisplayName</key>       <string>PKHeX</string>
     <key>CFBundleExecutable</key>        <string>PKHeX.Mac</string>
     <key>CFBundleIdentifier</key>        <string>dev.jackhuffman.pkhex-mac</string>
-    <key>CFBundleVersion</key>           <string>1.0</string>
-    <key>CFBundleShortVersionString</key><string>1.0</string>
+    <key>CFBundleVersion</key>           <string>${APP_VERSION}</string>
+    <key>CFBundleShortVersionString</key><string>${APP_VERSION}</string>
+    <key>PKHeXCoreVersion</key>          <string>${CORE_VERSION}</string>
+    <key>LSApplicationCategoryType</key> <string>public.app-category.utilities</string>
     <key>CFBundlePackageType</key>       <string>APPL</string>
     <key>CFBundleIconFile</key>          <string>AppIcon</string>
     <key>NSHighResolutionCapable</key>   <true/>

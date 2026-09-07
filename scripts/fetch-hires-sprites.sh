@@ -33,10 +33,11 @@ rm -f "$urls_file"
 echo "==> Building form id map from PokeAPI..."
 mkdir -p "$DST/forms/shiny"
 listing=$(mktemp)
+form_ids=$(mktemp)
 curl -sf "https://pokeapi.co/api/v2/pokemon?limit=100000" -o "$listing"
-python3 - "$listing" "$DST" <<'PY'
+python3 - "$listing" "$DST" "$form_ids" <<'PY'
 import json, sys
-listing, dst = sys.argv[1], sys.argv[2]
+listing, dst, form_ids_path = sys.argv[1], sys.argv[2], sys.argv[3]
 data = json.load(open(listing))
 m = {}
 for r in data["results"]:
@@ -44,7 +45,7 @@ for r in data["results"]:
     m[r["name"]] = pid
 json.dump(m, open(f"{dst}/forms.json", "w"))
 form_ids = sorted(i for i in m.values() if i > 10000)
-open("/tmp/pkhex_form_ids.txt", "w").write("\n".join(map(str, form_ids)))
+open(form_ids_path, "w").write("\n".join(map(str, form_ids)))
 print(f"forms.json: {len(m)} names, {len(form_ids)} alternate forms")
 PY
 rm -f "$listing"
@@ -53,13 +54,13 @@ form_urls=$(mktemp)
 while read -r id; do
   [[ -f "$DST/forms/$id.png" ]]       || printf 'url = "%s/%s.png"\noutput = "%s/forms/%s.png"\n' "$BASE" "$id" "$DST" "$id" >> "$form_urls"
   [[ -f "$DST/forms/shiny/$id.png" ]] || printf 'url = "%s/shiny/%s.png"\noutput = "%s/forms/shiny/%s.png"\n' "$BASE" "$id" "$DST" "$id" >> "$form_urls"
-done < /tmp/pkhex_form_ids.txt
+done < "$form_ids"
 
 if [[ -s "$form_urls" ]]; then
   echo "Fetching $(grep -c '^url' "$form_urls") form files (404s are normal — not every form has a render)..."
   curl -sf --parallel --parallel-max 12 --retry 2 --config "$form_urls" || true
 fi
-rm -f "$form_urls" /tmp/pkhex_form_ids.txt
+rm -f "$form_urls" "$form_ids"
 
 # Remove empty files from failed downloads so re-runs retry them.
 find "$DST" -name "*.png" -size 0 -delete
